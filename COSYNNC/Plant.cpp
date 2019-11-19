@@ -1,24 +1,22 @@
 #include "Plant.h"
 
-using namespace cosynnc;
+using namespace COSYNNC;
 
-Plant::Plant(int stateDimension, int inputDimension, float tau) : _stateDim(stateDimension), _inputDim(inputDimension), _tau(tau) {
-	_state.SetLength(stateDimension);
-	_input.SetLength(inputDimension);
+Plant::Plant(int stateSpaceDimension, int inputSpaceDimension, float tau) : _stateSpaceDim(stateSpaceDimension), _inputSpaceDim(inputSpaceDimension), _tau(tau) {
+	_state.SetLength(stateSpaceDimension);
+	_input.SetLength(inputSpaceDimension);
 }
 
 
-// Virtual Plant Dynamics function, should be overriden by the actual plant dynamics
+// Virtual function that describes the plant dynamics subject to a time step of tau, should be overriden by the actual plant dynamics
 Vector Plant::SingleStepDynamics(Vector input) {
 	return _state;
 }
 
-
-Vector Plant::Evolve(Vector input) {
+// TODO: Turn this into a Runge-Kutta integration where the delta dynamics are described and proper numerical integration techniques are utilized
+void Plant::Evolve(Vector input) {
 	_state = SingleStepDynamics(input);
 	_input = input;
-
-	return _state;
 }
 
 

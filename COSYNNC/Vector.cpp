@@ -1,12 +1,11 @@
 #include "Vector.h"
 
-using namespace cosynnc;
+using namespace COSYNNC;
 
 Vector::Vector(int length) {
 	_length = length;
 	_values.resize(length, 0);
 }
-
 
 Vector::Vector(vector<float> values) {
 	_values = values;
@@ -69,6 +68,6 @@ void Vector::SetLength(int size) {
 
 void Vector::PrintValues() const {
 	for (int i = 0; i < _length; i++) {
-		std::cout << _values[i] << std::endl;
+		std::cout << _values[i] << " ";
 	}
 }
