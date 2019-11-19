@@ -5,7 +5,7 @@
 
 using namespace std;
 
-namespace cosynnc {
+namespace COSYNNC {
 	class Vector
 	{
 	public:
@@ -27,7 +27,7 @@ namespace cosynnc {
 		void PrintValues() const;
 
 	private:
-		int _length = 0;
-		vector<float> _values;
+		int _length = 1;
+		vector<float> _values{ 0 };
 	};
 }
