@@ -12,7 +12,10 @@ namespace COSYNNC {
 		// Initialize a vector by specifying the amount of elements in the vector
 		Vector(int length = 0);
 
-		// Initialize the vector by giving the values for the vector
+		// Initialize a vector with only a single element
+		Vector(float value);
+
+		// Initialize a vector by giving the values for the vector
 		Vector(vector<float> values);
 
 		Vector operator+(const Vector other);

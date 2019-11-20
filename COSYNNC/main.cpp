@@ -4,8 +4,10 @@
 #include "Quantizer.h"
 #include "Controller.h"
 #include "ControlSpecification.h"
+#include "MultilayerPerceptron.h"
 
 using namespace std;
+using namespace mxnet;
 
 class Rocket : public Plant {
 public:
@@ -26,7 +28,7 @@ private:
 }; 
 
 int main() {
-	std::cout << "COSYNNC: A correct-by-design neural network synthesis tool." << std::endl;
+	std::cout << "COSYNNC: A correct-by-design neural network synthesis tool." << std::endl << std::endl;
 
 
 	// Initialize quantizers
@@ -34,7 +36,7 @@ int main() {
 	stateQuantizer->SetQuantizeParameters(Vector({ 0.1, 0.1 }), Vector({ -0.05, -0.05 }));
 
 	Quantizer* inputQuantizer = new Quantizer();
-	inputQuantizer->SetQuantizeParameters(vector<float>{0.1}, vector<float>{-0.05});
+	inputQuantizer->SetQuantizeParameters(Vector((float)0.1), Vector((float)-0.05));
 
 
 	// Initialize plant
@@ -52,8 +54,14 @@ int main() {
 	controller.SetControlSpecification(&specification);
 
 
+	// Initialize a multilayer perceptron neural network
+	// DEBUG: This is just a simple test 1 8 8 1 neural network to test the MXNet library functionality 
+	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 8, 8, 1 }, ActivationActType::kRelu);
+	multilayerPerceptron->Test();
+
+
 	// Simulate closed loop
-	std::cout << std::endl;
+	/*std::cout << std::endl;
 	for (int i = 0; i < 100; i++) {
 		// Get the control action
 		Vector input = controller.GetControlAction(plant->GetState());
@@ -72,13 +80,14 @@ int main() {
 
 		std::cout << std::endl;
 	}
-	std::cout << std::endl;
+	std::cout << std::endl;*/
 
 
 	// Free memory
 	delete plant;
 	delete stateQuantizer;
 	delete inputQuantizer;
+	delete multilayerPerceptron;
 
 
 	// Wait for an input to stop the program

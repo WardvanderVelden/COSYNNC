@@ -8,14 +8,6 @@ Quantizer::Quantizer(bool isBounded) {
 
 
 // Set the quantization parameters for the space
-void Quantizer::SetQuantizeParameters(vector<float> spaceEta, vector<float> spaceReference) {
-	_spaceDim = spaceEta.size();
-	_spaceEta = Vector(spaceEta);
-	_spaceReference = Vector(spaceReference);
-
-	_isBounded = false;
-}
-
 void Quantizer::SetQuantizeParameters(Vector spaceEta, Vector spaceReference) {
 	_spaceDim = spaceEta.GetLength();
 	_spaceEta = spaceEta;
