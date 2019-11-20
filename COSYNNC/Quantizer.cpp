@@ -7,102 +7,48 @@ Quantizer::Quantizer(bool isBounded) {
 }
 
 
-#pragma region Setters
-
-// Set the quantization parameters for the state space
-void Quantizer::SetStateQuantizeParameters(vector<float> stateSpaceEta, vector<float> stateSpaceReference) {
-	_stateSpaceDim = stateSpaceEta.size();
-	_stateSpaceEta = stateSpaceEta;
-	_stateSpaceReference = stateSpaceReference;
+// Set the quantization parameters for the space
+void Quantizer::SetQuantizeParameters(vector<float> spaceEta, vector<float> spaceReference) {
+	_spaceDim = spaceEta.size();
+	_spaceEta = Vector(spaceEta);
+	_spaceReference = Vector(spaceReference);
 
 	_isBounded = false;
 }
 
-void Quantizer::SetStateQuantizeParameters(Vector stateSpaceEta, Vector stateSpaceReference) {
-	_stateSpaceDim = stateSpaceEta.GetLength();
-	_stateSpaceEta = stateSpaceEta;
-	_stateSpaceReference = stateSpaceReference;
+void Quantizer::SetQuantizeParameters(Vector spaceEta, Vector spaceReference) {
+	_spaceDim = spaceEta.GetLength();
+	_spaceEta = spaceEta;
+	_spaceReference = spaceReference;
 
 	_isBounded = false;
 }
 
-// Set the quantization parameters for the state space, if the state space is not bounded the lower bound will be used as the reference
-void Quantizer::SetStateQuantizeParameters(Vector stateSpaceEta, Vector stateSpaceLowerBound, Vector stateSpaceUpperBound) {
-	_stateSpaceDim = stateSpaceEta.GetLength();
-	_stateSpaceEta = stateSpaceEta;
+// Set the quantization parameters for the space, if the space is not bounded the lower bound will be used as the reference
+void Quantizer::SetQuantizeParameters(Vector spaceEta, Vector spaceLowerBound, Vector spaceUpperBound) {
+	_spaceDim = spaceEta.GetLength();
+	_spaceEta = spaceEta;
 		
 	if (_isBounded) {
-		_stateSpaceLowerBound = stateSpaceLowerBound;
-		_stateSpaceUpperBound = stateSpaceUpperBound;
+		_spaceLowerBound = spaceLowerBound;
+		_spaceUpperBound = spaceUpperBound;
 	}
 	else {
-		_stateSpaceReference = stateSpaceLowerBound;
+		_spaceReference = spaceLowerBound;
 	}
 }
 
 
-// Set the quantization parameters for the input space
-void Quantizer::SetInputQuantizeParameters(vector<float> inputSpaceEta, vector<float> inputSpaceReference) {
-	_inputSpaceDim = inputSpaceEta.size();
-	_inputSpaceEta = inputSpaceEta;
-	_inputSpaceReference = inputSpaceReference;
-
-	_isBounded = false;
-}
-
-void Quantizer::SetInputQuantizeParameters(Vector inputSpaceEta, Vector inputSpaceReference) {
-	_inputSpaceDim = inputSpaceEta.GetLength();
-	_inputSpaceEta = inputSpaceEta;
-	_inputSpaceReference = inputSpaceReference;
-
-	_isBounded = false;
-}
-
-// Set the quantization parameters for the input space, if the input space is not bounded the lower bound will be used as the reference
-void Quantizer::SetInputQuantizeParameters(Vector inputSpaceEta, Vector inputSpaceLowerBound, Vector inputSpaceUpperBound) {
-	_inputSpaceDim = inputSpaceEta.GetLength();
-	_inputSpaceEta = inputSpaceEta;
-
-	if (_isBounded) {
-		_inputSpaceLowerBound = inputSpaceLowerBound;
-		_inputSpaceUpperBound = inputSpaceUpperBound;
-	}
-	else {
-		_inputSpaceReference = inputSpaceLowerBound;
-	}
-}
-
-
-#pragma endregion
-
-
-// Quantize a vector to the quantized state set
-Vector Quantizer::QuantizeToState(Vector v) {
+// Quantize a vector to quantization parameters
+Vector Quantizer::QuantizeVector(Vector v) {
 	Vector quantized(v.GetLength());
 
 	for (int i = 0; i < v.GetLength(); i++) {
 		if (_isBounded) {
-			quantized[i] = floor(((v[i] - _stateSpaceLowerBound[i]) / _stateSpaceEta[i])) * _stateSpaceEta[i] + _stateSpaceReference[i] + _stateSpaceEta[i] * 0.5;
+			quantized[i] = floor(((v[i] - _spaceLowerBound[i]) / _spaceEta[i])) * _spaceEta[i] + _spaceReference[i] + _spaceEta[i] * 0.5;
 		}
 		else {
-			quantized[i] = floor(((v[i] - _stateSpaceReference[i]) / _stateSpaceEta[i])) * _stateSpaceEta[i] + _stateSpaceReference[i] + _stateSpaceEta[i] * 0.5;
-		}
-	}
-
-	return quantized;
-}
-
-
-// Quantize a vector to the quantized input set
-Vector Quantizer::QuantizeToInput(Vector v) {
-	Vector quantized(v.GetLength());
-
-	for (int i = 0; i < v.GetLength(); i++) {
-		if (_isBounded) {
-			quantized[i] = floor(((v[i] - _inputSpaceLowerBound[i]) / _inputSpaceEta[i])) * _inputSpaceEta[i] + _inputSpaceReference[i] + _inputSpaceEta[i] * 0.5;
-		}
-		else {
-			quantized[i] = floor(((v[i] - _inputSpaceReference[i]) / _inputSpaceEta[i])) * _inputSpaceEta[i] + _inputSpaceReference[i] + _inputSpaceEta[i] * 0.5;
+			quantized[i] = floor(((v[i] - _spaceReference[i]) / _spaceEta[i])) * _spaceEta[i] + _spaceReference[i] + _spaceEta[i] * 0.5;
 		}
 	}
 

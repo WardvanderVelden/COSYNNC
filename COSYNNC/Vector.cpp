@@ -43,6 +43,10 @@ Vector Vector::operator*(const float scalar) {
 	return *this;
 }
 
+Vector Vector::operator/(const float scalar) {
+	return *this * (1 / scalar);
+}
+
 
 Vector Vector::operator=(const vector<float> values) {
 	_length = values.size();

@@ -3,6 +3,7 @@
 #include "Plant.h"
 #include "Quantizer.h"
 #include "Controller.h"
+#include "ControlSpecification.h"
 
 using namespace std;
 
@@ -25,35 +26,62 @@ private:
 }; 
 
 int main() {
-	std::cout << "Hello COSYNNC!" << std::endl;
+	std::cout << "COSYNNC: A correct-by-design neural network synthesis tool." << std::endl;
 
-	// Initialize quantizer
-	Quantizer* quantizer = new Quantizer();
-	quantizer->SetStateQuantizeParameters({ 0.1, 0.1 }, { 0, 0 });
-	quantizer->SetInputQuantizeParameters(vector<float>(1,0.1), vector<float>(1, 0));
+
+	// Initialize quantizers
+	Quantizer* stateQuantizer = new Quantizer();
+	stateQuantizer->SetQuantizeParameters(Vector({ 0.1, 0.1 }), Vector({ -0.05, -0.05 }));
+
+	Quantizer* inputQuantizer = new Quantizer();
+	inputQuantizer->SetQuantizeParameters(vector<float>{0.1}, vector<float>{-0.05});
+
 
 	// Initialize plant
-	Vector initialState({ 1, 1 });
-
 	Rocket* plant = new Rocket();
-	plant->SetState(initialState);
+	plant->SetState(Vector({ 20, 0 }));
+
 
 	// Initialize controller
-	Controller controller(plant, quantizer);
+	Controller controller(plant, stateQuantizer, inputQuantizer);
+
+
+	// Initialize a control specification
+	ControlSpecification specification(ControlSpecificationType::Reachability, plant);
+	specification.SetHyperInterval(Vector({ -0.05, -0.05 }), Vector({ 0.05, 0.05 }));
+	controller.SetControlSpecification(&specification);
+
 
 	// Simulate closed loop
 	std::cout << std::endl;
-	for (int i = 0; i < 20; i++) {
-		Vector input = controller.GetControlAction(quantizer->QuantizeToState(plant->GetState()));
+	for (int i = 0; i < 100; i++) {
+		// Get the control action
+		Vector input = controller.GetControlAction(plant->GetState());
+		std::cout << "i: ";
+		input.PrintValues();
+
+		// Evolve the system according to the control action
 		plant->Evolve(input);
 
+		// Print state and quantized state for comparison
+		std::cout << "\ts: ";
 		plant->GetState().PrintValues();
+
+		std::cout << "\tq: ";
+		stateQuantizer->QuantizeVector(plant->GetState()).PrintValues();
+
 		std::cout << std::endl;
 	}
+	std::cout << std::endl;
+
 
 	// Free memory
 	delete plant;
-	delete quantizer;
-	
+	delete stateQuantizer;
+	delete inputQuantizer;
+
+
+	// Wait for an input to stop the program
+	system("pause");
 	return 0;
 }
