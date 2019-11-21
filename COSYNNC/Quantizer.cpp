@@ -46,3 +46,17 @@ Vector Quantizer::QuantizeVector(Vector v) {
 
 	return quantized;
 }
+
+
+// Gets a random vector within the bounded quantization space if isBounded is set
+Vector Quantizer::GetRandomVector() {
+	Vector randomVector(_spaceDim);
+
+	if (_isBounded) {
+		for (int i = 0; i < _spaceDim; i++) {
+			randomVector[i] = _spaceLowerBound[i] + (_spaceUpperBound[i] - _spaceLowerBound[i]) * rand();
+		}
+	}
+
+	return QuantizeVector(randomVector);
+}

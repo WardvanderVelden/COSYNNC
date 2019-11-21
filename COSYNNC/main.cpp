@@ -33,7 +33,8 @@ int main() {
 
 	// Initialize quantizers
 	Quantizer* stateQuantizer = new Quantizer();
-	stateQuantizer->SetQuantizeParameters(Vector({ 0.1, 0.1 }), Vector({ -0.05, -0.05 }));
+	//stateQuantizer->SetQuantizeParameters(Vector({ 0.1, 0.1 }), Vector({ -0.05, -0.05 }));
+	stateQuantizer->SetQuantizeParameters(Vector({ 0.1,0.1 }), Vector({ -10, -5 }), Vector({ 10, 5 }));
 
 	Quantizer* inputQuantizer = new Quantizer();
 	inputQuantizer->SetQuantizeParameters(Vector((float)0.1), Vector((float)-0.05));
@@ -41,7 +42,7 @@ int main() {
 
 	// Initialize plant
 	Rocket* plant = new Rocket();
-	plant->SetState(Vector({ 20, 0 }));
+	plant->SetState(Vector({ 10, 0 }));
 
 
 	// Initialize controller
@@ -56,8 +57,11 @@ int main() {
 
 	// Initialize a multilayer perceptron neural network
 	// DEBUG: This is just a simple test 1 8 8 1 neural network to test the MXNet library functionality 
-	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 8, 8, 1 }, ActivationActType::kRelu);
-	multilayerPerceptron->Test();
+	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 64, 64, 1 }, ActivationActType::kRelu);
+	TrainingData* data = multilayerPerceptron->GetTrainingData(plant, &controller, stateQuantizer);
+	multilayerPerceptron->Test(data);
+
+	delete data;
 
 
 	// Simulate closed loop

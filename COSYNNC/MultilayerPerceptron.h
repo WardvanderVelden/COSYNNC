@@ -1,12 +1,21 @@
 #pragma once
 #include <vector>
 #include <map>
+#include <iostream>
 #include "mxnet-cpp/MxNetCpp.h";
 #include "NeuralNetwork.h"
+#include "Plant.h"
+#include "Quantizer.h"
+#include "Controller.h"
 
 using namespace mxnet::cpp;
 
 namespace COSYNNC {
+	struct TrainingData {
+		NDArray inputs;
+		NDArray labels;
+	};
+
 	class MultilayerPerceptron : public NeuralNetwork  
 	{
 	public:
@@ -17,7 +26,10 @@ namespace COSYNNC {
 		virtual void InitializeNetworkTopology();
 
 		// DEBUG: Temporay test bed for learning MXNET
-		void Test();
+		void Test(TrainingData* data);
+
+		// DEBUG: Get test data
+		TrainingData* GetTrainingData(Plant* plant, Controller* controller, Quantizer* stateQuantizer);
 	private:
 		vector<Symbol> _weights;
 		vector<Symbol> _biases;
