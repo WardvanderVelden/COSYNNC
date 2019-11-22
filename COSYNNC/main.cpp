@@ -57,7 +57,7 @@ int main() {
 
 	// Initialize a multilayer perceptron neural network
 	// DEBUG: This is just a simple test 1 8 8 1 neural network to test the MXNet library functionality 
-	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 64, 64, 1 }, ActivationActType::kRelu);
+	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 16, 8 }, ActivationActType::kRelu);
 	TrainingData* data = multilayerPerceptron->GetTrainingData(plant, &controller, stateQuantizer);
 	multilayerPerceptron->Test(data);
 

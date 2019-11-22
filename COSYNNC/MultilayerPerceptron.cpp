@@ -34,32 +34,35 @@ namespace COSYNNC {
 				_outputs[i] = fullyConnected;
 			}
 			else {
-				_outputs[i] = Activation(fullyConnected, ActivationActType::kSigmoid);
+				_outputs[i] = Activation(fullyConnected, ActivationActType::kRelu);
 			}
 		}
 
 		// DEBUG: This is now a softmax function (so cross entropy) just to test all the neural network functionality
-		_network = SoftmaxOutput(_outputs.back(), label);
+		//_network = SoftmaxOutput(_outputs.back(), label);
+		_network = LinearRegressionOutput(_outputs.back(), label);
 	}
 
 	// DEBUG: Temporay test bed for learning MXNET
 	void MultilayerPerceptron::Test(TrainingData* data) {
-		const int batchSize = 50;
-		const float learningRate = 0.1;
+		const int batchSize = 100;
+		const float learningRate = 0.01;
 		const float weightDecay = 0.1;
-		const int maxEpoch = 100;
+		const int maxEpoch = 10000;
 		const int dataSize = data->labels.Size();
 
 		// Arguments for the neural network (input layer is 2 neurons and the output layer is 1 neuron)
 		map<string, NDArray> arguments; 
-		arguments["input"] = NDArray(Shape(batchSize, 1), _context);
-		arguments["output"] = NDArray(Shape(batchSize, 1), _context);
+		/*arguments["input"] = NDArray(Shape(batchSize, 2), _context);
+		arguments["output"] = NDArray(Shape(batchSize, 1), _context);*/
+		arguments["input"] = NDArray(Shape(batchSize), _context);
+		arguments["output"] = NDArray(Shape(batchSize), _context);
 
 		// Infers the matrix sizes for the network from the netwokr arguments
 		_network.InferArgsMap(_context, &arguments, arguments);
 
 		// Initialize all parameters with a uniform distribution
-		auto initializer = Uniform(-0.1, 0.1);
+		auto initializer = Uniform(-1, 1);
 		for (auto& argument : arguments) {
 			initializer(argument.first, &argument.second);
 		}
@@ -86,6 +89,9 @@ namespace COSYNNC {
 				// Get data batch
 				NDArray inputBatch = data->inputs.Slice(currentDataIndex, currentDataIndex + batchSize);
 				NDArray labelBatch = data->labels.Slice(currentDataIndex, currentDataIndex + batchSize);
+
+				auto inputBatchData = inputBatch.GetData();
+				auto labelBatchData = labelBatch.GetData();
 
 				// Copy data to the network
 				inputBatch.CopyTo(&arguments["input"]);
@@ -135,12 +141,13 @@ namespace COSYNNC {
 		std::cout << "Accuracy: " << accuracy.Get() << std::endl;*/
 
 		// Manually evaluate the network
-		arguments["input"] = NDArray(Shape(1, 1), _context);
-		arguments["output"] = NDArray(Shape(1, 1), _context);
+		arguments["input"] = NDArray(Shape(1), _context);
+		arguments["output"] = NDArray(Shape(1), _context);
 
 		currentDataIndex = 0;
 		int correct = 0;
 		int total = 0;
+		int nanInputs = 0;
 		while (currentDataIndex < dataSize) {
 			NDArray inputBatch = data->inputs.Slice(currentDataIndex, currentDataIndex + 1);
 			NDArray labelBatch = data->labels.Slice(currentDataIndex, currentDataIndex + 1);
@@ -151,14 +158,16 @@ namespace COSYNNC {
 			// Execute the network
 			executor->Forward(false);
 
+			auto input = inputBatch.GetData();
 			auto label = labelBatch.GetData();
 			auto prediction = executor->outputs[0].GetData();
 
-			if (*label == 1.0 && *prediction > 0.5) correct++;
+ 			if (*label == 1.0 && *prediction > 0.5) correct++;
 			if (*label == 0.0 && *prediction < 0.5) correct++;
 
-			if (isnan(*prediction)) total++;
+			std::cout << "Input: " << *input << "\tLabels: " << *label << "\tPrediction: " << *prediction << std::endl;
 
+			total++;
 			currentDataIndex++;
 		}
 		float accuracy = (float)correct / (float)total * 100.0;
@@ -176,8 +185,8 @@ namespace COSYNNC {
 		//NDArray input(Shape(episodes*steps, 2), _context);
 		//NDArray label(Shape(episodes*steps, 1), _context);
 
-		vector<mx_float> input;
-		vector<mx_float> label;
+		vector<mx_float> inputs;
+		vector<mx_float> labels;
 
 		// Simulate a 1000 episodes
 		for (int i = 0; i < episodes; i++) {
@@ -190,28 +199,31 @@ namespace COSYNNC {
 				plant->Evolve(controlAction);
 
 				// Add data 
-				input.push_back(state[0]*1/10);
-				input.push_back(state[1]*1/10);
+				inputs.push_back(state[0]*1/10);
+				inputs.push_back(state[1]*1/10);
 
 				if (controlAction[0] > 2750) {
-					label.push_back(1);
+					labels.push_back(1);
 				}
 				else {
-					label.push_back(0);
+					labels.push_back(0);
 				}
 			}*/
 
 			// Round function
-			auto number = rand();
-			input.push_back(number);
+			float number = (rand() % 10000) / 10000.0;
+			inputs.push_back(number);
 
-			if (number > 0.5) label.push_back(1);
-			else label.push_back(0);
+			if (number > 0.5) labels.push_back(1);
+			else labels.push_back(0);
 		}
 
 		TrainingData* data = new TrainingData();
-		data->inputs = NDArray(input, Shape(episodes*steps, 1), _context);
-		data->labels = NDArray(label, Shape(episodes*steps, 1), _context);
+		/*data->inputs = NDArray(input, Shape(episodes*steps, 1), _context);
+		data->labels = NDArray(label, Shape(episodes*steps, 1), _context);*/
+
+		data->inputs = NDArray(inputs, Shape(episodes), _context);
+		data->labels = NDArray(labels, Shape(episodes), _context);
 		return data;
 	}
 }
