@@ -6,36 +6,34 @@ namespace COSYNNC {
 	class Quantizer
 	{
 	public:
+		// Initialized the quantizer, by default isBounded is set to false so that only a reference point needs to be specified
 		Quantizer(bool isBounded = false);
 
-		void SetStateQuantizeParameters(vector<float> stateSpaceEta, vector<float> stateSpaceReference);
-		void SetStateQuantizeParameters(Vector stateSpaceEta, Vector stateSpaceReference);
-		void SetStateQuantizeParameters(Vector stateSpaceEta, Vector stateSpaceLowerBound, Vector stateSpaceUpperBound);
 
-		void SetInputQuantizeParameters(vector<float> inputSpaceEta, vector<float> inputSpaceReference);
-		void SetInputQuantizeParameters(Vector inputSpaceEta, Vector inputSpaceReference);
-		void SetInputQuantizeParameters(Vector inputSpaceEta, Vector inputSpaceLowerBound, Vector inputSpaceUpperBound);
+		// Set the quantization parameters for the space
+		void SetQuantizeParameters(Vector stateSpaceEta, Vector stateSpaceReference);
 
-		Vector QuantizeToState(Vector v);
-		Vector QuantizeToInput(Vector v);
+		// Set the quantization parameters for the space, if the space is not bounded the lower bound will be used as the reference
+		void SetQuantizeParameters(Vector stateSpaceEta, Vector stateSpaceLowerBound, Vector stateSpaceUpperBound);
+
+		// Set quantize a vector to the quantized space based on the quantization parameters
+		Vector QuantizeVector(Vector v);
+
+		// Gets a random vector within the bounded quantization space if isBounded is set
+		Vector GetRandomVector();
 
 	private:
 		bool _isBounded = false;
 
-		int _stateSpaceDim = 0;
+		int _spaceDim = 0;
 		int _inputSpaceDim = 0;
 
-		Vector _stateSpaceEta;
-		Vector _inputSpaceEta;
+		Vector _spaceEta;
 
-		Vector _stateSpaceLowerBound;
-		Vector _stateSpaceUpperBound;
+		Vector _spaceLowerBound;
+		Vector _spaceUpperBound;
 
-		Vector _inputSpaceLowerBound;
-		Vector _inputSpaceUpperBound;
-
-		Vector _stateSpaceReference;
-		Vector _inputSpaceReference;
+		Vector _spaceReference;
 	};
 }
 
