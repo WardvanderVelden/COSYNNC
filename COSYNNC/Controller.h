@@ -27,6 +27,9 @@ namespace COSYNNC {
 
 		// DEBUG: Temporay PD controller in order to have some sort of benchmark of data generator
 		Vector GetPDControlAction(Vector state);
+
+		// DEBUG: Resets the control so no old information is used for calcuating the input
+		void ResetController();
 	private:
 		float _tau;
 

@@ -19,6 +19,15 @@ namespace COSYNNC {
 		// Set quantize a vector to the quantized space based on the quantization parameters
 		Vector QuantizeVector(Vector v);
 
+		// Normalize a vector from the bounded space to the normal space
+		Vector NormalizeVector(Vector v);
+
+		// Denormalize a vector a vector from the normal space to the bounded space
+		Vector DenormalizeVector(Vector v);
+
+		// Checks if a vector is in the bounds of the quantized space
+		Vector IsInBounds(Vector v);
+
 		// Gets a random vector within the bounded quantization space if isBounded is set
 		Vector GetRandomVector();
 

@@ -44,19 +44,18 @@ namespace COSYNNC {
 	}
 
 	// DEBUG: Temporay test bed for learning MXNET
-	void MultilayerPerceptron::Test(TrainingData* data) {
+	void MultilayerPerceptron::Test(TrainingData* data, Quantizer* stateQuantizer, Quantizer* inputQuantizer) {
 		const int batchSize = 100;
 		const float learningRate = 0.1;
 		const float weightDecay = 0.1;
-		const int maxEpoch = 250;
+		const int maxEpoch = 10000;
 		const int dataSize = data->labels.Size();
+		const int steps = 50;
 
 		// Arguments for the neural network (input layer is 2 neurons and the output layer is 1 neuron)
 		map<string, NDArray> arguments; 
-		/*arguments["input"] = NDArray(Shape(batchSize, 2), _context);
-		arguments["output"] = NDArray(Shape(batchSize, 1), _context);*/
-		arguments["input"] = NDArray(Shape(batchSize), _context);
-		arguments["output"] = NDArray(Shape(batchSize), _context);
+		arguments["input"] = NDArray(Shape(batchSize, 2), _context);
+		arguments["output"] = NDArray(Shape(batchSize, 1), _context);
 
 		// Infers the matrix sizes for the network from the netwokr arguments
 		_network.InferArgsMap(_context, &arguments, arguments);
@@ -68,14 +67,10 @@ namespace COSYNNC {
 		}
 
 		// Create an optimizer (for now we will use simply stochastic gradient descent (sgd))
-		Optimizer* optimizer = OptimizerRegistry::Find("sgd");
+		Optimizer* optimizer = OptimizerRegistry::Find("adam");
 		optimizer->SetParam("rescale_grad", 1.0 / batchSize);
 		optimizer->SetParam("lr", learningRate);
 		optimizer->SetParam("wd", weightDecay);
-		/*Optimizer* optimizer = OptimizerRegistry::Find("adam");
-		optimizer->SetParam("rescale_grad", 1.0 / batchSize);
-		optimizer->SetParam("lr", learningRate);
-		optimizer->SetParam("wd", weightDecay);*/
 
 		// Bind parameters to the neural network model through an executor
 		auto* executor = _network.SimpleBind(_context, arguments);
@@ -118,8 +113,7 @@ namespace COSYNNC {
 		system("cls");
 
 		// Evaluate network
-		Accuracy accuracy;
-		int conditionedInputs = 0;
+		//Accuracy accuracy;
 		int correct = 0;
 
 		currentDataIndex = 0;
@@ -128,6 +122,9 @@ namespace COSYNNC {
 			NDArray inputBatch = data->inputs.Slice(currentDataIndex, currentDataIndex + batchSize);
 			NDArray labelBatch = data->labels.Slice(currentDataIndex, currentDataIndex + batchSize);
 
+			auto inputBatchShape = inputBatch.GetShape();
+			auto labelBatchShape = labelBatch.GetShape();
+
 			// Copy data to the network
 			inputBatch.CopyTo(&arguments["input"]);
 			labelBatch.CopyTo(&arguments["output"]);
@@ -135,84 +132,81 @@ namespace COSYNNC {
 			// Execute the network
 			executor->Forward(false);
 
+			auto output = executor->outputs[0];
+			auto outputShape = output.GetShape();
+
 			// Determine accuracy
 			for (int i = 0; i < batchSize; i++) {
-				auto inputValue = arguments["input"].At(i);
-				auto labelValue = labelBatch.At(i);
-				auto predictionValue = arguments["output"].At(i);
+				auto inputValueOne = arguments["input"].At(i, 0);
+				auto inputValueTwo = arguments["input"].At(i, 1);
+				auto labelValue = labelBatch.At(i, 0);
+				//auto predictionValue = arguments["output"].At(i, 0);
+				auto predictionValue = output.At(i, 0);
 
-				std::cout << "Input: " << inputValue << "\tPrediction: " << predictionValue << std::endl;
+				auto quantizedState = stateQuantizer->QuantizeVector(stateQuantizer->DenormalizeVector(Vector({ inputValueOne, inputValueTwo })));
+				auto quantizedPrediction = inputQuantizer->QuantizeVector(inputQuantizer->DenormalizeVector(Vector(predictionValue)));
+				auto quantizedLabel = inputQuantizer->QuantizeVector(inputQuantizer->DenormalizeVector(Vector(labelValue)));
 
-				conditionedInputs++;
-				if (predictionValue >= 0.5 && labelValue == 1.0) correct++;
-				if (predictionValue < 0.5 && labelValue == 0.0) correct++;
+				if ((currentDataIndex + i) % steps == 0) std::cout << std::endl;
+
+				std::cout << "i: " << i << "\tx1: " << inputValueOne << "\tx2: " << inputValueTwo << "\tlabel: " << labelValue << "\tpred: " << predictionValue << std::endl;
+				//std::cout << "i: " << i << "\tx1: " << quantizedState[0] << "\tx2: " << quantizedState[1] << "\tlabel: " << quantizedLabel[0] << "\tpred: " << quantizedPrediction[0] << std::endl;
+				
+				if (quantizedLabel == quantizedPrediction) correct++;
 			}
 
 			// Update accuracy
-			accuracy.Update(labelBatch, executor->outputs[0]);
+			//accuracy.Update(labelBatch, executor->outputs[0]);
 
 			currentDataIndex += batchSize;
 		}
-		std::cout << std::endl << "Accuracy: " << accuracy.Get() << std::endl;
+		//std::cout << std::endl << "Accuracy: " << accuracy.Get() << std::endl;
 
-		// Manual accuracy on conditionedInputs
-		float manualAccuracy = (float)correct / (float)conditionedInputs;
-		std::cout << "Tested accuracy: " << manualAccuracy << std::endl;
-
-		float conditionedFraction = (float)conditionedInputs / (float)dataSize;
-		std::cout << "Conditioned fraction: " << conditionedFraction << std::endl;
+		// Accuracy
+		float accuracy = (float)correct / (float)dataSize * 100.0;
+		std::cout << "Accuracy: " << accuracy << "%" <<  std::endl;
 
 		// Make sure to delete the pointers
 		delete executor;
 		delete optimizer;
 	}
 
-	TrainingData* MultilayerPerceptron::GetTrainingData(Plant* plant, Controller* controller, Quantizer* stateQuantizer) {
-		const int episodes = 100000;
-		const int steps = 50;
-
-		//NDArray input(Shape(episodes*steps, 2), _context);
-		//NDArray label(Shape(episodes*steps, 1), _context);
+	TrainingData* MultilayerPerceptron::GetTrainingData(Plant* plant, Controller* controller, Quantizer* stateQuantizer, Quantizer* inputQuantizer) {
+		const int episodes = 100;
+		const int steps = 10;
 
 		vector<mx_float> inputs;
 		vector<mx_float> labels;
 
-		// Simulate a 1000 episodes
+		// Simulate episodes
 		for (int i = 0; i < episodes; i++) {
 			// Set initial position
-			/*plant->SetState(stateQuantizer->GetRandomVector());
+			controller->ResetController();
+			plant->SetState(stateQuantizer->GetRandomVector());
 
 			for (int j = 0; j < steps; j++) {
-				Vector state = stateQuantizer->QuantizeVector(plant->GetState());
-				Vector controlAction = controller->GetPDControlAction(state);
-				plant->Evolve(controlAction);
+				Vector quantizedState = stateQuantizer->QuantizeVector(plant->GetState());
+				Vector normalizedQuantizedState = stateQuantizer->NormalizeVector(quantizedState);
+
+				Vector controlAction = controller->GetPDControlAction(quantizedState);
+				Vector quantizedControlAction = inputQuantizer->QuantizeVector(controlAction);
+
+				Vector normalizedQuantizedControlAction = inputQuantizer->NormalizeVector(quantizedControlAction);
 
 				// Add data 
-				inputs.push_back(state[0]*1/10);
-				inputs.push_back(state[1]*1/10);
+				inputs.push_back(normalizedQuantizedState[0]);
+				inputs.push_back(normalizedQuantizedState[1]);
 
-				if (controlAction[0] > 2750) {
-					labels.push_back(1);
-				}
-				else {
-					labels.push_back(0);
-				}
-			}*/
+				labels.push_back(normalizedQuantizedControlAction[0]);
 
-			// Round function
-			float number = (rand() % 10000) / 10000.0;
-			inputs.push_back(number);
-
-			if (number >= 0.5) labels.push_back(1);
-			else labels.push_back(0);
+				// Evolve plant with control action
+				plant->Evolve(quantizedControlAction);
+			}
 		}
 
 		TrainingData* data = new TrainingData();
-		/*data->inputs = NDArray(input, Shape(episodes*steps, 1), _context);
-		data->labels = NDArray(label, Shape(episodes*steps, 1), _context);*/
-
-		data->inputs = NDArray(inputs, Shape(episodes), _context);
-		data->labels = NDArray(labels, Shape(episodes), _context);
+		data->inputs = NDArray(inputs, Shape(episodes*steps, 2), _context);
+		data->labels = NDArray(labels, Shape(episodes*steps, 1), _context);
 		return data;
 	}
 }

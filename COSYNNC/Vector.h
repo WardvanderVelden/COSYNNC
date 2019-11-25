@@ -25,6 +25,7 @@ namespace COSYNNC {
 		Vector operator*(const float scalar);
 		Vector operator/(const float scalar);
 		Vector operator=(const vector<float> values);
+		bool operator==(const Vector other);
 
 		float & operator[](const int index);
 
