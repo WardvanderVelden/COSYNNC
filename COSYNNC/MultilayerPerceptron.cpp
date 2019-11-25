@@ -46,9 +46,9 @@ namespace COSYNNC {
 	// DEBUG: Temporay test bed for learning MXNET
 	void MultilayerPerceptron::Test(TrainingData* data) {
 		const int batchSize = 100;
-		const float learningRate = 0.01;
+		const float learningRate = 0.1;
 		const float weightDecay = 0.1;
-		const int maxEpoch = 10000;
+		const int maxEpoch = 250;
 		const int dataSize = data->labels.Size();
 
 		// Arguments for the neural network (input layer is 2 neurons and the output layer is 1 neuron)
@@ -62,7 +62,7 @@ namespace COSYNNC {
 		_network.InferArgsMap(_context, &arguments, arguments);
 
 		// Initialize all parameters with a uniform distribution
-		auto initializer = Uniform(-1, 1);
+		auto initializer = Uniform(0.01);
 		for (auto& argument : arguments) {
 			initializer(argument.first, &argument.second);
 		}
@@ -72,6 +72,10 @@ namespace COSYNNC {
 		optimizer->SetParam("rescale_grad", 1.0 / batchSize);
 		optimizer->SetParam("lr", learningRate);
 		optimizer->SetParam("wd", weightDecay);
+		/*Optimizer* optimizer = OptimizerRegistry::Find("adam");
+		optimizer->SetParam("rescale_grad", 1.0 / batchSize);
+		optimizer->SetParam("lr", learningRate);
+		optimizer->SetParam("wd", weightDecay);*/
 
 		// Bind parameters to the neural network model through an executor
 		auto* executor = _network.SimpleBind(_context, arguments);
@@ -85,7 +89,7 @@ namespace COSYNNC {
 			std::cout << "Epoch: " << epoch << std::endl;
 
 			// While still have data
-			while (currentDataIndex < (dataSize - batchSize)) {			
+			while (currentDataIndex <= (dataSize - batchSize)) {			
 				// Get data batch
 				NDArray inputBatch = data->inputs.Slice(currentDataIndex, currentDataIndex + batchSize);
 				NDArray labelBatch = data->labels.Slice(currentDataIndex, currentDataIndex + batchSize);
@@ -110,13 +114,16 @@ namespace COSYNNC {
 				currentDataIndex += batchSize;
 			}
 		}
-		std::cout << std::endl << "Stopped training!" << std::endl;
+		std::cout << std::endl << "Stopped training!" << std::endl << std::endl;
+		system("cls");
 
 		// Evaluate network
-		/*Accuracy accuracy;
+		Accuracy accuracy;
+		int conditionedInputs = 0;
+		int correct = 0;
 
 		currentDataIndex = 0;
-		while (currentDataIndex < (dataSize - batchSize)) {
+		while (currentDataIndex <= (dataSize - batchSize)) {
 			// Get data batch
 			NDArray inputBatch = data->inputs.Slice(currentDataIndex, currentDataIndex + batchSize);
 			NDArray labelBatch = data->labels.Slice(currentDataIndex, currentDataIndex + batchSize);
@@ -128,50 +135,32 @@ namespace COSYNNC {
 			// Execute the network
 			executor->Forward(false);
 
-			// DEBUG
-			auto shape = executor->outputs[0].GetShape();
-			auto value = executor->outputs[0].GetData();
-			auto label = labelBatch.GetData();
+			// Determine accuracy
+			for (int i = 0; i < batchSize; i++) {
+				auto inputValue = arguments["input"].At(i);
+				auto labelValue = labelBatch.At(i);
+				auto predictionValue = arguments["output"].At(i);
+
+				std::cout << "Input: " << inputValue << "\tPrediction: " << predictionValue << std::endl;
+
+				conditionedInputs++;
+				if (predictionValue >= 0.5 && labelValue == 1.0) correct++;
+				if (predictionValue < 0.5 && labelValue == 0.0) correct++;
+			}
 
 			// Update accuracy
 			accuracy.Update(labelBatch, executor->outputs[0]);
 
 			currentDataIndex += batchSize;
 		}
-		std::cout << "Accuracy: " << accuracy.Get() << std::endl;*/
+		std::cout << std::endl << "Accuracy: " << accuracy.Get() << std::endl;
 
-		// Manually evaluate the network
-		arguments["input"] = NDArray(Shape(1), _context);
-		arguments["output"] = NDArray(Shape(1), _context);
+		// Manual accuracy on conditionedInputs
+		float manualAccuracy = (float)correct / (float)conditionedInputs;
+		std::cout << "Tested accuracy: " << manualAccuracy << std::endl;
 
-		currentDataIndex = 0;
-		int correct = 0;
-		int total = 0;
-		int nanInputs = 0;
-		while (currentDataIndex < dataSize) {
-			NDArray inputBatch = data->inputs.Slice(currentDataIndex, currentDataIndex + 1);
-			NDArray labelBatch = data->labels.Slice(currentDataIndex, currentDataIndex + 1);
-
-			inputBatch.CopyTo(&arguments["input"]);
-			labelBatch.CopyTo(&arguments["output"]);
-
-			// Execute the network
-			executor->Forward(false);
-
-			auto input = inputBatch.GetData();
-			auto label = labelBatch.GetData();
-			auto prediction = executor->outputs[0].GetData();
-
- 			if (*label == 1.0 && *prediction > 0.5) correct++;
-			if (*label == 0.0 && *prediction < 0.5) correct++;
-
-			std::cout << "Input: " << *input << "\tLabels: " << *label << "\tPrediction: " << *prediction << std::endl;
-
-			total++;
-			currentDataIndex++;
-		}
-		float accuracy = (float)correct / (float)total * 100.0;
-		std::cout << "Accuracy: " << accuracy << "%" << std::endl;
+		float conditionedFraction = (float)conditionedInputs / (float)dataSize;
+		std::cout << "Conditioned fraction: " << conditionedFraction << std::endl;
 
 		// Make sure to delete the pointers
 		delete executor;
@@ -179,7 +168,7 @@ namespace COSYNNC {
 	}
 
 	TrainingData* MultilayerPerceptron::GetTrainingData(Plant* plant, Controller* controller, Quantizer* stateQuantizer) {
-		const int episodes = 1000;
+		const int episodes = 100000;
 		const int steps = 50;
 
 		//NDArray input(Shape(episodes*steps, 2), _context);
@@ -214,7 +203,7 @@ namespace COSYNNC {
 			float number = (rand() % 10000) / 10000.0;
 			inputs.push_back(number);
 
-			if (number > 0.5) labels.push_back(1);
+			if (number >= 0.5) labels.push_back(1);
 			else labels.push_back(0);
 		}
 
