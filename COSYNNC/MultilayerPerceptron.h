@@ -36,6 +36,8 @@ namespace COSYNNC {
 		vector<Symbol> _outputs;
 
 		ActivationActType _activationFunction;
+
+		int _steps = 20;
 	};
 }
 
