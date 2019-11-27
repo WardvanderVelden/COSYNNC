@@ -34,20 +34,18 @@ namespace COSYNNC {
 				_outputs[i] = fullyConnected;
 			}
 			else {
-				_outputs[i] = Activation(fullyConnected, ActivationActType::kSigmoid);
+				_outputs[i] = Activation(fullyConnected, ActivationActType::kRelu); // Dont use sigmoid, its slow and shit
 			}
 		}
 
-		// DEBUG: This is now a softmax function (so cross entropy) just to test all the neural network functionality
-		_network = SoftmaxOutput(_outputs.back(), label);
-		//_network = LinearRegressionOutput(_outputs.back(), label);
+		_network = LinearRegressionOutput(_outputs.back(), label);
 	}
 
 	// DEBUG: Temporay test bed for learning MXNET
 	void MultilayerPerceptron::Test(TrainingData* data, Quantizer* stateQuantizer, Quantizer* inputQuantizer) {
 		const int batchSize = 250;
 		const float learningRate = 0.1;
-		const float weightDecay = 0.001;
+		const float weightDecay = 0.01;
 		const int maxEpoch = 25000;
 		const int dataSize = data->labels.Size()/2;
 
@@ -60,13 +58,13 @@ namespace COSYNNC {
 		_network.InferArgsMap(_context, &arguments, arguments);
 
 		// Initialize all parameters with a uniform distribution
-		auto initializer = Uniform(0.01);
+		auto initializer = Uniform(0.1);
 		for (auto& argument : arguments) {
 			initializer(argument.first, &argument.second);
 		}
 
 		// Create an optimizer (for now we will use simply stochastic gradient descent (sgd))
-		Optimizer* optimizer = OptimizerRegistry::Find("sgd");
+		Optimizer* optimizer = OptimizerRegistry::Find("adam");
 		optimizer->SetParam("rescale_grad", 1.0 / batchSize);
 		optimizer->SetParam("lr", learningRate);
 		optimizer->SetParam("wd", weightDecay);
