@@ -8,7 +8,8 @@ namespace COSYNNC {
 
 	Vector::Vector(float value) {
 		_length = 1;
-		_values.resize(1, value);
+		_values.resize(1);
+		_values[0] = value;
 	}
 
 	Vector::Vector(vector<float> values) {
@@ -57,6 +58,14 @@ namespace COSYNNC {
 		_values = values;
 
 		return *this;
+	}
+
+	bool Vector::operator==(const Vector other) {
+		for (int i = 0; i < _length; i++) {
+			if (_values[i] != other._values[i])	return false;
+		}
+
+		return true;
 	}
 
 

@@ -47,18 +47,22 @@ Vector Controller::GetPDControlAction(Vector state) {
 	Vector goal = _controlSpecification->GetCenter();
 
 	// Calculate proportional and derivative
-	Vector proportional = (goal - state);
-	Vector lastProportional = (goal - _lastState);
+	Vector proportional = (Vector(goal) - state);
+	Vector lastProportional = (Vector(goal) - _lastState);
 
 	Vector derivative = (proportional - lastProportional) / _tau;
 
 	Vector controlAction(_inputSpaceDim);
 
 	// Determine control action based on two PD controllers and where we are in the state space
-	if (state[0] > goal[0]) controlAction[0] = 2500 - proportional[0] * 500 - derivative[1] * 100;
-	else controlAction[0] = 2500 - proportional[0] * 2500 - derivative[1] * 100;
+	if (state[0] > goal[0]) controlAction[0] = 2500 + proportional[0] * 500 + derivative[1] * 100;
+	else controlAction[0] = 2500 + proportional[0] * 2500 + derivative[1] * 100;
 
 	if (controlAction[0] < 0) controlAction[0] = 0;
 
 	return controlAction;
+}
+
+void Controller::ResetController() {
+	_lastState = Vector(_stateSpaceDim);
 }

@@ -32,13 +32,12 @@ int main() {
 
 
 	// Initialize quantizers
-	Quantizer* stateQuantizer = new Quantizer();
+	Quantizer* stateQuantizer = new Quantizer(true);
 	//stateQuantizer->SetQuantizeParameters(Vector({ 0.1, 0.1 }), Vector({ -0.05, -0.05 }));
 	stateQuantizer->SetQuantizeParameters(Vector({ 0.1,0.1 }), Vector({ -10, -5 }), Vector({ 10, 5 }));
 
-	Quantizer* inputQuantizer = new Quantizer();
-	inputQuantizer->SetQuantizeParameters(Vector((float)0.1), Vector((float)-0.05));
-
+	Quantizer* inputQuantizer = new Quantizer(true);
+	inputQuantizer->SetQuantizeParameters(Vector((float)25.0), Vector((float)0.0), Vector((float)5000.0));
 
 	// Initialize plant
 	Rocket* plant = new Rocket();
@@ -58,37 +57,13 @@ int main() {
 	// Initialize a multilayer perceptron neural network
 	// DEBUG: This is just a simple test 1 8 1 neural network to test the MXNet library functionality 
 	// Please note that the output layer should be noted
-	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 8, 1 }, ActivationActType::kRelu);
-	TrainingData* data = multilayerPerceptron->GetTrainingData(plant, &controller, stateQuantizer);
-	multilayerPerceptron->Test(data);
-
-	delete data;
-
-
-	// Simulate closed loop
-	/*std::cout << std::endl;
-	for (int i = 0; i < 100; i++) {
-		// Get the control action
-		Vector input = controller.GetControlAction(plant->GetState());
-		std::cout << "i: ";
-		input.PrintValues();
-
-		// Evolve the system according to the control action
-		plant->Evolve(input);
-
-		// Print state and quantized state for comparison
-		std::cout << "\ts: ";
-		plant->GetState().PrintValues();
-
-		std::cout << "\tq: ";
-		stateQuantizer->QuantizeVector(plant->GetState()).PrintValues();
-
-		std::cout << std::endl;
-	}
-	std::cout << std::endl;*/
+	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 8, 8, 2 }, ActivationActType::kRelu);
+	TrainingData* data = multilayerPerceptron->GetTrainingData(plant, &controller, stateQuantizer, inputQuantizer);
+	multilayerPerceptron->Test(data, stateQuantizer, inputQuantizer);
 
 
 	// Free memory
+	delete data;
 	delete plant;
 	delete stateQuantizer;
 	delete inputQuantizer;
