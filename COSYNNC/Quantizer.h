@@ -16,8 +16,11 @@ namespace COSYNNC {
 		// Set the quantization parameters for the space, if the space is not bounded the lower bound will be used as the reference
 		void SetQuantizeParameters(Vector stateSpaceEta, Vector stateSpaceLowerBound, Vector stateSpaceUpperBound);
 
-		// Set quantize a vector to the quantized space based on the quantization parameters
+		// Quantize a vector to the quantized space based on the quantization parameters
 		Vector QuantizeVector(Vector v);
+
+		// Quantizes a normalized vector to a normalized quantized vector
+		Vector QuantizeNormalizedVector(Vector v);
 
 		// Normalize a vector from the bounded space to the normal space
 		Vector NormalizeVector(Vector v);

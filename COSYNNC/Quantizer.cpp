@@ -50,6 +50,12 @@ Vector Quantizer::QuantizeVector(Vector v) {
 	return quantized;
 }
 
+Vector Quantizer::QuantizeNormalizedVector(Vector v) {
+	auto denormalized = DenormalizeVector(v);
+	auto quantized = QuantizeVector(denormalized);
+
+	return NormalizeVector(quantized);
+}
 
 // Normalize a vector from the bounded space to the normal space
 Vector Quantizer::NormalizeVector(Vector v) {
