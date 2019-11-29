@@ -5,6 +5,7 @@ namespace COSYNNC {
 
 	}
 
+
 	ControlSpecification::ControlSpecification(ControlSpecificationType type, Plant * plant) {
 		_type = type;
 		_spaceDim = plant->GetStateSpaceDimension();
@@ -15,12 +16,14 @@ namespace COSYNNC {
 	void ControlSpecification::SetHyperInterval(Vector lowerVertex, Vector upperVertex) {
 		_lowerVertex = lowerVertex;
 		_upperVertex = upperVertex;
-
-		_center = _lowerVertex + (_upperVertex - _lowerVertex) * 0.5;
 	}
 
-	// Gets the center of the hyper interval
-	Vector ControlSpecification::GetCenter() const {
-		return _center;
+
+	// Checks if the current state vector satisfies is in the control specification goal
+	bool ControlSpecification::IsInControlGoal(Vector state) {
+		for (int i = 0; i < state.GetLength(); i++) {
+			if (state[i] < _lowerVertex[i] || state[i] > _upperVertex[i]) return false;
+		}
+		return true;
 	}
 }

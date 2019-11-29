@@ -2,16 +2,14 @@
 
 namespace COSYNNC {
 	// Initializes a multilayer perceptron neural network topology
-	MultilayerPerceptron::MultilayerPerceptron(vector<int> layers, ActivationActType activationFunction) {
+	MultilayerPerceptron::MultilayerPerceptron(vector<int> hiddenLayers, ActivationActType activationFunction) {
 		_activationFunction = activationFunction;
 
-		SetLayers(layers);
-
-		InitializeNetworkTopology();
+		SetHiddenLayers(hiddenLayers);
 	}
 
 	// Initializes a multilayer perceptron neural network topology
-	void MultilayerPerceptron::InitializeNetworkTopology() {
+	void MultilayerPerceptron::InitializeGraph() {
 		auto input = Symbol::Variable("input");
 		auto label = Symbol::Variable("label");
 
@@ -44,14 +42,6 @@ namespace COSYNNC {
 
 	// DEBUG: Temporay test bed for learning MXNET
 	void MultilayerPerceptron::Test(TrainingData* data, Quantizer* stateQuantizer, Quantizer* inputQuantizer) {
-		// For 8 8 1 neural network
-		/*const int batchSize = 10000;
-		const float learningRate = 0.05;
-		const float weightDecay = 0.001;
-
-		const int maxEpoch = 50000;
-		const int verbalEpoch = 250;*/
-
 		const int batchSize = 2500;
 		const float learningRate = 0.05;
 		const float weightDecay = 0.0001;
@@ -210,7 +200,7 @@ namespace COSYNNC {
 		delete optimizer;
 	}
 
-	TrainingData* MultilayerPerceptron::GetTrainingData(Plant* plant, Controller* controller, Quantizer* stateQuantizer, Quantizer* inputQuantizer) {
+	/*TrainingData* MultilayerPerceptron::GetTrainingData(Plant* plant, Controller* controller, Quantizer* stateQuantizer, Quantizer* inputQuantizer) {
 		std::cout << "Phase: Data generation" << std::endl << "\t";
 
 		const int episodes = 20000;
@@ -239,7 +229,7 @@ namespace COSYNNC {
 				/*inputs.push_back(normalizedQuantizedState[0]);
 				inputs.push_back(normalizedQuantizedState[1]);
 
-				labels.push_back(normalizedQuantizedControlAction[0]);*/
+				labels.push_back(normalizedQuantizedControlAction[0]);
 
 				float randomValueOne = rand() % 100000 / 100000.0 * 1.7;
 				float randomValueTwo = rand() % 100000 / 100000.0 * 1.7;
@@ -265,5 +255,5 @@ namespace COSYNNC {
 		std::cout << std::endl << "\tData generation completed" << std::endl;
 
 		return data;
-	}
+	}*/
 }

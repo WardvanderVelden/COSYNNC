@@ -18,6 +18,7 @@ namespace COSYNNC {
 		// Initialize a vector by giving the values for the vector
 		Vector(vector<float> values);
 
+		// Mathematical operators
 		Vector operator+(const Vector other);
 		Vector operator+=(const Vector other);
 		Vector operator-(const Vector other);
@@ -27,7 +28,8 @@ namespace COSYNNC {
 		Vector operator=(const vector<float> values);
 		bool operator==(const Vector other);
 
-		float & operator[](const int index);
+		// Indexing operator
+		float& operator[](const int index);
 
 		// Returns the amount of elements in the vector
 		int GetLength() const;

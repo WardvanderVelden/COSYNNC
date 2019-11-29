@@ -21,7 +21,7 @@ Controller::Controller(Plant* plant, Quantizer* stateQuantizer, Quantizer* input
 	_inputSpaceDim = plant->GetInputSpaceDimension();
 
 	_tau = plant->GetTau();
-	_lastState = plant->GetState();
+	//_lastState = plant->GetState();
 
 	_stateQuantizer = stateQuantizer;
 	_inputQuantizer = inputQuantizer;
@@ -32,18 +32,26 @@ void Controller::SetControlSpecification(ControlSpecification* specification) {
 	_controlSpecification = specification;
 }
 
+
+void Controller::SetNeuralNetwork(NeuralNetwork* neuralNetwork) {
+	_neuralNetwork = neuralNetwork;
+}
+
 // Read out the control action using the neural network with the quantized state as input
 Vector Controller::GetControlAction(Vector state) {
-	Vector controlAction(_inputSpaceDim);
-	
-	controlAction = GetPDControlAction(state);
+	if (_neuralNetwork == NULL) return Vector(_inputSpaceDim);
 
-	_lastState = state;
-	return controlAction;
+	auto quantizedNormalizedState = _stateQuantizer->NormalizeVector(_stateQuantizer->QuantizeVector(state));
+	auto networkOutput = _neuralNetwork->EvaluateNetwork(quantizedNormalizedState);
+	
+	auto denormalizeddInput = _inputQuantizer->DenormalizeVector(networkOutput);
+	auto quantizedInput = _inputQuantizer->QuantizeVector(denormalizeddInput);
+	
+	return quantizedInput;
 }
 
 // DEBUG: Temporay PD controller in order to have some sort of benchmark of data generator
-Vector Controller::GetPDControlAction(Vector state) {
+/*Vector Controller::GetPDControlAction(Vector state) {
 	Vector goal = _controlSpecification->GetCenter();
 
 	// Calculate proportional and derivative
@@ -65,4 +73,4 @@ Vector Controller::GetPDControlAction(Vector state) {
 
 void Controller::ResetController() {
 	_lastState = Vector(_stateSpaceDim);
-}
+}*/

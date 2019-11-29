@@ -29,7 +29,6 @@ namespace COSYNNC {
 	}
 	Vector Vector::operator+=(const Vector other) { return *this + other; }
 
-
 	Vector Vector::operator-(const Vector other) {
 		if (_length != other._length) return *this;
 
@@ -40,18 +39,15 @@ namespace COSYNNC {
 	}
 	Vector Vector::operator-=(const Vector other) { return *this - other; }
 
-
 	Vector Vector::operator*(const float scalar) {
 		for (int i = 0; i < _length; i++)
 			_values[i] *= scalar;
 
 		return *this;
 	}
-
 	Vector Vector::operator/(const float scalar) {
 		return *this * (1 / scalar);
 	}
-
 
 	Vector Vector::operator=(const vector<float> values) {
 		_length = values.size();
@@ -59,7 +55,6 @@ namespace COSYNNC {
 
 		return *this;
 	}
-
 	bool Vector::operator==(const Vector other) {
 		for (int i = 0; i < _length; i++) {
 			if (_values[i] != other._values[i])	return false;
@@ -67,7 +62,6 @@ namespace COSYNNC {
 
 		return true;
 	}
-
 
 	float& Vector::operator[](const int index) {
 		return _values[index];
