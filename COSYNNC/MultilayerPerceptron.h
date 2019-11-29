@@ -37,7 +37,7 @@ namespace COSYNNC {
 
 		ActivationActType _activationFunction;
 
-		int _steps = 20;
+		int _steps = 25;
 	};
 }
 
