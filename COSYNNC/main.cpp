@@ -32,14 +32,15 @@ int main() {
 
 	
 	// COSYNNC training parameters
-	const int episodes = 50000;
-	const int steps = 15;
+	const int episodes = 25000;
+	const int steps = 10;
 	const int verboseEpisode = 1000;
 
 
 	// Initialize quantizers
 	Quantizer* stateQuantizer = new Quantizer(true);
-	stateQuantizer->SetQuantizeParameters(Vector({ 0.1, 0.1 }), Vector({ -5, -2.5 }), Vector({ 5, 2.5 }));
+	//stateQuantizer->SetQuantizeParameters(Vector({ 0.1, 0.1 }), Vector({ -5, -2.5 }), Vector({ 5, 2.5 }));
+	stateQuantizer->SetQuantizeParameters(Vector({ 0.1, 0.1 }), Vector({ -5, -5 }), Vector({ 5, 5 }));
 
 	Quantizer* inputQuantizer = new Quantizer(true);
 	//inputQuantizer->SetQuantizeParameters(Vector((float)100.0), Vector((float)0.0), Vector((float)3000.0));
@@ -61,14 +62,15 @@ int main() {
 
 
 	// Initialize a multilayer perceptron neural network and configure it to function as controller
-	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 16, 16 }, ActivationActType::kRelu);
-	multilayerPerceptron->InitializeOptimizer("adam", 0.05, 0.001);
+	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 16 }, ActivationActType::kRelu);
+	multilayerPerceptron->InitializeOptimizer("adam", 0.01, 0.0025);
+	//multilayerPerceptron->InitializeOptimizer("sgd", 0.05, 0.005);
 	multilayerPerceptron->ConfigurateInputOutput(plant, steps);
 	controller.SetNeuralNetwork(multilayerPerceptron);
 
 
 	// TEMPORARY: Proof of concept for the reinforcement learning synthesis routine
-	auto initialState = Vector({ -1.2, 0.2 });
+	//auto initialState = Vector({ -1.2, 0.2 });
 	for (int i = 0; i < episodes; i++) {
 		if (i % verboseEpisode == 0) std::cout << std::endl;
 
@@ -76,16 +78,20 @@ int main() {
 		//vector<Vector> inputs;
 		vector<Vector> labels;
 
-		//auto initialState = stateQuantizer->GetRandomVector();
-		auto oldIsAtGoal = specification.IsInControlGoal(initialState);
+		auto initialState = stateQuantizer->GetRandomVector();
+		initialState = initialState * 0.5;
+		plant->SetState(initialState);
+
+		vector<float> normWeights = { 1.0, 4.0 };
+		auto oldDifference = (initialState - specification.GetCenter()).GetWeightedNorm(normWeights);
+
+		bool isInStateSet = true;
 
 		// Simulate the episode using the neural network
-		plant->SetState(initialState);
 		for (int j = 0; j < steps; j++) {
-			//auto input = controller.GetControlAction(plant->GetState());
 			auto normalizedQuantizedState = stateQuantizer->NormalizeVector(stateQuantizer->QuantizeVector(plant->GetState()));
 			auto rawInput = multilayerPerceptron->EvaluateNetwork(normalizedQuantizedState);
-			
+
 			auto denormalizedQuantizedInput = inputQuantizer->DenormalizeVector(rawInput);
 			auto input = inputQuantizer->QuantizeVector(denormalizedQuantizedInput);
 
@@ -93,29 +99,79 @@ int main() {
 			plant->Evolve(input);
 			auto state = plant->GetState();
 
+			if (!stateQuantizer->IsInBounds(state)) {
+				isInStateSet = false;
+				break;
+			}
+
 			// Find label based on performance
 			auto isAtGoal = specification.IsInControlGoal(state);
 
 			Vector label(input.GetLength());
-			if (isAtGoal) label[0] = 2750.0;
-			else if (state[0] < -1 && state[1] < 1) label[0] = 4990;
-			else label[0] = 10;
 
-			oldIsAtGoal = isAtGoal;
+			// Control scheme based on control to minimize the weighted norm, it determines whether or not the resulting control action that led to the new state from
+			// the previous state was beneficial. If it was the network will reinforce that input from the previous state to that input
+			auto difference = (state - specification.GetCenter()).GetWeightedNorm(normWeights);
+
+			if (difference < oldDifference) label = input;
+			else {
+				if (state[0] < 0) label = Vector((float)4582.5);
+				else label = Vector((float)916.5);
+			}
+
+			states.push_back(normalizedQuantizedState);
+			labels.push_back(inputQuantizer->NormalizeVector(label));
+
+			oldDifference = difference;
+
+			// Take the mean of the states to confirm that the neural network is still capable of learning
+			/*Vector networkInput = Vector({ (float)(rand() % 10000 / 10000.0), (float)(rand() % 10000 / 10000.0) });
+
+			float mean = 0.5 * networkInput[0];
+			mean += 0.5 * networkInput[1];
+			label[0] = mean;
+
+			states.push_back(networkInput);
+			labels.push_back(label);*/
 
 			// DEBUG: Print simulation for verification purposes
-			if (i % verboseEpisode == 0)
-				std::cout << "i: " << i << "\tj: " << j << "\tx0: " << state[0] << "\tx1: " << state[1] << "\tp: " << rawInput[0] << "\tu: " << input[0] << "\ts: " << isAtGoal << "\tl: " << label[0] << std::endl;
-		
-			// Add to history for training after the episode
-			states.push_back(stateQuantizer->NormalizeVector(state));
-			//inputs.push_back(inputQuantizer->NormalizeVector(input));
-			labels.push_back(inputQuantizer->NormalizeVector(label));
+			if (i % verboseEpisode == 0) {
+				//std::cout << "i: " << i << "\tj: " << j << "\t\tx0: " << state[0] << ":" << states[j][0] <<  "\tx1: " << state[1] << ":" << states[j][1] << "\t\tp: " << rawInput[0] << "\tl: " << label[0] << ":" << labels[j][0] << "\tu: " << input[0] << "\ts: " << isAtGoal << std::endl;
+				std::cout << "i: " << i << "\tj: " << j << "\t\tx0: " << state[0] << "\tx1: " << state[1] << "\t\tp: " << rawInput[0] << "\tl: " << label[0] << "\tu: " << input[0] << "\ts: " << isAtGoal << std::endl;
+			}
 		}
 
 		// Train the neural network based on the performance of the network
 		multilayerPerceptron->Train(states, labels);
 	}
+
+	// Evaluate some random initial positions to see how the network is performing
+	std::cout << std::endl;
+	for (int i = 0; i < 10; i++) {
+		auto initialState = stateQuantizer->GetRandomVector();
+		initialState = initialState * 0.5;
+		plant->SetState(initialState);
+
+		std::cout << std::endl;
+
+		for (int j = 0; j < steps; j++) {
+			auto normalizedQuantizedState = stateQuantizer->NormalizeVector(stateQuantizer->QuantizeVector(plant->GetState()));
+			auto rawInput = multilayerPerceptron->EvaluateNetwork(normalizedQuantizedState);
+
+			auto denormalizedQuantizedInput = inputQuantizer->DenormalizeVector(rawInput);
+			auto input = inputQuantizer->QuantizeVector(denormalizedQuantizedInput);
+
+			// Evolve the plant
+			plant->Evolve(input);
+			auto state = plant->GetState();
+
+			// Print simulation for evaluation
+			std::cout << "i: " << i << "\tj: " << j << "\t\tx0: " << state[0] << "\tx1: " << state[1] << "\t\tp: " << denormalizedQuantizedInput[0] << "\tu: " << input[0] << std::endl;
+		}
+	}
+
+	// DEBUG: Print weights for evaluation
+	//multilayerPerceptron->PrintWeights();
 
 
 	// Free memory
@@ -124,6 +180,7 @@ int main() {
 	delete inputQuantizer;
 	delete multilayerPerceptron;
 
+	MXNotifyShutdown();
 
 	// Wait for an input to stop the program
 	system("pause");

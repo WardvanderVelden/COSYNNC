@@ -37,6 +37,12 @@ namespace COSYNNC {
 		// Sets the amount of elements in the vector
 		void SetLength(int length);
 
+		// Returns the norm of the vector
+		float GetNorm();
+
+		// Returns the weighted norm of the vector
+		float GetWeightedNorm(vector<float> weights);
+
 		// Prints the elements contained within the vector to the console
 		void PrintValues() const;
 

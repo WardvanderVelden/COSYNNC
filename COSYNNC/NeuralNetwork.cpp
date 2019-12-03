@@ -93,18 +93,22 @@ namespace COSYNNC {
 		vector<mx_float> inputData;
 		vector<mx_float> labelData;
 
-		for (int i = 0; i < states.size(); i++) {
-			auto state = states[i];
+		auto amountOfStates = states.size();
+		for (int i = 0; i < _batchSize; i++) {
+			auto state = states[i % amountOfStates];
 			for (int j = 0; j < _inputDimension; j++)
 				inputData.push_back(state[j]);
 
-			auto label = labels[i];
+			auto label = labels[i % amountOfStates];
 			for (int j = 0; j < _labelDimension; j++)
 				labelData.push_back(label[j]);
 		}
 
 		NDArray networkInputData(inputData, Shape(_batchSize, _inputDimension), _context);
 		NDArray networkLabelData(labelData, Shape(_batchSize, _labelDimension), _context);
+
+		networkInputData.WaitToRead();
+		networkLabelData.WaitToRead();
 
 		// Assign the data to the network
 		networkInputData.CopyTo(&_arguments["input"]);
@@ -114,18 +118,28 @@ namespace COSYNNC {
 		networkInputData.WaitToWrite(); 
 		networkLabelData.WaitToWrite();
 
-		/*for (int i = 0; i < _batchSize; i++) {
-			std::cout << "\tx0: " << _arguments["input"].At(i, 0) << "\tx1: " << _arguments["input"].At(i, 1) << std::endl;
-		}*/
-
 		// Train
 		_executor->Forward(true);
 		_executor->Backward();
+
+		// DEBUG: Print to debug
+		/*for (int i = 0; i < _batchSize; i++) {
+			std::cout << "\tx0: " << _arguments["input"].At(i, 0) << "\tx1: " << _arguments["input"].At(i, 1) << "\tp: " << _executor->outputs[0].At(i, 0) << "\tl: " << _arguments["label"].At(i, 0) << std::endl;
+		}*/
 
 		// Update parameters
 		for (int i = 0; i < _argumentNames.size(); ++i) {
 			if (_argumentNames[i] == "input" || _argumentNames[i] == "label") continue;
 			_optimizer->Update(i, _executor->arg_arrays[i], _executor->grad_arrays[i]);
+		}
+	}
+
+
+	// Print network weights
+	void NeuralNetwork::PrintWeights() const {
+		for (int i = 0; i < _argumentNames.size(); i++) {
+			auto name = _argumentNames[i];
+			std::cout << name << std::endl;
 		}
 	}
 

@@ -50,6 +50,7 @@ Vector Quantizer::QuantizeVector(Vector v) {
 	return quantized;
 }
 
+
 Vector Quantizer::QuantizeNormalizedVector(Vector v) {
 	auto denormalized = DenormalizeVector(v);
 	auto quantized = QuantizeVector(denormalized);
@@ -87,7 +88,7 @@ Vector Quantizer::DenormalizeVector(Vector v) {
 
 
 // Checks if a vector is in the bounds of the quantized space
-Vector Quantizer::IsInBounds(Vector v) {
+bool Quantizer::IsInBounds(Vector v) {
 	for (int i = 0; i < v.GetLength(); i++) {
 		if (v[i] < _spaceLowerBound[i] || v[i] > _spaceUpperBound[i]) {
 			return false;

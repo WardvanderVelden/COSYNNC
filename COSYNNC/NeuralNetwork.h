@@ -30,6 +30,9 @@ namespace COSYNNC {
 		// Train the network based on inputs and labels
 		virtual void Train(vector<Vector> states, vector<Vector> labels);
 
+		// Print network weights
+		void PrintWeights() const;
+
 		// Sets the layers of the network, including the output (if we consider a fully connected network topology)
 		void SetLayers(vector<int> layers);
 

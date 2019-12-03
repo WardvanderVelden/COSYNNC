@@ -21,6 +21,9 @@ namespace COSYNNC {
 
 		// Checks if the current state vector satisfies is in the control specification goal
 		bool IsInControlGoal(Vector state); 
+
+		// Returns the center of the control specification set
+		Vector GetCenter() const;
 	private:
 		ControlSpecificationType _type;
 

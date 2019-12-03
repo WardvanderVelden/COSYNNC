@@ -1,11 +1,13 @@
 #include "ControlSpecification.h";
 
 namespace COSYNNC {
+	// Initialize a default control specification
 	ControlSpecification::ControlSpecification() {
 
 	}
 
 
+	// Initializates the control specification based on the control specification type and the plant
 	ControlSpecification::ControlSpecification(ControlSpecificationType type, Plant * plant) {
 		_type = type;
 		_spaceDim = plant->GetStateSpaceDimension();
@@ -16,6 +18,12 @@ namespace COSYNNC {
 	void ControlSpecification::SetHyperInterval(Vector lowerVertex, Vector upperVertex) {
 		_lowerVertex = lowerVertex;
 		_upperVertex = upperVertex;
+
+		auto dimension = _lowerVertex.GetLength();
+		_center = Vector(dimension);
+		for (int i = 0; i < dimension; i++) {
+			_center[i] = (_upperVertex[i] - lowerVertex[i]) / 2 + _lowerVertex[i];
+		}
 	}
 
 
@@ -25,5 +33,11 @@ namespace COSYNNC {
 			if (state[i] < _lowerVertex[i] || state[i] > _upperVertex[i]) return false;
 		}
 		return true;
+	}
+
+
+	// Returns the center of the control specification set
+	Vector ControlSpecification::GetCenter() const {
+		return _center;
 	}
 }

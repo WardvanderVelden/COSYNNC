@@ -22,28 +22,34 @@ namespace COSYNNC {
 	Vector Vector::operator+(const Vector other) {
 		if (_length != other._length) return *this;
 
-		for (int i = 0; i < _length; i++)
-			_values[i] += other._values[i];
+		Vector vec(*this);
 
-		return *this;
+		for (int i = 0; i < _length; i++)
+			vec[i] += other._values[i];
+
+		return vec;
 	}
 	Vector Vector::operator+=(const Vector other) { return *this + other; }
 
 	Vector Vector::operator-(const Vector other) {
 		if (_length != other._length) return *this;
 
-		for (int i = 0; i < _length; i++)
-			_values[i] -= other._values[i];
+		Vector vec(*this);
 
-		return *this;
+		for (int i = 0; i < _length; i++)
+			vec[i] -= other._values[i];
+
+		return vec;
 	}
 	Vector Vector::operator-=(const Vector other) { return *this - other; }
 
 	Vector Vector::operator*(const float scalar) {
-		for (int i = 0; i < _length; i++)
-			_values[i] *= scalar;
+		Vector vec(*this);
 
-		return *this;
+		for (int i = 0; i < _length; i++)
+			vec[i] *= scalar;
+
+		return vec;
 	}
 	Vector Vector::operator/(const float scalar) {
 		return *this * (1 / scalar);
@@ -76,6 +82,23 @@ namespace COSYNNC {
 		_values.resize(size, 0);
 	}
 
+	// Returns the norm of the vector
+	float Vector::GetNorm() {
+		float norm = 0.0;
+		for (int i = 0; i < _length; i++) {
+			norm += pow(_values[i], 2);
+		}
+		return sqrt(norm);
+	}
+
+	// Returns the weighted norm of the vector
+	float Vector::GetWeightedNorm(vector<float> weights) {
+		float norm = 0.0;
+		for (int i = 0; i < _length; i++) {
+			norm += pow(weights[i] * _values[i], 2);
+		}
+		return sqrt(norm);
+	}
 
 	void Vector::PrintValues() const {
 		for (int i = 0; i < _length; i++) {
