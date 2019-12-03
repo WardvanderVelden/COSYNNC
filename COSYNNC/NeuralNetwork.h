@@ -19,7 +19,7 @@ namespace COSYNNC {
 		virtual void InitializeGraph();
 
 		// Initializes the optimizer for training
-		virtual void InitializeOptimizer(string optimizer = "sgd", float learningRate = 0.1, float weightDecayRate = 0.1);
+		virtual void InitializeOptimizer(string optimizer = "sgd", float learningRate = 0.1, float weightDecayRate = 0.1, bool verboseOptimizationInspection = false);
 
 		// Configures the neural network to receive input and output data compatible with the state and input dimensions and batch size
 		virtual void ConfigurateInputOutput(Plant* plant, int batchSize = 1, float initialDistribution = 0.1);
@@ -48,6 +48,8 @@ namespace COSYNNC {
 
 		int _inputDimension = 1;
 		int _labelDimension = 1;
+
+		bool _verboseOptimizationInspection = false;
 
 		Symbol _network;
 		map<string, NDArray> _arguments;

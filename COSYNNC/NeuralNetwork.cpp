@@ -20,7 +20,9 @@ namespace COSYNNC {
 
 	
 	// Initializes the optimizer for training
-	void NeuralNetwork::InitializeOptimizer(string optimizer, float learningRate, float weightDecayRate) {
+	void NeuralNetwork::InitializeOptimizer(string optimizer, float learningRate, float weightDecayRate, bool verboseOptimizationInspection) {
+		_verboseOptimizationInspection = verboseOptimizationInspection;
+
 		_optimizer = OptimizerRegistry::Find(optimizer);
 		_optimizer->SetParam("rescale_grad", 1.0 / _batchSize);
 		_optimizer->SetParam("lr", learningRate);
@@ -123,9 +125,11 @@ namespace COSYNNC {
 		_executor->Backward();
 
 		// DEBUG: Print to debug
-		/*for (int i = 0; i < _batchSize; i++) {
-			std::cout << "\tx0: " << _arguments["input"].At(i, 0) << "\tx1: " << _arguments["input"].At(i, 1) << "\tp: " << _executor->outputs[0].At(i, 0) << "\tl: " << _arguments["label"].At(i, 0) << std::endl;
-		}*/
+		if (_verboseOptimizationInspection) {
+			for (int i = 0; i < _batchSize; i++) {
+				std::cout << "\tx0: " << _arguments["input"].At(i, 0) << "\tx1: " << _arguments["input"].At(i, 1) << "\tp: " << _executor->outputs[0].At(i, 0) << "\tl: " << _arguments["label"].At(i, 0) << std::endl;
+			}
+		}
 
 		// Update parameters
 		for (int i = 0; i < _argumentNames.size(); ++i) {
