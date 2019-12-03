@@ -22,36 +22,38 @@ namespace COSYNNC {
 	Vector Vector::operator+(const Vector other) {
 		if (_length != other._length) return *this;
 
-		for (int i = 0; i < _length; i++)
-			_values[i] += other._values[i];
+		Vector vec(*this);
 
-		return *this;
+		for (int i = 0; i < _length; i++)
+			vec[i] += other._values[i];
+
+		return vec;
 	}
 	Vector Vector::operator+=(const Vector other) { return *this + other; }
-
 
 	Vector Vector::operator-(const Vector other) {
 		if (_length != other._length) return *this;
 
-		for (int i = 0; i < _length; i++)
-			_values[i] -= other._values[i];
+		Vector vec(*this);
 
-		return *this;
+		for (int i = 0; i < _length; i++)
+			vec[i] -= other._values[i];
+
+		return vec;
 	}
 	Vector Vector::operator-=(const Vector other) { return *this - other; }
 
-
 	Vector Vector::operator*(const float scalar) {
+		Vector vec(*this);
+
 		for (int i = 0; i < _length; i++)
-			_values[i] *= scalar;
+			vec[i] *= scalar;
 
-		return *this;
+		return vec;
 	}
-
 	Vector Vector::operator/(const float scalar) {
 		return *this * (1 / scalar);
 	}
-
 
 	Vector Vector::operator=(const vector<float> values) {
 		_length = values.size();
@@ -59,7 +61,6 @@ namespace COSYNNC {
 
 		return *this;
 	}
-
 	bool Vector::operator==(const Vector other) {
 		for (int i = 0; i < _length; i++) {
 			if (_values[i] != other._values[i])	return false;
@@ -67,7 +68,6 @@ namespace COSYNNC {
 
 		return true;
 	}
-
 
 	float& Vector::operator[](const int index) {
 		return _values[index];
@@ -82,6 +82,23 @@ namespace COSYNNC {
 		_values.resize(size, 0);
 	}
 
+	// Returns the norm of the vector
+	float Vector::GetNorm() {
+		float norm = 0.0;
+		for (int i = 0; i < _length; i++) {
+			norm += pow(_values[i], 2);
+		}
+		return sqrt(norm);
+	}
+
+	// Returns the weighted norm of the vector
+	float Vector::GetWeightedNorm(vector<float> weights) {
+		float norm = 0.0;
+		for (int i = 0; i < _length; i++) {
+			norm += pow(weights[i] * _values[i], 2);
+		}
+		return sqrt(norm);
+	}
 
 	void Vector::PrintValues() const {
 		for (int i = 0; i < _length; i++) {

@@ -4,6 +4,7 @@
 #include "Quantizer.h"
 #include "ControlSpecification.h"
 #include <math.h>
+#include "NeuralNetwork.h"
 
 namespace COSYNNC {
 	class Controller
@@ -22,19 +23,22 @@ namespace COSYNNC {
 		// Set the control specification of the controller
 		void SetControlSpecification(ControlSpecification* specification);
 
+		// Set the neural network that will dictate the control input of the system
+		void SetNeuralNetwork(NeuralNetwork* neuralNetwork);
+
 		// Get a control action based on the state in the stateSpace of the plant
 		Vector GetControlAction(Vector state);
 
 		// DEBUG: Temporay PD controller in order to have some sort of benchmark of data generator
-		Vector GetPDControlAction(Vector state);
+		//Vector GetPDControlAction(Vector state);
 
 		// DEBUG: Resets the control so no old information is used for calcuating the input
-		void ResetController();
+		//void ResetController();
 	private:
 		float _tau;
 
 		Vector _lastControlAction;
-		Vector _lastState;
+		//Vector _lastState;
 
 		int _stateSpaceDim;
 		int _inputSpaceDim;
@@ -43,6 +47,8 @@ namespace COSYNNC {
 		Quantizer* _inputQuantizer = NULL;
 
 		ControlSpecification* _controlSpecification;
+
+		NeuralNetwork* _neuralNetwork;
 	};
 }
 

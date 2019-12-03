@@ -19,7 +19,10 @@ namespace COSYNNC {
 		// Set the hyper interval for which the controller should satisfy the specification
 		void SetHyperInterval(Vector lowerVertex, Vector upperVertex);
 
-		// Gets the center of the hyper interval
+		// Checks if the current state vector satisfies is in the control specification goal
+		bool IsInControlGoal(Vector state); 
+
+		// Returns the center of the control specification set
 		Vector GetCenter() const;
 	private:
 		ControlSpecificationType _type;
@@ -29,7 +32,6 @@ namespace COSYNNC {
 		Vector _lowerVertex;
 		Vector _upperVertex;
 
-		// DEBUG: Temporary to make a simple control
 		Vector _center;
 	};
 }

@@ -29,7 +29,7 @@ namespace COSYNNC {
 		Vector DenormalizeVector(Vector v);
 
 		// Checks if a vector is in the bounds of the quantized space
-		Vector IsInBounds(Vector v);
+		bool IsInBounds(Vector v);
 
 		// Gets a random vector within the bounded quantization space if isBounded is set
 		Vector GetRandomVector();
