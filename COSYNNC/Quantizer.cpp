@@ -26,6 +26,15 @@ void Quantizer::SetQuantizeParameters(Vector spaceEta, Vector spaceLowerBound, V
 	if (_isBounded) {
 		_spaceLowerBound = spaceLowerBound;
 		_spaceUpperBound = spaceUpperBound;
+
+		_spaceCardinalityPerAxis = vector<int>(_spaceDim, 0);
+
+		for (int i = 0; i < _spaceDim; i++) {
+			if (i == 0) _spaceCardinality = floor((_spaceUpperBound[i] - _spaceLowerBound[i]) / _spaceEta[i]);
+			else _spaceCardinality *= floor((_spaceUpperBound[i] - _spaceLowerBound[i]) / _spaceEta[i]);
+
+			_spaceCardinalityPerAxis[i] = floor((_spaceUpperBound[i] - _spaceLowerBound[i]) / _spaceEta[i]);
+		}
 	}
 	else {
 		_spaceReference = spaceLowerBound;
@@ -144,6 +153,27 @@ vector<ProbabilisticVector> Quantizer::QuantizeVectorProbabilistically(Vector de
 	return vectors;
 }
 
+
+// Returns the input that corresponds to the labelled output of the network
+Vector Quantizer::FindVectorFromOneHot(Vector oneHot) {
+	int index = 0;
+	for (int i = 0; i < oneHot.GetLength(); i++) {
+		if (oneHot[i] == 1.0) index = i;
+	}
+
+	Vector vec(_spaceDim);
+	for (int i = (_spaceDim - 1); i >= 0; i--) {
+		int indexOnAxis = 0;
+		if (i > 0) indexOnAxis = floor(index / _spaceCardinalityPerAxis[i]);
+		else indexOnAxis = index;
+		index -= indexOnAxis * _spaceCardinalityPerAxis[i];
+		vec[i] = indexOnAxis * _spaceEta[i] + _spaceLowerBound[i] + _spaceEta[i] * 0.5;
+	}
+
+	return vec;
+}
+
+
 // Checks if a vector is in the bounds of the quantized space
 bool Quantizer::IsInBounds(Vector vector) {
 	for (int i = 0; i < vector.GetLength(); i++) {
@@ -168,4 +198,10 @@ Vector Quantizer::GetRandomVector() {
 	}
 
 	return QuantizeVector(randomVector);
+}
+
+
+// Returns the cardinality of the quantized set
+int Quantizer::GetCardinality() const {
+	return _spaceCardinality;
 }

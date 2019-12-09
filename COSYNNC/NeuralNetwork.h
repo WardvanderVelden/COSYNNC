@@ -3,6 +3,7 @@
 #include <vector>
 #include "Vector.h"
 #include "Plant.h"
+#include "Quantizer.h"
 
 using namespace mxnet::cpp;
 
@@ -22,7 +23,7 @@ namespace COSYNNC {
 		virtual void InitializeOptimizer(string optimizer = "sgd", float learningRate = 0.1, float weightDecayRate = 0.1, bool verboseOptimizationInspection = false);
 
 		// Configures the neural network to receive input and output data compatible with the state and input dimensions and batch size
-		virtual void ConfigurateInputOutput(Plant* plant, int batchSize = 1, float initialDistribution = 0.1);
+		virtual void ConfigurateInputOutput(Plant* plant, Quantizer* inputQuantizer, int batchSize = 1, float initialDistribution = 0.1);
 
 		// Evaluates the neural network
 		virtual Vector EvaluateNetwork(Vector input);

@@ -32,16 +32,15 @@ int main() {
 
 	
 	// COSYNNC training parameters
-	const int episodes = 1000000;
+	const int episodes = 2500000;
 	const int steps = 25;
-	const int verboseEpisode = 1000;
+	const int verboseEpisode = 2500;
 
 	// Initialize quantizers
 	Quantizer* stateQuantizer = new Quantizer(true);
 	stateQuantizer->SetQuantizeParameters(Vector({ 0.1, 0.1 }), Vector({ -5, -10 }), Vector({ 5, 10 }));
 
 	Quantizer* inputQuantizer = new Quantizer(true);
-	//inputQuantizer->SetQuantizeParameters(Vector((float)1000.0), Vector((float)0.0), Vector((float)5000.0));
 	inputQuantizer->SetQuantizeParameters(Vector((float)5000.0), Vector((float)-2500.0), Vector((float)7500.0));
 
 
@@ -62,7 +61,7 @@ int main() {
 	// Initialize a multilayer perceptron neural network and configure it to function as controller
 	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 32, 32 }, ActivationActType::kRelu);
 	multilayerPerceptron->InitializeOptimizer("adam", 0.0075, 0.001, false); // 32 32 (or 16 16 16 16)
-	multilayerPerceptron->ConfigurateInputOutput(plant, steps, 1.0);
+	multilayerPerceptron->ConfigurateInputOutput(plant, inputQuantizer, steps, 1.0);
 	controller.SetNeuralNetwork(multilayerPerceptron);
 
 
@@ -74,14 +73,13 @@ int main() {
 		vector<Vector> states;
 		vector<Vector> reinforcingLabels;
 		vector<Vector> deterringLabels;
-		vector<Vector> labels;
 
 		auto initialState = stateQuantizer->GetRandomVector();
 		initialState[0] = initialState[0] * 0.75;
 		initialState[1] = initialState[1] * 0.35;
 		plant->SetState(initialState);
 
-		vector<float> normWeights = { 1.0, 1.0 };
+		vector<float> normWeights = { 1.0, 0.0 };
 		auto initialNorm = (initialState - specification.GetCenter()).GetWeightedNorm(normWeights);
 		auto oldNorm = initialNorm;
 
@@ -94,27 +92,34 @@ int main() {
 
 			// Get network output for the quantized state
 			auto networkOutput = multilayerPerceptron->EvaluateNetwork(normalizedQuantizedState);
-			auto denormalizedNetworkOutput = inputQuantizer->DenormalizeVector(networkOutput);
 
-			// Pick the input based on the probability of that input occuring according to the network certainty
-			Vector input(plant->GetInputSpaceDimension());
+			auto amountOfLabels = networkOutput.GetLength();
 
-			auto potentialInputs = inputQuantizer->QuantizeVectorProbabilistically(denormalizedNetworkOutput);
+			// Get total probability of all the labels
+			float totalProbability = 0.0;
+			for (int i = 0; i < amountOfLabels; i++) totalProbability += networkOutput[i];
 
+			// Normalize probabilities
+			for (int i = 0; i < amountOfLabels; i++) networkOutput[i] = networkOutput[i] / totalProbability;
+
+			// Determine a one hot vector from the network output
 			float randomValue = ((float)rand() / RAND_MAX);
 			float cumalitiveProbability = 0.0;
-			int usedInput = 0;
-			for (int i = 0; i < potentialInputs.size(); i++) {
-				cumalitiveProbability += potentialInputs[i].probability;
+			int oneHotIndex = 0;
+			for (int i = 0; i < amountOfLabels; i++) {
+				cumalitiveProbability += networkOutput[i];
 				if (randomValue < cumalitiveProbability) {
-					input = potentialInputs[i].vector;
-					usedInput = i;
+					oneHotIndex = i;
 					break;
 				}
 			}
 
-			//input = inputQuantizer->QuantizeVector(denormalizedNetworkOutput); // Quantize
-			//usedInput = floor(input[0] / 1000);
+			// Determine input from one hot vector
+			Vector oneHot(networkOutput.GetLength());
+			oneHot[oneHotIndex] = 1.0;
+
+			auto input = inputQuantizer->FindVectorFromOneHot(oneHot);
+
 
 			// Evolve the plant
 			plant->Evolve(input);
@@ -126,59 +131,33 @@ int main() {
 			isAtGoal = specification.IsInControlGoal(state);
 			isInStateSet = stateQuantizer->IsInBounds(state);
 
-			// Find the deterring label based on the probability of the inputs
-			Vector deterringLabel = Vector(input.GetLength());
-			if (potentialInputs.size() > 1) {
-				float total = 0.0;
-				for (int i = 0; i < potentialInputs.size(); i++) {
-					if (i != usedInput) total += potentialInputs[i].probability;
-					else potentialInputs[i].probability = 0.0;
-				}
+			// Find the reinforcing labels and the deterring labels
+			Vector reinforcementLabel = Vector(networkOutput.GetLength());
+			Vector deterringLabel = Vector(networkOutput.GetLength());
 
-				for (int i = 0; i < potentialInputs.size(); i++) potentialInputs[i].probability = potentialInputs[i].probability / total;
-
-				float randomValue = ((float)rand() / RAND_MAX);
-				float cumalitiveProbability = 0.0;
-				for (int i = 0; i < potentialInputs.size(); i++) {
-					cumalitiveProbability += potentialInputs[i].probability;
-					if (randomValue < cumalitiveProbability) {
-						deterringLabel = potentialInputs[i].vector;
-						break;
-					}
-				}
-			}
-			else {
-				deterringLabel = inputQuantizer->GetRandomVector();
-				while (deterringLabel == input) deterringLabel = inputQuantizer->GetRandomVector();
-			}
-
-			// Reinforce or deter based on the performance of that input
-			if (norm < oldNorm) labels.push_back(inputQuantizer->NormalizeVector(input));
-			else labels.push_back(inputQuantizer->NormalizeVector(deterringLabel));
+			reinforcementLabel = oneHot;
+			for (int i = 0; i < amountOfLabels; i++) deterringLabel[i] = 1.0 - reinforcementLabel[i];
 
 			oldNorm = norm;
 
 			// Add states and labels to the list of states and labels
 			states.push_back(normalizedQuantizedState);
-			reinforcingLabels.push_back(inputQuantizer->NormalizeVector(input));
-			deterringLabels.push_back(inputQuantizer->NormalizeVector(deterringLabel));
+			reinforcingLabels.push_back(reinforcementLabel);
+			deterringLabels.push_back(deterringLabel);
 
 			// DEBUG: Print simulation for verification purposes
-			//if (i % verboseEpisode == 0) std::cout << "i: " << i << "\tj: " << j << "\t\tx0: " << state[0] << "\tx1: " << state[1] << "\t\tp: " << networkOutput[0] << "\tu: " << input[0] << "\trl: " << reinforcingLabels[j][0] << "\tdl: " << deterringLabels[j][0] << "\ts: " << isAtGoal << std::endl;
-			if (i % verboseEpisode == 0) std::cout << "i: " << i << "\tj: " << j << "\t\tx0: " << state[0] << "\tx1: " << state[1] << "\t\tp: " << networkOutput[0] << "\tu: " << input[0] << "\tl: " << labels[j][0] << "\ts: " << isAtGoal << std::endl;
+			if (i % verboseEpisode == 0) std::cout << "i: " << i << "\tj: " << j << "\t\tx0: " << state[0] << "\tx1: " << state[1] << "\t\tp0: " << networkOutput[0] << "\tp1: " << networkOutput[1] << "\tu: " << input[0] << "\ts: " << isAtGoal << std::endl;
 
 			// Stop episode if we are in the goal state or have left the bounded set
 			if (isAtGoal || !isInStateSet) break;
 		}
 
 		// Train the neural network based on the performance of the network
-		//if (isAtGoal) multilayerPerceptron->Train(states, reinforcingLabels); // Reinforce if we are at the goal
-		//else multilayerPerceptron->Train(states, deterringLabels);
+		if (oldNorm < initialNorm || isAtGoal) multilayerPerceptron->Train(states, reinforcingLabels); // Reinforce if we are closer to the goal
+		else multilayerPerceptron->Train(states, deterringLabels);
 
-		//if (initialNorm > oldNorm) multilayerPerceptron->Train(states, reinforcingLabels); // Reinforce if we are closer to the goal
+		//if (isAtGoal) multilayerPerceptron->Train(states, reinforcingLabels); // Reinforce if we are closer to the goal
 		//else multilayerPerceptron->Train(states, deterringLabels);
-
-		multilayerPerceptron->Train(states, labels);
 	}
 
 

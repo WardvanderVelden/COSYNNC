@@ -5,7 +5,6 @@
 #include "mxnet-cpp/MxNetCpp.h";
 #include "NeuralNetwork.h"
 #include "Plant.h"
-#include "Quantizer.h"
 #include "Controller.h"
 
 using namespace mxnet::cpp;
