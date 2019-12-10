@@ -8,6 +8,12 @@
 using namespace mxnet::cpp;
 
 namespace COSYNNC {
+	enum class LossFunctionType {
+		CrossEntropy,
+		Proportional,
+		Quadratic
+	};
+
 	class NeuralNetwork {
 	public:
 		// Initializes a default neural network
@@ -59,6 +65,8 @@ namespace COSYNNC {
 		Executor* _executor = NULL;
 
 		Optimizer* _optimizer = NULL;
+
+		LossFunctionType _lossFunction = LossFunctionType::Proportional;
 
 		// TEMPORARY: For now we are running on the cpu
 		Context _context = Context::cpu();

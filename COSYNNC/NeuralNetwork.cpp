@@ -34,7 +34,7 @@ namespace COSYNNC {
 	void NeuralNetwork::ConfigurateInputOutput(Plant* plant, Quantizer* inputQuantizer, int batchSize, float initialDistribution) {
 		_inputDimension = plant->GetStateSpaceDimension();
 		//_labelDimension = plant->GetInputSpaceDimension();
-		_labelDimension = 2; //inputQuantizer->GetCardinality(); // For the labelled-inputs
+		_labelDimension = inputQuantizer->GetCardinality(); // For the labelled-inputs
 
 		// Define layers based on label dimension
 		auto layers = vector<int>(_hiddenLayers);

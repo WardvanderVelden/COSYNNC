@@ -27,8 +27,8 @@ namespace COSYNNC {
 	}
 
 
-	// Checks if the current state vector satisfies is in the control specification goal
-	bool ControlSpecification::IsInControlGoal(Vector state) {
+	// Checks if the current state vector satisfies is in the specification set
+	bool ControlSpecification::IsInSpecificationSet(Vector state) {
 		for (int i = 0; i < state.GetLength(); i++) {
 			if (state[i] < _lowerVertex[i] || state[i] > _upperVertex[i]) return false;
 		}
@@ -39,5 +39,11 @@ namespace COSYNNC {
 	// Returns the center of the control specification set
 	Vector ControlSpecification::GetCenter() const {
 		return _center;
+	}
+
+
+	// Returns the control specification type
+	ControlSpecificationType ControlSpecification::GetSpecificationType() const {
+		return _type;
 	}
 }

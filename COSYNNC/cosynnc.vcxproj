@@ -136,6 +136,7 @@
     <ClCompile Include="NeuralNetwork.cpp" />
     <ClCompile Include="Plant.cpp" />
     <ClCompile Include="Quantizer.cpp" />
+    <ClCompile Include="Rocket.cpp" />
     <ClCompile Include="Vector.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -145,6 +146,7 @@
     <ClInclude Include="NeuralNetwork.h" />
     <ClInclude Include="Plant.h" />
     <ClInclude Include="Quantizer.h" />
+    <ClInclude Include="Rocket.h" />
     <ClInclude Include="Vector.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
