@@ -39,17 +39,26 @@ namespace COSYNNC {
 		// Returns the nearest quantized element in the quantized space and returns its probability, also provides a random alternative
 		vector<ProbabilisticVector> QuantizeVectorProbabilistically(Vector denormal);
 
-		// Returns the input that corresponds to the labelled output of the network
-		Vector FindVectorFromOneHot(Vector oneHot);
+		// Returns the vector that corresponds to the labelled output of the network
+		Vector GetVectorFromOneHot(Vector oneHot);
 
-		// Checks if a vector is in the bounds of the quantized space
-		bool IsInBounds(Vector vector);
+		// Returns the vector that corresponds to the index in the space
+		Vector GetVectorFromIndex(long index);
+
+		// Returns the index that corresponds to that vector
+		long GetIndexFromVector(Vector vector);
 
 		// Gets a random vector within the bounded quantization space if isBounded is set
 		Vector GetRandomVector();
 
 		// Returns the cardinality of the quantized set
-		int GetCardinality() const;
+		long GetCardinality() const;
+
+		// Returns the dimension of the space
+		int GetSpaceDimension() const;
+
+		// Checks if a vector is in the bounds of the quantized space
+		bool IsInBounds(Vector vector);
 
 	private:
 		bool _isBounded = false;
@@ -57,8 +66,8 @@ namespace COSYNNC {
 		int _spaceDim = 0;
 		int _inputSpaceDim = 0;
 
-		vector<int> _spaceCardinalityPerAxis;
-		int _spaceCardinality = 0;
+		vector<long> _spaceCardinalityPerAxis;
+		long _spaceCardinality = 0;
 
 		Vector _spaceEta;
 		double _spaceEtaEllipsoidVolume = 0.0;

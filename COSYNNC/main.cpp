@@ -2,10 +2,12 @@
 #include "Vector.h"
 #include "Plant.h"
 #include "Rocket.h"
+#include "DCDC.h"
 #include "Quantizer.h"
 #include "Controller.h"
 #include "ControlSpecification.h"
 #include "MultilayerPerceptron.h"
+#include "Verifier.h"
 
 using namespace std;
 using namespace mxnet;
@@ -15,18 +17,22 @@ int main() {
 
 	// COSYNNC training parameters
 	const int episodes = 1000000;
-	const int steps = 25;
+	const int steps = 25; // 25;
 	const int verboseEpisode = 2500;
+	const int verificationEpisode = 25000;
 
 	// Initialize quantizers
 	Quantizer* stateQuantizer = new Quantizer(true);
 	stateQuantizer->SetQuantizeParameters(Vector({ 0.1, 0.1 }), Vector({ -5, -10 }), Vector({ 5, 10 }));
+	//stateQuantizer->SetQuantizeParameters(Vector({ 0.05, 0.05 }), Vector({ 1.15, 5.45 }), Vector({ 1.55, 5.85 }));
 
 	Quantizer* inputQuantizer = new Quantizer(true);
 	inputQuantizer->SetQuantizeParameters(Vector((float)1000.0), Vector((float)0.0), Vector((float)5000.0));
+	//inputQuantizer->SetQuantizeParameters(Vector((float)0.5), Vector((float)0.0), Vector((float)1.0));
 
 	// Initialize plant
 	Rocket* plant = new Rocket();
+	//DCDC* plant = new DCDC();
 
 	// Initialize controller
 	Controller controller(plant, stateQuantizer, inputQuantizer);
@@ -34,6 +40,8 @@ int main() {
 	// Initialize a control specification
 	ControlSpecification specification(ControlSpecificationType::Reachability, plant);
 	specification.SetHyperInterval(Vector({ -1, -1 }), Vector({ 1, 1 }));
+	//ControlSpecification specification(ControlSpecificationType::Invariance, plant);
+	//specification.SetHyperInterval(Vector({ 1.15, 5.45 }), Vector({ 1.55, 5.85 }));
 	controller.SetControlSpecification(&specification);
 
 	// Initialize a multilayer perceptron neural network and configure it to function as controller
@@ -41,6 +49,9 @@ int main() {
 	multilayerPerceptron->InitializeOptimizer("adam", 0.0075, 0.001, false);
 	multilayerPerceptron->ConfigurateInputOutput(plant, inputQuantizer, steps, 1.0);
 	controller.SetNeuralNetwork(multilayerPerceptron);
+
+	// Initialize the verifier for verifying the controller
+	Verifier* verifier = new Verifier(plant, &controller, stateQuantizer, inputQuantizer);
 
 	// Training routine for the neural network controller
 	std::cout << "Training" << std::endl;
@@ -53,11 +64,11 @@ int main() {
 
 		// Get an initial state based on the control specification we are trying to solve for
 		float progressionFactor = (float)i / (float)episodes;
-		auto initialState = specification.GetCenter();
+		auto initialState = Vector({ 0.0, 0.0 }); //Vector({ 1.2, 5.6 });
 
 		switch (specification.GetSpecificationType()) {
 		case ControlSpecificationType::Invariance:
-
+			initialState = stateQuantizer->GetRandomVector();
 			break;
 		case ControlSpecificationType::Reachability:
 			while (specification.IsInSpecificationSet(initialState)) {
@@ -78,60 +89,34 @@ int main() {
 
 		// Simulate the episode using the neural network
 		for (int j = 0; j < steps; j++) {
-			auto normalizedQuantizedState = stateQuantizer->NormalizeVector(stateQuantizer->QuantizeVector(plant->GetState()));
+			auto state = plant->GetState();
+			auto normalizedQuantizedState = stateQuantizer->NormalizeVector(stateQuantizer->QuantizeVector(state));
 
-			// Get network output for the quantized state
-			auto networkOutput = multilayerPerceptron->EvaluateNetwork(normalizedQuantizedState);
-			if(j == 0) networkOutput = multilayerPerceptron->EvaluateNetwork(normalizedQuantizedState); // TODO: Find a more expedient solution to this bug
-
-			auto amountOfOutputNeurons = networkOutput.GetLength();
-
-			// Get total probability of all the labels
-			float totalProbability = 0.0;
-			for (int i = 0; i < amountOfOutputNeurons; i++) totalProbability += networkOutput[i];
-
-			// Normalize probabilities
-			for (int i = 0; i < amountOfOutputNeurons; i++) networkOutput[i] = networkOutput[i] / totalProbability;
-
-			// Determine a one hot vector from the network output
-			float randomValue = ((float)rand() / RAND_MAX);
-			float cumalitiveProbability = 0.0;
-			int oneHotIndex = 0;
-			for (int i = 0; i < amountOfOutputNeurons; i++) {
-				cumalitiveProbability += networkOutput[i];
-				if (randomValue < cumalitiveProbability) {
-					oneHotIndex = i;
-					break;
-				}
-			}
-
-			// Determine input from one hot vector
-			Vector oneHot(amountOfOutputNeurons);
-			oneHot[oneHotIndex] = 1.0;
-
-			auto input = inputQuantizer->FindVectorFromOneHot(oneHot);
+			Vector oneHot(inputQuantizer->GetCardinality());
+			Vector networkOutput(inputQuantizer->GetCardinality());
+			auto input = controller.GetProbabilisticControlAction(state, oneHot, networkOutput);
 
 			// Evolve the plant
 			plant->Evolve(input);
-			auto state = plant->GetState();
+			auto newState = plant->GetState();
 
 			// See if the evolved state is in the specification set and calculate the new norm on the state
-			isInSpecificationSet = specification.IsInSpecificationSet(state);
-			auto norm = (state - specification.GetCenter()).GetWeightedNorm(normWeights);
+			isInSpecificationSet = specification.IsInSpecificationSet(newState);
+			auto norm = (newState - specification.GetCenter()).GetWeightedNorm(normWeights);
 
 			// Find the reinforcing labels and the deterring labels
-			Vector reinforcementLabel = Vector(networkOutput.GetLength());
-			Vector deterringLabel = Vector(networkOutput.GetLength());
+			Vector reinforcementLabel = Vector(inputQuantizer->GetCardinality());
+			Vector deterringLabel = Vector(inputQuantizer->GetCardinality());
 
 			reinforcementLabel = oneHot;
 
 			float sum = 0.0;
-			for (int i = 0; i < amountOfOutputNeurons; i++) {
+			for (int i = 0; i < inputQuantizer->GetCardinality(); i++) {
 				deterringLabel[i] = 1.0 - reinforcementLabel[i];
 				sum += deterringLabel[i];
 			}
 
-			for (int i = 0; i < amountOfOutputNeurons; i++) deterringLabel[i] = deterringLabel[i] / sum;
+			for (int i = 0; i < inputQuantizer->GetCardinality(); i++) deterringLabel[i] = deterringLabel[i] / sum;
 
 			// Add states and labels to the list of states and labels
 			states.push_back(normalizedQuantizedState);
@@ -142,9 +127,9 @@ int main() {
 
 			// DEBUG: Print simulation for verification purposes
 			if (i % verboseEpisode == 0) {
-				auto verboseLabels = (amountOfOutputNeurons <= 5) ? amountOfOutputNeurons : 5;
+				auto verboseLabels = (inputQuantizer->GetCardinality() <= 5) ? inputQuantizer->GetCardinality() : 5;
 
-				std::cout << "i: " << i << "\tj: " << j << "\t\tx0: " << state[0] << "\tx1: " << state[1];
+				std::cout << "i: " << i << "\tj: " << j << "\t\tx0: " << newState[0] << "\tx1: " << newState[1];
 				for (int i = 0; i < verboseLabels; i++) {
 					if (i == 0) std::cout << "\t";
 					std::cout << "\tp" << i << ": " << networkOutput[i];;
@@ -163,22 +148,31 @@ int main() {
 				break;
 			}
 			
-			if (!stateQuantizer->IsInBounds(state) || stopEpisode) break;
+			if (!stateQuantizer->IsInBounds(newState) || stopEpisode) break;
 		}
 
 		// Train the neural network based on the performance of the network
 		if (oldNorm < initialNorm || isInSpecificationSet) multilayerPerceptron->Train(states, reinforcingLabels);
 		else multilayerPerceptron->Train(states, deterringLabels);
+
+		// Verification routine for the neural network controller
+		if (i % verificationEpisode == 0 && i != 0) {
+			verifier->ComputeTransitionFunction();
+			verifier->ComputeWinningSet();
+
+			auto winningSetSize = verifier->GetWinningSetSize();
+			float winningSetPercentage = (float)winningSetSize / (float)stateQuantizer->GetCardinality();
+
+			std::cout << std::endl << "Winning set size percentage: " << winningSetPercentage * 100 << "%" << std::endl;
+		}
 	}
-
-	// Verification routine for the neural network controller
-
 
 	// Free memory
 	delete plant;
 	delete stateQuantizer;
 	delete inputQuantizer;
 	delete multilayerPerceptron;
+	delete verifier;
 
 	MXNotifyShutdown();
 

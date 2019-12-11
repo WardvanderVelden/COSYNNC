@@ -26,14 +26,14 @@ namespace COSYNNC {
 		// Set the neural network that will dictate the control input of the system
 		void SetNeuralNetwork(NeuralNetwork* neuralNetwork);
 
-		// Get a control action based on the state in the stateSpace of the plant
+		// Get a control action based on the state in the stateSpace of the plant using a greedy strategy
 		Vector GetControlAction(Vector state);
 
-		// DEBUG: Temporay PD controller in order to have some sort of benchmark of data generator
-		//Vector GetPDControlAction(Vector state);
+		// Get a probabilistic control action based on the certainty of the network
+		Vector GetProbabilisticControlAction(Vector state, Vector& oneHot, Vector& networkOutput);
 
-		// DEBUG: Resets the control so no old information is used for calcuating the input
-		//void ResetController();
+		// Returns the control specification that is currently assigned to the controller
+		ControlSpecification* GetControlSpecification() const;
 	private:
 		float _tau;
 

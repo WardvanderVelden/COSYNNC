@@ -58,6 +58,8 @@ namespace COSYNNC {
 
 		bool _verboseOptimizationInspection = false;
 
+		bool _justTrained = true;
+
 		Symbol _network;
 		map<string, NDArray> _arguments;
 		vector<string> _argumentNames;

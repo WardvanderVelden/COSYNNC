@@ -75,6 +75,10 @@ namespace COSYNNC {
 		networkInput.WaitToWrite(); // DEBUG: May also need a wait to read to prevent memory leaks
 
 		_executor->Forward(false);
+		if (_justTrained) {
+			_executor->Forward(false);
+			_justTrained = false;
+		}
 
 		auto outputDimension = _layers.back();
 		Vector output(outputDimension);
@@ -137,6 +141,8 @@ namespace COSYNNC {
 			if (_argumentNames[i] == "input" || _argumentNames[i] == "label") continue;
 			_optimizer->Update(i, _executor->arg_arrays[i], _executor->grad_arrays[i]);
 		}
+
+		_justTrained = true;
 	}
 
 

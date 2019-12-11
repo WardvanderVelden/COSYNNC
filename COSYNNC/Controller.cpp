@@ -1,76 +1,112 @@
 #include "Controller.h"
 
-using namespace COSYNNC;
+namespace COSYNNC {
+	Controller::Controller() {
+		_stateSpaceDim = 0;
+		_inputSpaceDim = 0;
 
-Controller::Controller() {
-	_stateSpaceDim = 0;
-	_inputSpaceDim = 0;
+		_tau = 0.0;
+	}
 
-	_tau = 0.0;
+	Controller::Controller(Plant* plant) {
+		_stateSpaceDim = plant->GetStateSpaceDimension();
+		_inputSpaceDim = plant->GetInputSpaceDimension();
+
+		_tau = plant->GetTau();
+	}
+
+	Controller::Controller(Plant* plant, Quantizer* stateQuantizer, Quantizer* inputQuantizer) {
+		_stateSpaceDim = plant->GetStateSpaceDimension();
+		_inputSpaceDim = plant->GetInputSpaceDimension();
+
+		_tau = plant->GetTau();
+		//_lastState = plant->GetState();
+
+		_stateQuantizer = stateQuantizer;
+		_inputQuantizer = inputQuantizer;
+	}
+
+
+	// Set the control specification of the controller
+	void Controller::SetControlSpecification(ControlSpecification* specification) {
+		_controlSpecification = specification;
+	}
+
+
+	// Set the neural network that will dictate the control input of the system
+	void Controller::SetNeuralNetwork(NeuralNetwork* neuralNetwork) {
+		_neuralNetwork = neuralNetwork;
+	}
+
+
+	// Read out the control action using the neural network with the quantized state as input
+	Vector Controller::GetControlAction(Vector state) {
+		if (_neuralNetwork == NULL) return Vector(_inputSpaceDim);
+
+		auto quantizedNormalizedState = _stateQuantizer->NormalizeVector(_stateQuantizer->QuantizeVector(state));
+		auto networkOutput = _neuralNetwork->EvaluateNetwork(quantizedNormalizedState);
+
+		//auto denormalizedInput = _inputQuantizer->DenormalizeVector(networkOutput);
+		//auto quantizedInput = _inputQuantizer->QuantizeVector(denormalizedInput);
+
+		// Greedily pick the input
+		float highestProbability = 0.0;
+		int highestProbabilityIndex = 0.0;
+		for (int i = 0; i < networkOutput.GetLength(); i++) {
+			if (networkOutput[i] > highestProbability) {
+				highestProbability = networkOutput[i];
+				highestProbabilityIndex = i;
+			}
+		}
+
+		Vector oneHot(networkOutput.GetLength());
+		oneHot[highestProbabilityIndex] = 1.0;
+
+		auto input = _inputQuantizer->GetVectorFromOneHot(oneHot);
+
+		return input;
+	}
+
+
+	// Get a probabilistic control action based on the certainty of the network
+	Vector Controller::GetProbabilisticControlAction(Vector state, Vector& oneHot, Vector& networkOutput) {
+		auto normalizedQuantizedState = _stateQuantizer->NormalizeVector(_stateQuantizer->QuantizeVector(state));
+
+		// Get network output for the quantized state
+		networkOutput = _neuralNetwork->EvaluateNetwork(normalizedQuantizedState);
+		//if (j == 0) networkOutput = _neuralNetwork->EvaluateNetwork(normalizedQuantizedState); // TODO: Find a more expedient solution to this bug
+
+		auto amountOfOutputNeurons = networkOutput.GetLength();
+
+		// Get total probability of all the labels
+		float totalProbability = 0.0;
+		for (int i = 0; i < amountOfOutputNeurons; i++) totalProbability += networkOutput[i];
+
+		// Normalize probabilities
+		for (int i = 0; i < amountOfOutputNeurons; i++) networkOutput[i] = networkOutput[i] / totalProbability;
+
+		// Determine a one hot vector from the network output
+		float randomValue = ((float)rand() / RAND_MAX);
+		float cumalitiveProbability = 0.0;
+		int oneHotIndex = 0;
+		for (int i = 0; i < amountOfOutputNeurons; i++) {
+			cumalitiveProbability += networkOutput[i];
+			if (randomValue < cumalitiveProbability) {
+				oneHotIndex = i;
+				break;
+			}
+		}
+
+		// Determine input from one hot vector
+		oneHot = Vector(amountOfOutputNeurons);
+		oneHot[oneHotIndex] = 1.0;
+
+		return _inputQuantizer->GetVectorFromOneHot(oneHot);
+	}
+
+
+	// Returns the control specification that is currently assigned to the controller
+	ControlSpecification* Controller::GetControlSpecification() const {
+		return _controlSpecification;
+	}
 }
-
-Controller::Controller(Plant* plant) {
-	_stateSpaceDim = plant->GetStateSpaceDimension();
-	_inputSpaceDim = plant->GetInputSpaceDimension();
-
-	_tau = plant->GetTau();
-}
-
-Controller::Controller(Plant* plant, Quantizer* stateQuantizer, Quantizer* inputQuantizer) {
-	_stateSpaceDim = plant->GetStateSpaceDimension();
-	_inputSpaceDim = plant->GetInputSpaceDimension();
-
-	_tau = plant->GetTau();
-	//_lastState = plant->GetState();
-
-	_stateQuantizer = stateQuantizer;
-	_inputQuantizer = inputQuantizer;
-}
-
-
-void Controller::SetControlSpecification(ControlSpecification* specification) {
-	_controlSpecification = specification;
-}
-
-
-void Controller::SetNeuralNetwork(NeuralNetwork* neuralNetwork) {
-	_neuralNetwork = neuralNetwork;
-}
-
-// Read out the control action using the neural network with the quantized state as input
-Vector Controller::GetControlAction(Vector state) {
-	if (_neuralNetwork == NULL) return Vector(_inputSpaceDim);
-
-	auto quantizedNormalizedState = _stateQuantizer->NormalizeVector(_stateQuantizer->QuantizeVector(state));
-	auto networkOutput = _neuralNetwork->EvaluateNetwork(quantizedNormalizedState);
-	
-	auto denormalizeddInput = _inputQuantizer->DenormalizeVector(networkOutput);
-	auto quantizedInput = _inputQuantizer->QuantizeVector(denormalizeddInput);
-	
-	return quantizedInput;
-}
-
-// DEBUG: Temporay PD controller in order to have some sort of benchmark of data generator
-/*Vector Controller::GetPDControlAction(Vector state) {
-	Vector goal = _controlSpecification->GetCenter();
-
-	// Calculate proportional and derivative
-	Vector proportional = (Vector(goal) - state);
-	Vector lastProportional = (Vector(goal) - _lastState);
-
-	Vector derivative = (proportional - lastProportional) / _tau;
-
-	Vector controlAction(_inputSpaceDim);
-
-	// Determine control action based on two PD controllers and where we are in the state space
-	if (state[0] > goal[0]) controlAction[0] = 2500 + proportional[0] * 500 + derivative[1] * 100;
-	else controlAction[0] = 2500 + proportional[0] * 2500 + derivative[1] * 100;
-
-	if (controlAction[0] < 0) controlAction[0] = 0;
-
-	return controlAction;
-}
-
-void Controller::ResetController() {
-	_lastState = Vector(_stateSpaceDim);
-}*/

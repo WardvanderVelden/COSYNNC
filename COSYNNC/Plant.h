@@ -13,7 +13,7 @@ namespace COSYNNC {
 
 
 		// Defines the dynamics of the plant for a single time step tau
-		virtual Vector SingleStepDynamics(Vector input);
+		virtual Vector StepDynamics(Vector input);
 
 		// Evolves the plant based on the single step dynamics and the input based on time step tau
 		void Evolve(Vector input);

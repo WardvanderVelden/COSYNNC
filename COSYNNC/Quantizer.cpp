@@ -27,13 +27,13 @@ void Quantizer::SetQuantizeParameters(Vector spaceEta, Vector spaceLowerBound, V
 		_spaceLowerBound = spaceLowerBound;
 		_spaceUpperBound = spaceUpperBound;
 
-		_spaceCardinalityPerAxis = vector<int>(_spaceDim, 0);
+		_spaceCardinalityPerAxis = vector<long>(_spaceDim, 0);
 
 		for (int i = 0; i < _spaceDim; i++) {
-			if (i == 0) _spaceCardinality = floor((_spaceUpperBound[i] - _spaceLowerBound[i]) / _spaceEta[i]);
-			else _spaceCardinality *= floor((_spaceUpperBound[i] - _spaceLowerBound[i]) / _spaceEta[i]);
+			if (i == 0) _spaceCardinality = round((_spaceUpperBound[i] - _spaceLowerBound[i]) / _spaceEta[i]);
+			else _spaceCardinality *= round((_spaceUpperBound[i] - _spaceLowerBound[i]) / _spaceEta[i]);
 
-			_spaceCardinalityPerAxis[i] = floor((_spaceUpperBound[i] - _spaceLowerBound[i]) / _spaceEta[i]);
+			_spaceCardinalityPerAxis[i] = round((_spaceUpperBound[i] - _spaceLowerBound[i]) / _spaceEta[i]);
 		}
 	}
 	else {
@@ -155,7 +155,7 @@ vector<ProbabilisticVector> Quantizer::QuantizeVectorProbabilistically(Vector de
 
 
 // Returns the input that corresponds to the labelled output of the network
-Vector Quantizer::FindVectorFromOneHot(Vector oneHot) {
+Vector Quantizer::GetVectorFromOneHot(Vector oneHot) {
 	int index = 0;
 	for (int i = 0; i < oneHot.GetLength(); i++) {
 		if (oneHot[i] == 1.0) index = i;
@@ -171,6 +171,36 @@ Vector Quantizer::FindVectorFromOneHot(Vector oneHot) {
 	}
 
 	return vec;
+}
+
+
+// Returns the vector that corresponds to the index in the space
+Vector Quantizer::GetVectorFromIndex(long index) {
+	Vector vec(_spaceDim);
+	for (int i = (_spaceDim - 1); i >= 0; i--) {
+		long indexOnAxis = 0;
+		if (i > 0) indexOnAxis = floor(index / _spaceCardinalityPerAxis[i]);
+		else indexOnAxis = index;
+		index -= indexOnAxis * _spaceCardinalityPerAxis[i];
+		vec[i] = indexOnAxis * _spaceEta[i] + _spaceLowerBound[i] + _spaceEta[i] * 0.5;
+	}
+
+	return vec;
+}
+
+
+// Returns the index that corresponds to that vector
+long Quantizer::GetIndexFromVector(Vector vector) {
+	long index = 0;
+
+	if (!IsInBounds(vector)) return -1;
+
+	for (int i = 0; i < _spaceDim; i++) {
+		long indexPerAxis = (i != 0) ? _spaceCardinalityPerAxis[i - 1] : 1;
+		index += floor((vector[i] - _spaceLowerBound[i]) / _spaceEta[i]) * indexPerAxis;
+	}
+
+	return index;
 }
 
 
@@ -202,6 +232,12 @@ Vector Quantizer::GetRandomVector() {
 
 
 // Returns the cardinality of the quantized set
-int Quantizer::GetCardinality() const {
+long Quantizer::GetCardinality() const {
 	return _spaceCardinality;
+}
+
+
+// Returns the dimension of the space
+int Quantizer::GetSpaceDimension() const {
+	return _spaceDim;
 }
