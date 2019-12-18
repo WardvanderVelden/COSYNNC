@@ -131,21 +131,27 @@
   <ItemGroup>
     <ClCompile Include="Controller.cpp" />
     <ClCompile Include="ControlSpecification.cpp" />
+    <ClCompile Include="DCDC.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MultilayerPerceptron.cpp" />
     <ClCompile Include="NeuralNetwork.cpp" />
     <ClCompile Include="Plant.cpp" />
     <ClCompile Include="Quantizer.cpp" />
+    <ClCompile Include="Rocket.cpp" />
     <ClCompile Include="Vector.cpp" />
+    <ClCompile Include="Verifier.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Controller.h" />
     <ClInclude Include="ControlSpecification.h" />
+    <ClInclude Include="DCDC.h" />
     <ClInclude Include="MultilayerPerceptron.h" />
     <ClInclude Include="NeuralNetwork.h" />
     <ClInclude Include="Plant.h" />
     <ClInclude Include="Quantizer.h" />
+    <ClInclude Include="Rocket.h" />
     <ClInclude Include="Vector.h" />
+    <ClInclude Include="Verifier.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

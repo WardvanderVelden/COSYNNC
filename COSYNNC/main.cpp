@@ -1,166 +1,169 @@
 #include <iostream>
 #include "Vector.h"
 #include "Plant.h"
+#include "Rocket.h"
+#include "DCDC.h"
 #include "Quantizer.h"
 #include "Controller.h"
 #include "ControlSpecification.h"
 #include "MultilayerPerceptron.h"
+#include "Verifier.h"
 
 using namespace std;
 using namespace mxnet;
 
-class Rocket : public Plant {
-public:
-	Rocket() : Plant(2, 1, 0.1) { }
-
-	// Simple second order rocket dynamics in one axis
-	Vector SingleStepDynamics(Vector input) override {
-		Vector newState(GetStateSpaceDimension());
-
-		newState[0] = GetState()[0] + GetState()[1] * GetTau();
-		newState[1] = GetState()[1] + GetTau() / _mass * input[0] + _g * GetTau();
-
-		return newState;
-	}
-private:
-	float _mass = 267; // kg
-	float _g = -9.81; // m s^-2
-}; 
-
 int main() {
 	std::cout << "COSYNNC: A correct-by-design neural network synthesis tool." << std::endl << std::endl;
 
-	
 	// COSYNNC training parameters
-	const int episodes = 10000;
-	const int steps = 25;
-	const int verboseEpisode = 1000;
-
+	const int episodes = 1000000;
+	const int steps = 25; // 25;
+	const int verboseEpisode = 2500;
+	const int verificationEpisode = 25000;
 
 	// Initialize quantizers
 	Quantizer* stateQuantizer = new Quantizer(true);
-	//stateQuantizer->SetQuantizeParameters(Vector({ 0.1, 0.1 }), Vector({ -5, -2.5 }), Vector({ 5, 2.5 }));
 	stateQuantizer->SetQuantizeParameters(Vector({ 0.1, 0.1 }), Vector({ -5, -10 }), Vector({ 5, 10 }));
+	//stateQuantizer->SetQuantizeParameters(Vector({ 0.05, 0.05 }), Vector({ 1.15, 5.45 }), Vector({ 1.55, 5.85 }));
 
 	Quantizer* inputQuantizer = new Quantizer(true);
-	//inputQuantizer->SetQuantizeParameters(Vector((float)100.0), Vector((float)0.0), Vector((float)3000.0));
-	inputQuantizer->SetQuantizeParameters(Vector((float)1833.0), Vector((float)0.0), Vector((float)5500.0));
-
+	inputQuantizer->SetQuantizeParameters(Vector((float)1000.0), Vector((float)0.0), Vector((float)5000.0));
+	//inputQuantizer->SetQuantizeParameters(Vector((float)0.5), Vector((float)0.0), Vector((float)1.0));
 
 	// Initialize plant
 	Rocket* plant = new Rocket();
-
+	//DCDC* plant = new DCDC();
 
 	// Initialize controller
 	Controller controller(plant, stateQuantizer, inputQuantizer);
 
-
 	// Initialize a control specification
 	ControlSpecification specification(ControlSpecificationType::Reachability, plant);
 	specification.SetHyperInterval(Vector({ -1, -1 }), Vector({ 1, 1 }));
+	//ControlSpecification specification(ControlSpecificationType::Invariance, plant);
+	//specification.SetHyperInterval(Vector({ 1.15, 5.45 }), Vector({ 1.55, 5.85 }));
 	controller.SetControlSpecification(&specification);
 
-
 	// Initialize a multilayer perceptron neural network and configure it to function as controller
-	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 16, 16, 16, 16 }, ActivationActType::kRelu);
-	multilayerPerceptron->InitializeOptimizer("adam", 0.0075, 0.001, false); // 32 32 (or 16 16 16 16)
-	multilayerPerceptron->ConfigurateInputOutput(plant, steps);
+	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 32, 32 }, ActivationActType::kRelu, LossFunctionType::CrossEntropy);
+	multilayerPerceptron->InitializeOptimizer("adam", 0.0075, 0.001, false);
+	multilayerPerceptron->ConfigurateInputOutput(plant, inputQuantizer, steps, 1.0);
 	controller.SetNeuralNetwork(multilayerPerceptron);
 
+	// Initialize the verifier for verifying the controller
+	Verifier* verifier = new Verifier(plant, &controller, stateQuantizer, inputQuantizer);
 
-	// TEMPORARY: Proof of concept for the reinforcement learning synthesis routine
+	// Training routine for the neural network controller
 	std::cout << "Training" << std::endl;
 	for (int i = 0; i < episodes; i++) {
 		if (i % verboseEpisode == 0) std::cout << std::endl;
 
 		vector<Vector> states;
-		vector<Vector> labels;
+		vector<Vector> reinforcingLabels;
+		vector<Vector> deterringLabels;
 
-		auto initialState = stateQuantizer->GetRandomVector();
-		initialState[0] = initialState[0] * 0.75;
-		initialState[1] = initialState[1] * 0.3;
+		// Get an initial state based on the control specification we are trying to solve for
+		float progressionFactor = (float)i / (float)episodes;
+		auto initialState = Vector({ 0.0, 0.0 }); //Vector({ 1.2, 5.6 });
+
+		switch (specification.GetSpecificationType()) {
+		case ControlSpecificationType::Invariance:
+			initialState = stateQuantizer->GetRandomVector();
+			break;
+		case ControlSpecificationType::Reachability:
+			while (specification.IsInSpecificationSet(initialState)) {
+				initialState = stateQuantizer->GetRandomVector();
+				initialState[0] = initialState[0] * 0.1 + progressionFactor * 0.8;
+				initialState[1] = initialState[1] * 0.2 + progressionFactor * 0.4;
+			}
+			break;
+		}
 		plant->SetState(initialState);
 
-		vector<float> normWeights = { 1.0, 100.0 };
-		auto oldDifference = (initialState - specification.GetCenter()).GetWeightedNorm(normWeights);
+		// Define the norm for determining the networks performance
+		vector<float> normWeights = { 1.0, 1.0 };
+		auto initialNorm = (initialState - specification.GetCenter()).GetWeightedNorm(normWeights);
+		auto oldNorm = initialNorm;
 
-		bool isInStateSet = true;
+		bool isInSpecificationSet = false;
 
 		// Simulate the episode using the neural network
 		for (int j = 0; j < steps; j++) {
-			auto normalizedQuantizedState = stateQuantizer->NormalizeVector(stateQuantizer->QuantizeVector(plant->GetState()));
-			auto rawInput = multilayerPerceptron->EvaluateNetwork(normalizedQuantizedState);
+			auto state = plant->GetState();
+			auto normalizedQuantizedState = stateQuantizer->NormalizeVector(stateQuantizer->QuantizeVector(state));
 
-			// Pick the input based on the certainty of the network
-			auto denormalizedQuantizedInput = inputQuantizer->DenormalizeVector(rawInput);
-			auto input = inputQuantizer->QuantizeVector(denormalizedQuantizedInput);
+			Vector oneHot(inputQuantizer->GetCardinality());
+			Vector networkOutput(inputQuantizer->GetCardinality());
+			auto input = controller.GetProbabilisticControlAction(state, oneHot, networkOutput);
 
 			// Evolve the plant
 			plant->Evolve(input);
-			auto state = plant->GetState();
+			auto newState = plant->GetState();
 
-			if (!stateQuantizer->IsInBounds(state)) {
-				isInStateSet = false;
-				break;
+			// See if the evolved state is in the specification set and calculate the new norm on the state
+			isInSpecificationSet = specification.IsInSpecificationSet(newState);
+			auto norm = (newState - specification.GetCenter()).GetWeightedNorm(normWeights);
+
+			// Find the reinforcing labels and the deterring labels
+			Vector reinforcementLabel = Vector(inputQuantizer->GetCardinality());
+			Vector deterringLabel = Vector(inputQuantizer->GetCardinality());
+
+			reinforcementLabel = oneHot;
+
+			float sum = 0.0;
+			for (int i = 0; i < inputQuantizer->GetCardinality(); i++) {
+				deterringLabel[i] = 1.0 - reinforcementLabel[i];
+				sum += deterringLabel[i];
 			}
 
-			// Find label based on performance
-			auto isAtGoal = specification.IsInControlGoal(state);
+			for (int i = 0; i < inputQuantizer->GetCardinality(); i++) deterringLabel[i] = deterringLabel[i] / sum;
 
-			Vector label(input.GetLength());
-
-			// Control scheme based on control to minimize the weighted norm, it determines whether or not the resulting control action that led to the new state from
-			// the previous state was beneficial. If it was the network will reinforce that input from the previous state to that input
-			auto difference = (state - specification.GetCenter()).GetWeightedNorm(normWeights);
-
-			if (difference < oldDifference) label = input;
-			else {
-				if (state[0] < 0) label = Vector((float)4582.5);
-				else label = Vector((float)916.5);
-
-				/*auto randomValue = (float)rand() / RAND_MAX;
-				label = inputQuantizer->QuantizeVector(inputQuantizer->DenormalizeVector(Vector(randomValue)));*/
-			}
-
+			// Add states and labels to the list of states and labels
 			states.push_back(normalizedQuantizedState);
-			labels.push_back(inputQuantizer->NormalizeVector(label));
+			reinforcingLabels.push_back(reinforcementLabel);
+			deterringLabels.push_back(deterringLabel);
 
-			oldDifference = difference;
+			oldNorm = norm;
 
 			// DEBUG: Print simulation for verification purposes
 			if (i % verboseEpisode == 0) {
-				//std::cout << "i: " << i << "\tj: " << j << "\t\tx0: " << state[0] << ":" << states[j][0] <<  "\tx1: " << state[1] << ":" << states[j][1] << "\t\tp: " << rawInput[0] << "\tl: " << label[0] << ":" << labels[j][0] << "\tu: " << input[0] << "\ts: " << isAtGoal << std::endl;
-				std::cout << "i: " << i << "\tj: " << j << "\t\tx0: " << state[0] << "\tx1: " << state[1] << "\t\tp: " << rawInput[0] << "\tl: " << label[0] << "\tu: " << input[0] << "\ts: " << isAtGoal << std::endl;
+				auto verboseLabels = (inputQuantizer->GetCardinality() <= 5) ? inputQuantizer->GetCardinality() : 5;
+
+				std::cout << "i: " << i << "\tj: " << j << "\t\tx0: " << newState[0] << "\tx1: " << newState[1];
+				for (int i = 0; i < verboseLabels; i++) {
+					if (i == 0) std::cout << "\t";
+					std::cout << "\tp" << i << ": " << networkOutput[i];;
+				}
+				std::cout <<"\tu: " << input[0] << "\ts: " << isInSpecificationSet << std::endl;
 			}
+
+			// Check episode stopping conditions
+			bool stopEpisode = false;
+			switch (specification.GetSpecificationType()) {
+			case ControlSpecificationType::Invariance:
+				if (!isInSpecificationSet) stopEpisode = true;
+				break;
+			case ControlSpecificationType::Reachability:
+				if (isInSpecificationSet) stopEpisode = true;
+				break;
+			}
+			
+			if (!stateQuantizer->IsInBounds(newState) || stopEpisode) break;
 		}
 
 		// Train the neural network based on the performance of the network
-		multilayerPerceptron->Train(states, labels);
-	}
+		if (oldNorm < initialNorm || isInSpecificationSet) multilayerPerceptron->Train(states, reinforcingLabels);
+		else multilayerPerceptron->Train(states, deterringLabels);
 
-	// Evaluate some random initial positions to see how the network is performing
-	std::cout << std::endl << "Evaluating" << std::endl;
-	for (int i = 0; i < 10; i++) {
-		auto initialState = stateQuantizer->GetRandomVector();
-		initialState[0] = initialState[0] * 0.75;
-		initialState[1] = initialState[1] * 0.3;
-		plant->SetState(initialState);
+		// Verification routine for the neural network controller
+		if (i % verificationEpisode == 0 && i != 0) {
+			verifier->ComputeTransitionFunction();
+			verifier->ComputeWinningSet();
 
-		std::cout << std::endl;
+			auto winningSetSize = verifier->GetWinningSetSize();
+			float winningSetPercentage = (float)winningSetSize / (float)stateQuantizer->GetCardinality();
 
-		for (int j = 0; j < steps; j++) {
-			auto normalizedQuantizedState = stateQuantizer->NormalizeVector(stateQuantizer->QuantizeVector(plant->GetState()));
-			auto rawInput = multilayerPerceptron->EvaluateNetwork(normalizedQuantizedState);
-
-			auto denormalizedQuantizedInput = inputQuantizer->DenormalizeVector(rawInput);
-			auto input = inputQuantizer->QuantizeVector(denormalizedQuantizedInput);
-
-			// Evolve the plant
-			plant->Evolve(input);
-			auto state = plant->GetState();
-
-			// Print simulation for evaluation
-			std::cout << "i: " << i << "\tj: " << j << "\t\tx0: " << state[0] << "\tx1: " << state[1] << "\t\tp: " << denormalizedQuantizedInput[0] << "\tu: " << input[0] << std::endl;
+			std::cout << std::endl << "Winning set size percentage: " << winningSetPercentage * 100 << "%" << std::endl;
 		}
 	}
 
@@ -169,6 +172,7 @@ int main() {
 	delete stateQuantizer;
 	delete inputQuantizer;
 	delete multilayerPerceptron;
+	delete verifier;
 
 	MXNotifyShutdown();
 

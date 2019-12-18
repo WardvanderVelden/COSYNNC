@@ -3,10 +3,17 @@
 #include <vector>
 #include "Vector.h"
 #include "Plant.h"
+#include "Quantizer.h"
 
 using namespace mxnet::cpp;
 
 namespace COSYNNC {
+	enum class LossFunctionType {
+		CrossEntropy,
+		Proportional,
+		Quadratic
+	};
+
 	class NeuralNetwork {
 	public:
 		// Initializes a default neural network
@@ -22,7 +29,7 @@ namespace COSYNNC {
 		virtual void InitializeOptimizer(string optimizer = "sgd", float learningRate = 0.1, float weightDecayRate = 0.1, bool verboseOptimizationInspection = false);
 
 		// Configures the neural network to receive input and output data compatible with the state and input dimensions and batch size
-		virtual void ConfigurateInputOutput(Plant* plant, int batchSize = 1, float initialDistribution = 0.1);
+		virtual void ConfigurateInputOutput(Plant* plant, Quantizer* inputQuantizer, int batchSize = 1, float initialDistribution = 0.1);
 
 		// Evaluates the neural network
 		virtual Vector EvaluateNetwork(Vector input);
@@ -51,6 +58,8 @@ namespace COSYNNC {
 
 		bool _verboseOptimizationInspection = false;
 
+		bool _justTrained = true;
+
 		Symbol _network;
 		map<string, NDArray> _arguments;
 		vector<string> _argumentNames;
@@ -58,6 +67,8 @@ namespace COSYNNC {
 		Executor* _executor = NULL;
 
 		Optimizer* _optimizer = NULL;
+
+		LossFunctionType _lossFunction = LossFunctionType::Proportional;
 
 		// TEMPORARY: For now we are running on the cpu
 		Context _context = Context::cpu();

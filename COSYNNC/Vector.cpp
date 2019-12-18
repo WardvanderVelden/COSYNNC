@@ -62,6 +62,8 @@ namespace COSYNNC {
 		return *this;
 	}
 	bool Vector::operator==(const Vector other) {
+		if (_length != other._length) return false;
+
 		for (int i = 0; i < _length; i++) {
 			if (_values[i] != other._values[i])	return false;
 		}

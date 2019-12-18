@@ -9,13 +9,13 @@ Plant::Plant(int stateSpaceDimension, int inputSpaceDimension, float tau) : _sta
 
 
 // Virtual function that describes the plant dynamics subject to a time step of tau, should be overriden by the actual plant dynamics
-Vector Plant::SingleStepDynamics(Vector input) {
+Vector Plant::StepDynamics(Vector input) {
 	return _state;
 }
 
 // TODO: Turn this into a Runge-Kutta integration where the delta dynamics are described and proper numerical integration techniques are utilized
 void Plant::Evolve(Vector input) {
-	_state = SingleStepDynamics(input);
+	_state = StepDynamics(input);
 	_input = input;
 }
 

@@ -31,9 +31,10 @@ namespace COSYNNC {
 	
 
 	// Configures the neural network to receive input and output data compatible with the state and input dimensions and batch size
-	void NeuralNetwork::ConfigurateInputOutput(Plant* plant, int batchSize, float initialDistribution) {
+	void NeuralNetwork::ConfigurateInputOutput(Plant* plant, Quantizer* inputQuantizer, int batchSize, float initialDistribution) {
 		_inputDimension = plant->GetStateSpaceDimension();
-		_labelDimension = plant->GetInputSpaceDimension();
+		//_labelDimension = plant->GetInputSpaceDimension();
+		_labelDimension = inputQuantizer->GetCardinality(); // For the labelled-inputs
 
 		// Define layers based on label dimension
 		auto layers = vector<int>(_hiddenLayers);
@@ -74,6 +75,10 @@ namespace COSYNNC {
 		networkInput.WaitToWrite(); // DEBUG: May also need a wait to read to prevent memory leaks
 
 		_executor->Forward(false);
+		if (_justTrained) {
+			_executor->Forward(false);
+			_justTrained = false;
+		}
 
 		auto outputDimension = _layers.back();
 		Vector output(outputDimension);
@@ -136,6 +141,8 @@ namespace COSYNNC {
 			if (_argumentNames[i] == "input" || _argumentNames[i] == "label") continue;
 			_optimizer->Update(i, _executor->arg_arrays[i], _executor->grad_arrays[i]);
 		}
+
+		_justTrained = true;
 	}
 
 

@@ -13,6 +13,24 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Header Files\Neural Networks">
+      <UniqueIdentifier>{d7dadf84-21e7-42b1-8a2a-8359d92e426b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Neural Networks">
+      <UniqueIdentifier>{ee42d3ee-dbf0-46fd-be3f-e40d57c5bc6e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Plants">
+      <UniqueIdentifier>{05a9331e-5c6d-43a1-a5e9-0910626ca65e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Plants">
+      <UniqueIdentifier>{807fbcf8-fe7f-4d74-8b84-da24b0e47260}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Control">
+      <UniqueIdentifier>{be35a133-eeca-4312-8cc8-5b05a9d1e0a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Control">
+      <UniqueIdentifier>{6dfb83f2-2607-4b3d-886e-67caa4a99b41}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -21,46 +39,64 @@
     <ClCompile Include="Vector.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Plant.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Controller.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Quantizer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ControlSpecification.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="MultilayerPerceptron.cpp">
+      <Filter>Source Files\Neural Networks</Filter>
     </ClCompile>
     <ClCompile Include="NeuralNetwork.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Neural Networks</Filter>
     </ClCompile>
-    <ClCompile Include="MultilayerPerceptron.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="Plant.cpp">
+      <Filter>Source Files\Plants</Filter>
+    </ClCompile>
+    <ClCompile Include="Rocket.cpp">
+      <Filter>Source Files\Plants</Filter>
+    </ClCompile>
+    <ClCompile Include="Controller.cpp">
+      <Filter>Source Files\Control</Filter>
+    </ClCompile>
+    <ClCompile Include="ControlSpecification.cpp">
+      <Filter>Source Files\Control</Filter>
+    </ClCompile>
+    <ClCompile Include="Quantizer.cpp">
+      <Filter>Source Files\Control</Filter>
+    </ClCompile>
+    <ClCompile Include="DCDC.cpp">
+      <Filter>Source Files\Plants</Filter>
+    </ClCompile>
+    <ClCompile Include="Verifier.cpp">
+      <Filter>Source Files\Control</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Vector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Plant.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Controller.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Quantizer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ControlSpecification.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="NeuralNetwork.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\Neural Networks</Filter>
     </ClInclude>
     <ClInclude Include="MultilayerPerceptron.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\Neural Networks</Filter>
+    </ClInclude>
+    <ClInclude Include="Plant.h">
+      <Filter>Header Files\Plants</Filter>
+    </ClInclude>
+    <ClInclude Include="Rocket.h">
+      <Filter>Header Files\Plants</Filter>
+    </ClInclude>
+    <ClInclude Include="Controller.h">
+      <Filter>Header Files\Control</Filter>
+    </ClInclude>
+    <ClInclude Include="ControlSpecification.h">
+      <Filter>Header Files\Control</Filter>
+    </ClInclude>
+    <ClInclude Include="Quantizer.h">
+      <Filter>Header Files\Control</Filter>
+    </ClInclude>
+    <ClInclude Include="DCDC.h">
+      <Filter>Header Files\Plants</Filter>
+    </ClInclude>
+    <ClInclude Include="Verifier.h">
+      <Filter>Header Files\Control</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

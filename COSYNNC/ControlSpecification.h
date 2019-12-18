@@ -20,10 +20,13 @@ namespace COSYNNC {
 		void SetHyperInterval(Vector lowerVertex, Vector upperVertex);
 
 		// Checks if the current state vector satisfies is in the control specification goal
-		bool IsInControlGoal(Vector state); 
+		bool IsInSpecificationSet(Vector state); 
 
 		// Returns the center of the control specification set
 		Vector GetCenter() const;
+
+		// Returns the control specification type
+		ControlSpecificationType GetSpecificationType() const;
 	private:
 		ControlSpecificationType _type;
 
