@@ -19,12 +19,12 @@ int main() {
 	const int episodes = 1000000;
 	const int steps = 25; // 25;
 	const int verboseEpisode = 2500;
-	const int verificationEpisode = 25000;
+	const int verificationEpisode = 50000;
 
 	// Initialize quantizers
 	Quantizer* stateQuantizer = new Quantizer(true);
 	stateQuantizer->SetQuantizeParameters(Vector({ 0.1, 0.1 }), Vector({ -5, -10 }), Vector({ 5, 10 }));
-	//stateQuantizer->SetQuantizeParameters(Vector({ 0.05, 0.05 }), Vector({ 1.15, 5.45 }), Vector({ 1.55, 5.85 }));
+	//stateQuantizer->SetQuantizeParameters(Vector({ 0.0125, 0.0125 }), Vector({ 1.15, 5.45 }), Vector({ 1.55, 5.85 }));
 
 	Quantizer* inputQuantizer = new Quantizer(true);
 	inputQuantizer->SetQuantizeParameters(Vector((float)1000.0), Vector((float)0.0), Vector((float)5000.0));
@@ -42,6 +42,8 @@ int main() {
 	specification.SetHyperInterval(Vector({ -1, -1 }), Vector({ 1, 1 }));
 	//ControlSpecification specification(ControlSpecificationType::Invariance, plant);
 	//specification.SetHyperInterval(Vector({ 1.15, 5.45 }), Vector({ 1.55, 5.85 }));
+	//ControlSpecification specification(ControlSpecificationType::Reachability, plant);
+	//specification.SetHyperInterval(Vector({ 1.45, 5.45 }), Vector({ 1.55, 5.85 }));
 	controller.SetControlSpecification(&specification);
 
 	// Initialize a multilayer perceptron neural network and configure it to function as controller
@@ -64,17 +66,18 @@ int main() {
 
 		// Get an initial state based on the control specification we are trying to solve for
 		float progressionFactor = (float)i / (float)episodes;
-		auto initialState = Vector({ 0.0, 0.0 }); //Vector({ 1.2, 5.6 });
+		auto initialState = Vector({ 0.0, 0.0 }); 
+		//auto initialState = Vector({ 1.2, 5.6 });
+		//auto initialState = stateQuantizer->GetRandomVector();
 
 		switch (specification.GetSpecificationType()) {
 		case ControlSpecificationType::Invariance:
-			initialState = stateQuantizer->GetRandomVector();
 			break;
 		case ControlSpecificationType::Reachability:
+			initialState = verifier->GetVectorRadialFromGoal(0.15 + 0.85 * progressionFactor);
+			//initialState = verifier->GetVectorFromLosingDomain();
 			while (specification.IsInSpecificationSet(initialState)) {
-				initialState = stateQuantizer->GetRandomVector();
-				initialState[0] = initialState[0] * 0.1 + progressionFactor * 0.8;
-				initialState[1] = initialState[1] * 0.2 + progressionFactor * 0.4;
+				initialState = verifier->GetVectorRadialFromGoal(0.15 + 0.85 * progressionFactor);
 			}
 			break;
 		}

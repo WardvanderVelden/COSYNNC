@@ -178,14 +178,15 @@ Vector Quantizer::GetVectorFromOneHot(Vector oneHot) {
 Vector Quantizer::GetVectorFromIndex(long index) {
 	Vector vec(_spaceDim);
 	for (int i = (_spaceDim - 1); i >= 0; i--) {
-		long indexOnAxis = 0;
-		if (i > 0) indexOnAxis = floor(index / _spaceCardinalityPerAxis[i]);
-		else indexOnAxis = index;
+		long indexOnAxis = indexOnAxis = (i != 0) ? floor(index / _spaceCardinalityPerAxis[i - 1]) : index;
+		
 		index -= indexOnAxis * _spaceCardinalityPerAxis[i];
 		vec[i] = indexOnAxis * _spaceEta[i] + _spaceLowerBound[i] + _spaceEta[i] * 0.5;
 	}
 
-	return vec;
+	if (IsInBounds(vec)) return vec;
+	
+	return Vector(_spaceDim);
 }
 
 
@@ -197,6 +198,7 @@ long Quantizer::GetIndexFromVector(Vector vector) {
 
 	for (int i = 0; i < _spaceDim; i++) {
 		long indexPerAxis = (i != 0) ? _spaceCardinalityPerAxis[i - 1] : 1;
+
 		index += floor((vector[i] - _spaceLowerBound[i]) / _spaceEta[i]) * indexPerAxis;
 	}
 
@@ -240,4 +242,15 @@ long Quantizer::GetCardinality() const {
 // Returns the dimension of the space
 int Quantizer::GetSpaceDimension() const {
 	return _spaceDim;
+}
+
+
+// Returns the lower bound of the quantizer
+Vector Quantizer::GetSpaceLowerBound() const {
+	return _spaceLowerBound;
+}
+
+// Returns the upper bound of the quantizer
+Vector Quantizer::GetSpaceUpperBound() const {
+	return _spaceUpperBound;
 }
