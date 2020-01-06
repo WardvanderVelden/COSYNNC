@@ -15,33 +15,56 @@ using namespace mxnet;
 int main() {
 	std::cout << "COSYNNC: A correct-by-design neural network synthesis tool." << std::endl << std::endl;
 
+	// TEMPORARY: Example switch variables
+	const bool isRocketExample = true;
+	const bool isReachability = true;
+
 	// COSYNNC training parameters
-	const int episodes = 1000000;
-	const int steps = 25; // 25;
+	const int episodes = 2000000;
+	const int steps = 50; // 25;
 	const int verboseEpisode = 2500;
-	const int verificationEpisode = 25000;
+	const int verificationEpisode = 50000;
 
 	// Initialize quantizers
 	Quantizer* stateQuantizer = new Quantizer(true);
-	stateQuantizer->SetQuantizeParameters(Vector({ 0.1, 0.1 }), Vector({ -5, -10 }), Vector({ 5, 10 }));
-	//stateQuantizer->SetQuantizeParameters(Vector({ 0.05, 0.05 }), Vector({ 1.15, 5.45 }), Vector({ 1.55, 5.85 }));
+	if(isRocketExample)	stateQuantizer->SetQuantizeParameters(Vector({ 0.1, 0.1 }), Vector({ -5, -10 }), Vector({ 5, 10 }));
+	else stateQuantizer->SetQuantizeParameters(Vector({ 0.0125, 0.0125 }), Vector({ 1.15, 5.45 }), Vector({ 1.55, 5.85 }));
 
 	Quantizer* inputQuantizer = new Quantizer(true);
-	inputQuantizer->SetQuantizeParameters(Vector((float)1000.0), Vector((float)0.0), Vector((float)5000.0));
-	//inputQuantizer->SetQuantizeParameters(Vector((float)0.5), Vector((float)0.0), Vector((float)1.0));
+	if(isRocketExample) inputQuantizer->SetQuantizeParameters(Vector((float)1000.0), Vector((float)0.0), Vector((float)5000.0));
+	else inputQuantizer->SetQuantizeParameters(Vector((float)0.5), Vector((float)0.0), Vector((float)1.0));
 
 	// Initialize plant
-	Rocket* plant = new Rocket();
-	//DCDC* plant = new DCDC();
+	Plant* plant;
+	if(isRocketExample) plant = new Rocket();
+	else plant = new DCDC();
 
 	// Initialize controller
 	Controller controller(plant, stateQuantizer, inputQuantizer);
 
 	// Initialize a control specification
-	ControlSpecification specification(ControlSpecificationType::Reachability, plant);
-	specification.SetHyperInterval(Vector({ -1, -1 }), Vector({ 1, 1 }));
-	//ControlSpecification specification(ControlSpecificationType::Invariance, plant);
-	//specification.SetHyperInterval(Vector({ 1.15, 5.45 }), Vector({ 1.55, 5.85 }));
+	ControlSpecification specification;
+	if (isRocketExample) {
+		if (isReachability) {
+			specification = ControlSpecification(ControlSpecificationType::Reachability, plant);
+			//specification.SetHyperInterval(Vector({ -1, -1 }), Vector({ 1, 1 }));
+			specification.SetHyperInterval(Vector({ 0.5, -0.5 }), Vector({ 1.5, 0.5 }));
+		}
+		else {
+			specification = ControlSpecification(ControlSpecificationType::Invariance, plant);
+			specification.SetHyperInterval(Vector({ -2.5, -5 }), Vector({ 2.5, 5 }));
+		}	
+	}
+	else {
+		if (isReachability) {
+			specification = ControlSpecification(ControlSpecificationType::Reachability, plant);
+			specification.SetHyperInterval(Vector({ 1.15, 5.75 }), Vector({ 1.25, 5.85 }));
+		}
+		else {
+			ControlSpecification specification(ControlSpecificationType::Invariance, plant);
+			specification.SetHyperInterval(Vector({ 1.15, 5.45 }), Vector({ 1.55, 5.85 }));
+		}
+	}
 	controller.SetControlSpecification(&specification);
 
 	// Initialize a multilayer perceptron neural network and configure it to function as controller
@@ -64,17 +87,18 @@ int main() {
 
 		// Get an initial state based on the control specification we are trying to solve for
 		float progressionFactor = (float)i / (float)episodes;
-		auto initialState = Vector({ 0.0, 0.0 }); //Vector({ 1.2, 5.6 });
+		auto initialState = Vector({ 0.0, 0.0 }); 
 
 		switch (specification.GetSpecificationType()) {
 		case ControlSpecificationType::Invariance:
-			initialState = stateQuantizer->GetRandomVector();
 			break;
 		case ControlSpecificationType::Reachability:
+			//initialState = verifier->GetVectorRadialFromGoal(0.15 + 0.85 * progressionFactor);
+			initialState = verifier->GetVectorRadialFromGoal(0.15 + 0.35 * progressionFactor);
+			//initialState = verifier->GetVectorFromLosingDomain();
 			while (specification.IsInSpecificationSet(initialState)) {
-				initialState = stateQuantizer->GetRandomVector();
-				initialState[0] = initialState[0] * 0.1 + progressionFactor * 0.8;
-				initialState[1] = initialState[1] * 0.2 + progressionFactor * 0.4;
+				//initialState = verifier->GetVectorRadialFromGoal(0.15 + 0.85 * progressionFactor);
+				initialState = verifier->GetVectorRadialFromGoal(0.15 + 0.35 * progressionFactor);
 			}
 			break;
 		}
@@ -152,7 +176,10 @@ int main() {
 		}
 
 		// Train the neural network based on the performance of the network
-		if (oldNorm < initialNorm || isInSpecificationSet) multilayerPerceptron->Train(states, reinforcingLabels);
+		//if (oldNorm < initialNorm || isInSpecificationSet) multilayerPerceptron->Train(states, reinforcingLabels);
+		//else multilayerPerceptron->Train(states, deterringLabels);
+
+		if (isInSpecificationSet) multilayerPerceptron->Train(states, reinforcingLabels);
 		else multilayerPerceptron->Train(states, deterringLabels);
 
 		// Verification routine for the neural network controller
@@ -163,7 +190,16 @@ int main() {
 			auto winningSetSize = verifier->GetWinningSetSize();
 			float winningSetPercentage = (float)winningSetSize / (float)stateQuantizer->GetCardinality();
 
-			std::cout << std::endl << "Winning set size percentage: " << winningSetPercentage * 100 << "%" << std::endl;
+			std::cout << "Winning set size percentage: " << winningSetPercentage * 100 << "%" << std::endl << std::endl;
+
+			// Empirical random walks
+			std::cout << "Empirical verification" << std::endl;
+			for (unsigned int j = 0; j < 5; j++) {
+				std::cout << std::endl;
+				auto initialState = stateQuantizer->GetRandomVector();
+				verifier->PrintVerboseWalk(initialState);
+			}
+			std:cout << std::endl;
 		}
 	}
 

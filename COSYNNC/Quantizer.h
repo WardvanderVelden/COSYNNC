@@ -60,6 +60,12 @@ namespace COSYNNC {
 		// Checks if a vector is in the bounds of the quantized space
 		bool IsInBounds(Vector vector);
 
+		// Returns the lower bound of the quantizer
+		Vector GetSpaceLowerBound() const;
+
+		// Returns the upper bound of the quantizer
+		Vector GetSpaceUpperBound() const;
+
 	private:
 		bool _isBounded = false;
 

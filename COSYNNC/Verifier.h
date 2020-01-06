@@ -16,11 +16,20 @@ namespace COSYNNC {
 		// Computes the winning set for which the controller currently is able to adhere to the control specification
 		void ComputeWinningSet();
 
+		//  Prints a verbose walk of the current controller using greedy inputs
+		void PrintVerboseWalk(Vector initialState);
+
 		// Returns the size of the winning set compared to the cardinality of the state space
 		long GetWinningSetSize();
 
 		// Sets a part of the winning domain, returns whether or not that element has changed
 		bool SetWinningDomain(long index, bool value);
+
+		// Get a random vector from the space of the lossing domain
+		Vector GetVectorFromLosingDomain();
+
+		// Get a random vector in a radius to the goal based on training time
+		Vector GetVectorRadialFromGoal(float progression);
 
 	private:
 		Plant* _plant;
@@ -31,5 +40,8 @@ namespace COSYNNC {
 
 		long* _transitions;
 		bool* _winningSet;
+		vector<long> _losingIndices;
+
+		const unsigned int _maxSteps = 50;
 	};
 }
