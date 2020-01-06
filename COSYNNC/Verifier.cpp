@@ -65,7 +65,7 @@ namespace COSYNNC {
 
 			case ControlSpecificationType::Reachability:
 				auto state = _stateQuantizer->GetVectorFromIndex(index);
-				if (_specification->IsInSpecificationSet(state)) _winningSet[index] = true; // 18040 is true
+				if (_specification->IsInSpecificationSet(state)) _winningSet[index] = true;
 				else _winningSet[index] = false;
 				break;
 			}
@@ -133,7 +133,25 @@ namespace COSYNNC {
 			if (!_winningSet[index]) _losingIndices.push_back(index);
 		}
 
-		std::cout << std::endl << "Iterations: " << iterations << std::endl;
+		std::cout << std::endl << "Fixed point iterations: " << iterations << std::endl;
+	}
+
+
+	//  Prints a verbose walk of the current controller using greedy inputs
+	void Verifier::PrintVerboseWalk(Vector initialState) {
+		_plant->SetState(initialState);
+		for (unsigned int i = 0; i < _maxSteps; i++) {
+			auto quantizedState = _stateQuantizer->QuantizeVector(_plant->GetState());
+			auto input = _controller->GetControlAction(quantizedState);
+
+			_plant->Evolve(input);
+
+			auto newState = _plant->GetState();
+			//auto quantizedNewState = _stateQuantizer->QuantizeVector(newState);
+			auto satisfied = _specification->IsInSpecificationSet(newState);
+
+			std::cout << "\ti: " << i << "\tx0: " << newState[0] << "\tx1: " << newState[1] << "\tu: " << input[0] << "\ts: " << satisfied << std::endl;
+		}
 	}
 
 

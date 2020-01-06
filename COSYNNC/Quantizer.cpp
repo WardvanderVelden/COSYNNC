@@ -184,9 +184,9 @@ Vector Quantizer::GetVectorFromIndex(long index) {
 		vec[i] = indexOnAxis * _spaceEta[i] + _spaceLowerBound[i] + _spaceEta[i] * 0.5;
 	}
 
-	if (IsInBounds(vec)) return vec;
+	//if (IsInBounds(vec)) return vec;
 	
-	return Vector(_spaceDim);
+	return vec;
 }
 
 

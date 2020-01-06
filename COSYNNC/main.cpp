@@ -17,10 +17,11 @@ int main() {
 
 	// TEMPORARY: Example switch variables
 	const bool isRocketExample = true;
+	const bool isReachability = true;
 
 	// COSYNNC training parameters
-	const int episodes = 1000000;
-	const int steps = 25; // 25;
+	const int episodes = 2000000;
+	const int steps = 50; // 25;
 	const int verboseEpisode = 2500;
 	const int verificationEpisode = 50000;
 
@@ -44,14 +45,25 @@ int main() {
 	// Initialize a control specification
 	ControlSpecification specification;
 	if (isRocketExample) {
-		specification = ControlSpecification(ControlSpecificationType::Reachability, plant);
-		specification.SetHyperInterval(Vector({ -1, -1 }), Vector({ 1, 1 }));
+		if (isReachability) {
+			specification = ControlSpecification(ControlSpecificationType::Reachability, plant);
+			//specification.SetHyperInterval(Vector({ -1, -1 }), Vector({ 1, 1 }));
+			specification.SetHyperInterval(Vector({ 0.5, -0.5 }), Vector({ 1.5, 0.5 }));
+		}
+		else {
+			specification = ControlSpecification(ControlSpecificationType::Invariance, plant);
+			specification.SetHyperInterval(Vector({ -2.5, -5 }), Vector({ 2.5, 5 }));
+		}	
 	}
 	else {
-		//ControlSpecification specification(ControlSpecificationType::Invariance, plant);
-		//specification.SetHyperInterval(Vector({ 1.15, 5.45 }), Vector({ 1.55, 5.85 }));
-		specification = ControlSpecification(ControlSpecificationType::Reachability, plant);
-		specification.SetHyperInterval(Vector({ 1.45, 5.45 }), Vector({ 1.55, 5.85 }));
+		if (isReachability) {
+			specification = ControlSpecification(ControlSpecificationType::Reachability, plant);
+			specification.SetHyperInterval(Vector({ 1.15, 5.75 }), Vector({ 1.25, 5.85 }));
+		}
+		else {
+			ControlSpecification specification(ControlSpecificationType::Invariance, plant);
+			specification.SetHyperInterval(Vector({ 1.15, 5.45 }), Vector({ 1.55, 5.85 }));
+		}
 	}
 	controller.SetControlSpecification(&specification);
 
@@ -81,10 +93,12 @@ int main() {
 		case ControlSpecificationType::Invariance:
 			break;
 		case ControlSpecificationType::Reachability:
-			initialState = verifier->GetVectorRadialFromGoal(0.15 + 0.85 * progressionFactor);
+			//initialState = verifier->GetVectorRadialFromGoal(0.15 + 0.85 * progressionFactor);
+			initialState = verifier->GetVectorRadialFromGoal(0.15 + 0.35 * progressionFactor);
 			//initialState = verifier->GetVectorFromLosingDomain();
 			while (specification.IsInSpecificationSet(initialState)) {
-				initialState = verifier->GetVectorRadialFromGoal(0.15 + 0.85 * progressionFactor);
+				//initialState = verifier->GetVectorRadialFromGoal(0.15 + 0.85 * progressionFactor);
+				initialState = verifier->GetVectorRadialFromGoal(0.15 + 0.35 * progressionFactor);
 			}
 			break;
 		}
@@ -162,7 +176,10 @@ int main() {
 		}
 
 		// Train the neural network based on the performance of the network
-		if (oldNorm < initialNorm || isInSpecificationSet) multilayerPerceptron->Train(states, reinforcingLabels);
+		//if (oldNorm < initialNorm || isInSpecificationSet) multilayerPerceptron->Train(states, reinforcingLabels);
+		//else multilayerPerceptron->Train(states, deterringLabels);
+
+		if (isInSpecificationSet) multilayerPerceptron->Train(states, reinforcingLabels);
 		else multilayerPerceptron->Train(states, deterringLabels);
 
 		// Verification routine for the neural network controller
@@ -173,7 +190,16 @@ int main() {
 			auto winningSetSize = verifier->GetWinningSetSize();
 			float winningSetPercentage = (float)winningSetSize / (float)stateQuantizer->GetCardinality();
 
-			std::cout << std::endl << "Winning set size percentage: " << winningSetPercentage * 100 << "%" << std::endl;
+			std::cout << "Winning set size percentage: " << winningSetPercentage * 100 << "%" << std::endl << std::endl;
+
+			// Empirical random walks
+			std::cout << "Empirical verification" << std::endl;
+			for (unsigned int j = 0; j < 5; j++) {
+				std::cout << std::endl;
+				auto initialState = stateQuantizer->GetRandomVector();
+				verifier->PrintVerboseWalk(initialState);
+			}
+			std:cout << std::endl;
 		}
 	}
 

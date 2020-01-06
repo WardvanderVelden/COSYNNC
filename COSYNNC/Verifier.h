@@ -16,6 +16,9 @@ namespace COSYNNC {
 		// Computes the winning set for which the controller currently is able to adhere to the control specification
 		void ComputeWinningSet();
 
+		//  Prints a verbose walk of the current controller using greedy inputs
+		void PrintVerboseWalk(Vector initialState);
+
 		// Returns the size of the winning set compared to the cardinality of the state space
 		long GetWinningSetSize();
 
@@ -38,5 +41,7 @@ namespace COSYNNC {
 		long* _transitions;
 		bool* _winningSet;
 		vector<long> _losingIndices;
+
+		const unsigned int _maxSteps = 50;
 	};
 }
