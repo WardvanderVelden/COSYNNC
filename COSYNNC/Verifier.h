@@ -30,7 +30,6 @@ namespace COSYNNC {
 
 		// Get a random vector in a radius to the goal based on training time
 		Vector GetVectorRadialFromGoal(float progression);
-
 	private:
 		Plant* _plant;
 		Controller* _controller;

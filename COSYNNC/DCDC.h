@@ -6,8 +6,9 @@ namespace COSYNNC {
 	public:
 		DCDC() : Plant(2, 1, 0.1) { }
 
-		// Dynamics are described by two modes, hence input is binary ( < 0.5, > 0.5)
-		Vector StepDynamics(Vector input) override;
+		Vector StepDynamics(Vector input) override; // Dynamics are described by two modes, hence input is binary ( < 0.5, > 0.5)
+
+		Vector StepOverApproximation(Vector input) override;
 	private:
 		float _xc = 70;
 		float _xl = 3;

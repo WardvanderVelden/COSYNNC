@@ -27,6 +27,15 @@ namespace COSYNNC {
 
 		// Returns the control specification type
 		ControlSpecificationType GetSpecificationType() const;
+
+		// Returns the lower vertex of the control specification set
+		Vector GetLowerHyperIntervalVertex() const;
+
+		// Returns the upper vertex of the control specification set
+		Vector GetUpperHyperIntervalVertex() const;
+
+		// Get a random vector from the specified winning space
+		Vector GetVectorFromSpecification();
 	private:
 		ControlSpecificationType _type;
 

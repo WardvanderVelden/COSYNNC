@@ -54,19 +54,22 @@ namespace COSYNNC {
 	void Verifier::ComputeWinningSet() {
 		auto stateSpaceCardinality = _stateQuantizer->GetCardinality();
 
-		bool verbose = false;
+		bool verbose = true;
 
 		// Define initial winning domain for the fixed point operator
 		for (long index = 0; index < stateSpaceCardinality; index++) {
+			auto state = _stateQuantizer->GetVectorFromIndex(index);
+
 			switch (_specification->GetSpecificationType()) {
 			case ControlSpecificationType::Invariance:
-				_winningSet[index] = true;
+				_winningSet[index] = _specification->IsInSpecificationSet(state);
+
 				break;
 
 			case ControlSpecificationType::Reachability:
-				auto state = _stateQuantizer->GetVectorFromIndex(index);
 				if (_specification->IsInSpecificationSet(state)) _winningSet[index] = true;
 				else _winningSet[index] = false;
+			
 				break;
 			}
 		}
@@ -75,8 +78,8 @@ namespace COSYNNC {
 		if (verbose) {
 			for (long index = 0; index < stateSpaceCardinality; index++) {
 				if (index % 32 == 0) std::cout << std::endl;
-				if (_winningSet[index]) std::cout << "T";
-				else std::cout << "F";
+				if (_winningSet[index]) std::cout << "X";
+				else std::cout << ".";
 			}
 			std::cout << std::endl;
 		}
@@ -118,8 +121,8 @@ namespace COSYNNC {
 			if (verbose) {
 				for (long index = 0; index < stateSpaceCardinality; index++) {
 					if (index % 32 == 0) std::cout << std::endl;
-					if (_winningSet[index]) std::cout << "T";
-					else std::cout << "F";
+					if (_winningSet[index]) std::cout << "X";
+					else std::cout << ".";
 				}
 				std::cout << std::endl;
 			}
@@ -140,8 +143,14 @@ namespace COSYNNC {
 	//  Prints a verbose walk of the current controller using greedy inputs
 	void Verifier::PrintVerboseWalk(Vector initialState) {
 		_plant->SetState(initialState);
+
+		bool continueWalk = true;
 		for (unsigned int i = 0; i < _maxSteps; i++) {
-			auto quantizedState = _stateQuantizer->QuantizeVector(_plant->GetState());
+			auto state = _plant->GetState();
+			if (!_stateQuantizer->IsInBounds(state)) break;
+
+			auto quantizedState = _stateQuantizer->QuantizeVector(state);
+
 			auto input = _controller->GetControlAction(quantizedState);
 
 			_plant->Evolve(input);
@@ -151,6 +160,17 @@ namespace COSYNNC {
 			auto satisfied = _specification->IsInSpecificationSet(newState);
 
 			std::cout << "\ti: " << i << "\tx0: " << newState[0] << "\tx1: " << newState[1] << "\tu: " << input[0] << "\ts: " << satisfied << std::endl;
+			
+			switch (_specification->GetSpecificationType()) {
+			case ControlSpecificationType::Invariance:
+				if (!satisfied) continueWalk = false;
+				break;
+			case ControlSpecificationType::Reachability:
+				if (satisfied) continueWalk = false;
+				break;
+			}
+
+			if (!continueWalk) break;
 		}
 	}
 

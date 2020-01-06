@@ -250,6 +250,7 @@ Vector Quantizer::GetSpaceLowerBound() const {
 	return _spaceLowerBound;
 }
 
+
 // Returns the upper bound of the quantizer
 Vector Quantizer::GetSpaceUpperBound() const {
 	return _spaceUpperBound;

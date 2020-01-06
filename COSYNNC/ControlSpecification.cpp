@@ -46,4 +46,29 @@ namespace COSYNNC {
 	ControlSpecificationType ControlSpecification::GetSpecificationType() const {
 		return _type;
 	}
+
+
+	// Returns the lower vertex of the control specification set
+	Vector ControlSpecification::GetLowerHyperIntervalVertex() const {
+		return _lowerVertex;
+	}
+
+
+	// Returns the upper vertex of the control specification set
+	Vector ControlSpecification::GetUpperHyperIntervalVertex() const {
+		return _upperVertex;
+	}
+
+
+	// Get a random vector from the specified winning space
+	Vector ControlSpecification::GetVectorFromSpecification() {
+		Vector randomVector(_spaceDim);
+
+		for (int i = 0; i < _spaceDim; i++) {
+			float randomFloat = (float)rand() / RAND_MAX;
+			randomVector[i] = _lowerVertex[i] + (_upperVertex[i] - _lowerVertex[i]) * randomFloat;
+		}
+
+		return randomVector;
+	}
 }
