@@ -66,6 +66,9 @@ namespace COSYNNC {
 		// Returns the upper bound of the quantizer
 		Vector GetSpaceUpperBound() const;
 
+		// Returns an array of vectors which are the vertices of the hypercell
+		Vector[] GetHyperCellVertices(Vector cell);
+
 	private:
 		bool _isBounded = false;
 

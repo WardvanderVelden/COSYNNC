@@ -255,3 +255,17 @@ Vector Quantizer::GetSpaceLowerBound() const {
 Vector Quantizer::GetSpaceUpperBound() const {
 	return _spaceUpperBound;
 }
+
+
+// Returns an array of vectors which are the vertices of the hypercell
+Vector[] Quantizer::GetHyperCellVertices(Vector cell) {
+	auto cellCenter = QuantizeVector(cell);
+	Vector vertices[_spaceDim * 2];
+
+	for(unsigned int i = 0; i < _spaceDim; i++) {
+		vertices[i * 2] = cellCenter[i] - _spaceEta[i] * 0.5;
+		vertices[i * 2 + 1] = cellCenter[i] + _spaceEta[i] * 0.5;
+	}
+
+	return vertices;
+}

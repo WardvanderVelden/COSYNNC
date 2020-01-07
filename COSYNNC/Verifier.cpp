@@ -30,11 +30,35 @@ namespace COSYNNC {
 		for (long index = 0; index < _stateQuantizer->GetCardinality(); index++) {
 			// Get state based on the index
 			auto state = _stateQuantizer->GetVectorFromIndex(index);
-			_plant->SetState(state);
+
+			// Calculate transition for every vertex in the hyper cell
+			auto vertices = _stateQuantizer->GetHyperCellVertices(state);
+			Vector newStateVertices[vertices.size()];
+			for(unsigned int i = 0; i < _spaceDim * 2; i++) {
+				auto vertex = vertices[i];
+
+				_plant->SetState(vertex);
+
+				auto input = _controller->GetControlAction(state);
+				auto newStateVertex = _plant->StepOverApproximation(input);
+
+				newStateVertices[i] = newStateVertex;
+			}
+
+			// Go through the new state vertices to determine all the new states that are captured by it
+			for(unsigned int i = 0; i < _spaceDim; i++) {
+				// Vertices are in the same cell
+				if(newStateVertices[i * 2] == newStateVertices[i * 2 + 1]) {
+					_transitions[index] = _stateQuantizer->QuantizeVector(newStateVertices[i]);
+				}
+			}
+
+			// Interpolate between the vertices to find all the new states and add these to an array of transitions
+			
 
 			// Find the input based on the current controller
-			auto input = _controller->GetControlAction(state);
-			
+			/*auto input = _controller->GetControlAction(state);
+
 			// Calculate the transition
 			_plant->Evolve(input);
 			auto newState = _plant->GetState();
@@ -45,7 +69,7 @@ namespace COSYNNC {
 				newIndex = _stateQuantizer->GetIndexFromVector(quantizedNewState);
 			}
 
-			_transitions[index] = newIndex;
+			_transitions[index] = newIndex;*/
 		}
 	}
 
