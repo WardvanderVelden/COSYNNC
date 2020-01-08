@@ -66,6 +66,12 @@
     <ClCompile Include="Verifier.cpp">
       <Filter>Source Files\Control</Filter>
     </ClCompile>
+    <ClCompile Include="Edge.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Transition.cpp">
+      <Filter>Source Files\Control</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Vector.h">
@@ -96,6 +102,12 @@
       <Filter>Header Files\Plants</Filter>
     </ClInclude>
     <ClInclude Include="Verifier.h">
+      <Filter>Header Files\Control</Filter>
+    </ClInclude>
+    <ClInclude Include="Edge.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Transition.h">
       <Filter>Header Files\Control</Filter>
     </ClInclude>
   </ItemGroup>

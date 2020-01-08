@@ -2,6 +2,7 @@
 #include <math.h>
 #include "Vector.h";
 #include "Quantizer.h";
+#include "Edge.h"
 
 # define PI 3.14159265358979323846
 
@@ -66,6 +67,11 @@ namespace COSYNNC {
 		// Returns the upper bound of the quantizer
 		Vector GetSpaceUpperBound() const;
 
+		// Returns the space eta of the quantizer
+		Vector GetSpaceEta() const;
+
+		// Returns an array of vectors which are the vertices of the hyper cell
+		Vector* GetHyperCellVertices(Vector cell);
 	private:
 		bool _isBounded = false;
 

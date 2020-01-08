@@ -13,6 +13,13 @@ Vector Plant::StepDynamics(Vector input) {
 	return _state;
 }
 
+
+// Defines the over approximation of the dynamics of the plant for a single time step tau
+Vector Plant::StepOverApproximation(Vector input) {
+	return StepDynamics(input);
+}
+
+
 // TODO: Turn this into a Runge-Kutta integration where the delta dynamics are described and proper numerical integration techniques are utilized
 void Plant::Evolve(Vector input) {
 	_state = StepDynamics(input);

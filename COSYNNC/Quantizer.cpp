@@ -250,7 +250,41 @@ Vector Quantizer::GetSpaceLowerBound() const {
 	return _spaceLowerBound;
 }
 
+
 // Returns the upper bound of the quantizer
 Vector Quantizer::GetSpaceUpperBound() const {
 	return _spaceUpperBound;
+}
+
+// Returns the space eta of the quantizer
+Vector Quantizer::GetSpaceEta() const {
+	return _spaceEta;
+}
+
+
+// Returns an array of vectors which are the vertices of the hyper cell
+Vector* Quantizer::GetHyperCellVertices(Vector cell) {
+	const unsigned int amountOfVertices = pow(2.0, (double)_spaceDim);
+
+	auto cellCenter = QuantizeVector(cell);
+	Vector* vertices = new Vector[amountOfVertices];
+
+	auto baseVertex = cellCenter;
+	for (unsigned int i = 0; i < _spaceDim; i++) baseVertex[i] -= _spaceEta[i] * 0.5;
+
+	unsigned int vertexIndex = 0;
+	for (unsigned int i = 0; i < _spaceDim; i++) {
+		if (i == 0) vertices[vertexIndex++] = baseVertex;
+
+		auto verticesAllocated = vertexIndex;
+		for (unsigned int j = 0; j < verticesAllocated; j++) {
+			auto facingVertex = vertices[j];
+
+			auto newVertex = facingVertex;
+			newVertex[i] += _spaceEta[i];
+			vertices[vertexIndex++] = newVertex;
+		}
+	}
+
+	return vertices;
 }

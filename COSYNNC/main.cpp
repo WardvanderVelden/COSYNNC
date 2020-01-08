@@ -16,14 +16,16 @@ int main() {
 	std::cout << "COSYNNC: A correct-by-design neural network synthesis tool." << std::endl << std::endl;
 
 	// TEMPORARY: Example switch variables
-	const bool isRocketExample = true;
+	const bool isRocketExample = false;
 	const bool isReachability = true;
 
 	// COSYNNC training parameters
-	const int episodes = 2000000;
-	const int steps = 50; // 25;
+	const int episodes = 200000;
+	const int steps = 25;
 	const int verboseEpisode = 2500;
-	const int verificationEpisode = 50000;
+	const int verificationEpisode = 10000;
+
+	const bool verboseMode = true;
 
 	// Initialize quantizers
 	Quantizer* stateQuantizer = new Quantizer(true);
@@ -58,11 +60,12 @@ int main() {
 	else {
 		if (isReachability) {
 			specification = ControlSpecification(ControlSpecificationType::Reachability, plant);
-			specification.SetHyperInterval(Vector({ 1.15, 5.75 }), Vector({ 1.25, 5.85 }));
+			specification.SetHyperInterval(Vector({ 1.35, 5.65 }), Vector({ 1.55, 5.85 }));
 		}
 		else {
-			ControlSpecification specification(ControlSpecificationType::Invariance, plant);
-			specification.SetHyperInterval(Vector({ 1.15, 5.45 }), Vector({ 1.55, 5.85 }));
+			specification = ControlSpecification(ControlSpecificationType::Invariance, plant);
+			//specification.SetHyperInterval(Vector({ 1.15, 5.45 }), Vector({ 1.55, 5.85 }));
+			specification.SetHyperInterval(Vector({ 1.2, 5.5 }), Vector({ 1.5, 5.8 }));
 		}
 	}
 	controller.SetControlSpecification(&specification);
@@ -78,8 +81,8 @@ int main() {
 
 	// Training routine for the neural network controller
 	std::cout << "Training" << std::endl;
-	for (int i = 0; i < episodes; i++) {
-		if (i % verboseEpisode == 0) std::cout << std::endl;
+	for (int i = 0; i <= episodes; i++) {
+		if (i % verboseEpisode == 0 && verboseMode) std::cout << std::endl;
 
 		vector<Vector> states;
 		vector<Vector> reinforcingLabels;
@@ -91,14 +94,14 @@ int main() {
 
 		switch (specification.GetSpecificationType()) {
 		case ControlSpecificationType::Invariance:
+			initialState = specification.GetVectorFromSpecification();
 			break;
 		case ControlSpecificationType::Reachability:
-			//initialState = verifier->GetVectorRadialFromGoal(0.15 + 0.85 * progressionFactor);
-			initialState = verifier->GetVectorRadialFromGoal(0.15 + 0.35 * progressionFactor);
 			//initialState = verifier->GetVectorFromLosingDomain();
+			initialState = verifier->GetVectorRadialFromGoal(0.4 + 0.6 * progressionFactor);
+			
 			while (specification.IsInSpecificationSet(initialState)) {
-				//initialState = verifier->GetVectorRadialFromGoal(0.15 + 0.85 * progressionFactor);
-				initialState = verifier->GetVectorRadialFromGoal(0.15 + 0.35 * progressionFactor);
+				initialState = verifier->GetVectorRadialFromGoal(0.4 + 0.6 * progressionFactor);
 			}
 			break;
 		}
@@ -150,7 +153,7 @@ int main() {
 			oldNorm = norm;
 
 			// DEBUG: Print simulation for verification purposes
-			if (i % verboseEpisode == 0) {
+			if (i % verboseEpisode == 0 && verboseMode) {
 				auto verboseLabels = (inputQuantizer->GetCardinality() <= 5) ? inputQuantizer->GetCardinality() : 5;
 
 				std::cout << "i: " << i << "\tj: " << j << "\t\tx0: " << newState[0] << "\tx1: " << newState[1];
@@ -182,6 +185,7 @@ int main() {
 		if (isInSpecificationSet) multilayerPerceptron->Train(states, reinforcingLabels);
 		else multilayerPerceptron->Train(states, deterringLabels);
 
+
 		// Verification routine for the neural network controller
 		if (i % verificationEpisode == 0 && i != 0) {
 			verifier->ComputeTransitionFunction();
@@ -193,13 +197,15 @@ int main() {
 			std::cout << "Winning set size percentage: " << winningSetPercentage * 100 << "%" << std::endl << std::endl;
 
 			// Empirical random walks
-			std::cout << "Empirical verification" << std::endl;
-			for (unsigned int j = 0; j < 5; j++) {
-				std::cout << std::endl;
-				auto initialState = stateQuantizer->GetRandomVector();
-				verifier->PrintVerboseWalk(initialState);
+			if (verboseMode) {
+				std::cout << "Empirical verification" << std::endl;
+				for (unsigned int j = 0; j < 5; j++) {
+					std::cout << std::endl;
+					auto initialState = stateQuantizer->GetRandomVector();
+					verifier->PrintVerboseWalk(initialState);
+				}
+				std:cout << std::endl;
 			}
-			std:cout << std::endl;
 		}
 	}
 
@@ -213,6 +219,8 @@ int main() {
 	MXNotifyShutdown();
 
 	// Wait for an input to stop the program
+	std::cout << "COSYNNC: Epoch limit reached" << std::endl;
+
 	system("pause");
 	return 0;
 }
