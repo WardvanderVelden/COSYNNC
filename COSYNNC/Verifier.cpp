@@ -12,7 +12,7 @@ namespace COSYNNC {
 		// Initialize transitions and winning set
 		auto stateSpaceCardinality = _stateQuantizer->GetCardinality();
 
-		_transitions = new long[stateSpaceCardinality] { -1 };
+		_transitions = new Transition[stateSpaceCardinality];
 		_winningSet = new bool[stateSpaceCardinality] { false };
 	}
 
@@ -20,56 +20,45 @@ namespace COSYNNC {
 	Verifier::~Verifier() {
 		delete[] _transitions;
 		delete[] _winningSet;
-
-		//for (long index = 0; index < _stateQuantizer->GetCardinality(); index++) delete _transitions[index];
 	}
 
 
 	// Calculates the transition function that transitions any state in the state space to a set of states in the state space based on the control law
 	void Verifier::ComputeTransitionFunction() {
+		const auto spaceDim = _stateQuantizer->GetSpaceDimension();
+
+		const unsigned int amountOfVertices = pow(2.0, (double)spaceDim);
+		const unsigned int amountOfEdges = spaceDim * pow(2.0, (double)spaceDim - 1);
+
 		for (long index = 0; index < _stateQuantizer->GetCardinality(); index++) {
-			// Get state based on the index
+			_transitions[index] = Transition(index);
+
+			// Get the state that corresponds to the index
 			auto state = _stateQuantizer->GetVectorFromIndex(index);
 
-			// Calculate transition for every vertex in the hyper cell
-			auto vertices = _stateQuantizer->GetHyperCellVertices(state);
-			Vector newStateVertices[vertices.size()];
-			for(unsigned int i = 0; i < _spaceDim * 2; i++) {
-				auto vertex = vertices[i];
+			// Evolve the vertices of the hyper cell to determine the new hyper cell
+			auto vertices = OverApproximateEvolution(state);
 
-				_plant->SetState(vertex);
+			// Determine edges of the new vertices
+			auto edges = GetEdgesBetweenVertices(vertices);
 
-				auto input = _controller->GetControlAction(state);
-				auto newStateVertex = _plant->StepOverApproximation(input);
-
-				newStateVertices[i] = newStateVertex;
-			}
-
-			// Go through the new state vertices to determine all the new states that are captured by it
-			for(unsigned int i = 0; i < _spaceDim; i++) {
-				// Vertices are in the same cell
-				if(newStateVertices[i * 2] == newStateVertices[i * 2 + 1]) {
-					_transitions[index] = _stateQuantizer->QuantizeVector(newStateVertices[i]);
-				}
-			}
-
-			// Interpolate between the vertices to find all the new states and add these to an array of transitions
+			// Determine border cells
 			
 
-			// Find the input based on the current controller
-			/*auto input = _controller->GetControlAction(state);
+			// Floodfill between the vertices in order to find all transitions
 
-			// Calculate the transition
-			_plant->Evolve(input);
-			auto newState = _plant->GetState();
 
-			long newIndex = -1;
-			if (_stateQuantizer->IsInBounds(newState)) {
-				auto quantizedNewState = _stateQuantizer->QuantizeVector(newState);
-				newIndex = _stateQuantizer->GetIndexFromVector(quantizedNewState);
+			// TEMPORARY: Add all the vertices to the transitions if they are not yet in the transition
+			for (unsigned int i = 0; i < amountOfVertices; i++) {
+				auto vertex = vertices[i];
+
+				long end = (_stateQuantizer->IsInBounds(vertex)) ? _stateQuantizer->GetIndexFromVector(_stateQuantizer->QuantizeVector(vertex)) : -1;
+				_transitions[index].AddEnd(end);
 			}
 
-			_transitions[index] = newIndex;*/
+			// Free up memory
+			delete[] vertices;
+			delete[] edges;
 		}
 	}
 
@@ -78,7 +67,7 @@ namespace COSYNNC {
 	void Verifier::ComputeWinningSet() {
 		auto stateSpaceCardinality = _stateQuantizer->GetCardinality();
 
-		bool verbose = true;
+		bool verboseMode = true;
 
 		// Define initial winning domain for the fixed point operator
 		for (long index = 0; index < stateSpaceCardinality; index++) {
@@ -99,7 +88,7 @@ namespace COSYNNC {
 		}
 
 		// DEBUG: Print a map of the set to depict its evolution
-		if (verbose) {
+		if (verboseMode) {
 			for (long index = 0; index < stateSpaceCardinality; index++) {
 				if (index % 32 == 0) std::cout << std::endl;
 				if (_winningSet[index]) std::cout << "X";
@@ -108,7 +97,6 @@ namespace COSYNNC {
 			std::cout << std::endl;
 		}
 		
-
 		// Perform fixed algorithm operator on winning set to determine the winning set
 		bool iterationConverged = false;
 		int iterations = 0;
@@ -117,14 +105,20 @@ namespace COSYNNC {
 			iterations++;
 
 			for (long index = 0; index < stateSpaceCardinality; index++) {
-				auto newState = _transitions[index];
-				bool newStateWinningSet = (newState != -1) ? _winningSet[newState] : false;
+				// Determine if the transition always ends in the winning set
+				auto ends = _transitions[index].GetEnds();
 
+				bool alwaysEndsInWinningSet = true;
+				for (auto end : ends) {
+					if (end == -1 || !_winningSet[end]) alwaysEndsInWinningSet = false;
+				}
+
+				// Handle transitions based on specification
 				switch (_specification->GetSpecificationType()) {
 				case ControlSpecificationType::Invariance:
 					if (!_winningSet[index]) break;
 
-					if (!newStateWinningSet) {
+					if (!alwaysEndsInWinningSet) {
 						auto changed = SetWinningDomain(index, false);
 						if (!setHasChanged) setHasChanged = changed;
 					}
@@ -133,7 +127,7 @@ namespace COSYNNC {
 				case ControlSpecificationType::Reachability:
 					if (_winningSet[index]) break;
 
-					if (newStateWinningSet) {
+					if (alwaysEndsInWinningSet) {
 						auto changed = SetWinningDomain(index, true);
 						if (!setHasChanged) setHasChanged = changed;
 					}
@@ -142,7 +136,7 @@ namespace COSYNNC {
 			}
 
 			// DEBUG: Print a map of the set to depict its evolution
-			if (verbose) {
+			if (verboseMode) {
 				for (long index = 0; index < stateSpaceCardinality; index++) {
 					if (index % 32 == 0) std::cout << std::endl;
 					if (_winningSet[index]) std::cout << "X";
@@ -160,7 +154,7 @@ namespace COSYNNC {
 			if (!_winningSet[index]) _losingIndices.push_back(index);
 		}
 
-		std::cout << std::endl << "Fixed point iterations: " << iterations << std::endl;
+		if(verboseMode)	std::cout << std::endl << "Fixed point iterations: " << iterations << std::endl;
 	}
 
 
@@ -267,5 +261,73 @@ namespace COSYNNC {
 		}
 
 		return vector;
+	}
+
+
+	// Over approximates all the vertices and returns an array of the new vertices
+	Vector* Verifier::OverApproximateEvolution(Vector state) {
+		const auto spaceDim = _stateQuantizer->GetSpaceDimension();
+		const unsigned int amountOfVertices = pow(2.0, (double)spaceDim);
+
+		auto vertices = _stateQuantizer->GetHyperCellVertices(state);
+
+		Vector* newStateVertices = new Vector[amountOfVertices];
+
+		for (unsigned int i = 0; i < amountOfVertices; i++) {
+			auto vertex = vertices[i];
+
+			_plant->SetState(vertex);
+
+			auto input = _controller->GetControlAction(state);
+			//auto newStateVertex = _plant->StepOverApproximation(input);
+			auto newStateVertex = _plant->StepDynamics(input); // TODO: Switch this for the over approximation dynamics
+
+			newStateVertices[i] = newStateVertex;
+		}
+
+		delete[] vertices;
+
+		return newStateVertices;
+	}
+
+
+	// Returns the edges between a set of vertices if the vertices are properly sorted
+	Edge* Verifier::GetEdgesBetweenVertices(Vector* vertices) {
+		const auto spaceDim = _stateQuantizer->GetSpaceDimension();
+		auto spaceEta = _stateQuantizer->GetSpaceEta();
+
+		const unsigned int amountOfEdges = spaceDim * pow(2.0, (double)spaceDim - 1);
+
+		Edge* edges = new Edge[amountOfEdges];
+
+		unsigned int edgeIndex = 0;
+		unsigned int edgesAccountedFor = 0;
+
+		for (unsigned int i = 0; i < spaceDim; i++) {
+			const unsigned int verticesForDimension = pow(2.0, (double)i + 1);
+
+			edgesAccountedFor = edgeIndex;
+
+			for (unsigned int j = 0; j < verticesForDimension / 2; j++) {
+				auto currentVertex = vertices[j];
+				auto facingVertex = vertices[j + verticesForDimension / 2];
+
+				edges[edgeIndex++] = Edge(currentVertex, facingVertex);
+			}
+
+			// Add edges of lower dimension
+			for (unsigned int j = 0; j < edgesAccountedFor; j++) {
+				auto transposedEdge = edges[j];
+
+				auto transposeVector = Vector(spaceDim);
+				transposeVector[i] += spaceEta[i];
+
+				transposedEdge.Transpose(transposeVector);
+
+				edges[edgeIndex++] = Edge(transposedEdge);
+			}
+		}
+
+		return edges;
 	}
 }

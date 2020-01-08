@@ -2,6 +2,7 @@
 #include "Plant.h"
 #include "Controller.h"
 #include "Quantizer.h"
+#include "Transition.h"
 
 namespace COSYNNC {
 	class Verifier {
@@ -30,6 +31,12 @@ namespace COSYNNC {
 
 		// Get a random vector in a radius to the goal based on training time
 		Vector GetVectorRadialFromGoal(float progression);
+
+		// Over approximates all the vertices and returns an array of the new vertices
+		Vector* OverApproximateEvolution(Vector state);
+
+		// Returns the edges between a set of vertices if the vertices are properly sorted
+		Edge* GetEdgesBetweenVertices(Vector* vertices);
 	private:
 		Plant* _plant;
 		Controller* _controller;
@@ -37,10 +44,12 @@ namespace COSYNNC {
 		Quantizer* _inputQuantizer;
 		ControlSpecification* _specification;
 
-		long* _transitions;
+		Transition* _transitions;
 		bool* _winningSet;
 		vector<long> _losingIndices;
 
 		const unsigned int _maxSteps = 50;
+
+		const float _interpolationPrecisionFactor = 0.1;
 	};
 }

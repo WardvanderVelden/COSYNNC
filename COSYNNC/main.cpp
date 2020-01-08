@@ -20,10 +20,12 @@ int main() {
 	const bool isReachability = true;
 
 	// COSYNNC training parameters
-	const int episodes = 2000000;
+	const int episodes = 200000;
 	const int steps = 25;
 	const int verboseEpisode = 2500;
 	const int verificationEpisode = 10000;
+
+	const bool verboseMode = true;
 
 	// Initialize quantizers
 	Quantizer* stateQuantizer = new Quantizer(true);
@@ -79,8 +81,8 @@ int main() {
 
 	// Training routine for the neural network controller
 	std::cout << "Training" << std::endl;
-	for (int i = 0; i < episodes; i++) {
-		if (i % verboseEpisode == 0) std::cout << std::endl;
+	for (int i = 0; i <= episodes; i++) {
+		if (i % verboseEpisode == 0 && verboseMode) std::cout << std::endl;
 
 		vector<Vector> states;
 		vector<Vector> reinforcingLabels;
@@ -151,7 +153,7 @@ int main() {
 			oldNorm = norm;
 
 			// DEBUG: Print simulation for verification purposes
-			if (i % verboseEpisode == 0) {
+			if (i % verboseEpisode == 0 && verboseMode) {
 				auto verboseLabels = (inputQuantizer->GetCardinality() <= 5) ? inputQuantizer->GetCardinality() : 5;
 
 				std::cout << "i: " << i << "\tj: " << j << "\t\tx0: " << newState[0] << "\tx1: " << newState[1];
@@ -195,13 +197,15 @@ int main() {
 			std::cout << "Winning set size percentage: " << winningSetPercentage * 100 << "%" << std::endl << std::endl;
 
 			// Empirical random walks
-			std::cout << "Empirical verification" << std::endl;
-			for (unsigned int j = 0; j < 5; j++) {
-				std::cout << std::endl;
-				auto initialState = stateQuantizer->GetRandomVector();
-				verifier->PrintVerboseWalk(initialState);
+			if (verboseMode) {
+				std::cout << "Empirical verification" << std::endl;
+				for (unsigned int j = 0; j < 5; j++) {
+					std::cout << std::endl;
+					auto initialState = stateQuantizer->GetRandomVector();
+					verifier->PrintVerboseWalk(initialState);
+				}
+				std:cout << std::endl;
 			}
-			std:cout << std::endl;
 		}
 	}
 
@@ -215,6 +219,8 @@ int main() {
 	MXNotifyShutdown();
 
 	// Wait for an input to stop the program
+	std::cout << "COSYNNC: Epoch limit reached" << std::endl;
+
 	system("pause");
 	return 0;
 }
