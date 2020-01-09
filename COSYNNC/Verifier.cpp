@@ -26,6 +26,7 @@ namespace COSYNNC {
 	// Calculates the transition function that transitions any state in the state space to a set of states in the state space based on the control law
 	void Verifier::ComputeTransitionFunction() {
 		const auto spaceDim = _stateQuantizer->GetSpaceDimension();
+		auto spaceEta = _stateQuantizer->GetSpaceEta();
 
 		const unsigned int amountOfVertices = pow(2.0, (double)spaceDim);
 		const unsigned int amountOfEdges = spaceDim * pow(2.0, (double)spaceDim - 1);
@@ -35,6 +36,9 @@ namespace COSYNNC {
 
 			// Get the state that corresponds to the index
 			auto state = _stateQuantizer->GetVectorFromIndex(index);
+			_plant->SetState(state);
+			auto input = _controller->GetControlAction(state);
+			auto newState = _plant->StepDynamics(input); // TODO: Switch for over approximation dynamics
 
 			// Evolve the vertices of the hyper cell to determine the new hyper cell
 			auto vertices = OverApproximateEvolution(state);
@@ -42,18 +46,52 @@ namespace COSYNNC {
 			// Determine edges of the new vertices
 			auto edges = GetEdgesBetweenVertices(vertices);
 
-			// Determine border cells
-			
+			// TODO: Floodfill through all the dimensions in order to get all the transitions
 
-			// Floodfill between the vertices in order to find all transitions
+			// TEMPORARY: Over-approximate the evolved hyper cell in order to each transition calculation
+			// Find upper and lower bound that over-approximates the over-approximation
+			Vector lowerBoundVertex = newState;
+			Vector upperBoundVertex = newState;
 
-
-			// TEMPORARY: Add all the vertices to the transitions if they are not yet in the transition
 			for (unsigned int i = 0; i < amountOfVertices; i++) {
 				auto vertex = vertices[i];
+				for (unsigned int j = 0; j < spaceDim; j++) {
+					lowerBoundVertex[j] = min(lowerBoundVertex[j], vertex[j]);
+					upperBoundVertex[j] = max(upperBoundVertex[j], vertex[j]);
+				}
+			}
+			lowerBoundVertex = _stateQuantizer->QuantizeVector(lowerBoundVertex);
+			upperBoundVertex = _stateQuantizer->QuantizeVector(upperBoundVertex);
 
-				long end = (_stateQuantizer->IsInBounds(vertex)) ? _stateQuantizer->GetIndexFromVector(_stateQuantizer->QuantizeVector(vertex)) : -1;
+			// Find the amount of cells per dimension axis
+			Vector cellsPerDimension(spaceDim);
+			unsigned long amountOfCells = 1;
+			for (unsigned int i = 0; i < spaceDim; i++) {
+				float delta = upperBoundVertex[i] - lowerBoundVertex[i];
+				cellsPerDimension[i] = round(delta / spaceEta[i]) + 1;
+				amountOfCells *= cellsPerDimension[i];
+			}
+
+			// Add all the cells in the over-approximation of the new hyper cell as transitions
+			Vector currentCell = lowerBoundVertex;
+			for (unsigned int i = 0; i < amountOfCells; i++) {
+				if (i != 0) {
+					for (unsigned int j = 1; j < spaceDim; j++) {
+						auto modulus = (i % (unsigned int)cellsPerDimension[j - 1]);
+						if (modulus == 0) {
+							currentCell[j] += spaceEta[j];
+							for (unsigned int k = 0; k < j; k++) {
+								currentCell[k] = lowerBoundVertex[k];
+							}
+							break;
+						}
+					}
+				}
+				
+				long end = (_stateQuantizer->IsInBounds(currentCell)) ? _stateQuantizer->GetIndexFromVector(_stateQuantizer->QuantizeVector(currentCell)) : -1;
 				_transitions[index].AddEnd(end);
+
+				currentCell[0] += spaceEta[0];
 			}
 
 			// Free up memory
