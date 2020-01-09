@@ -21,7 +21,7 @@ int main() {
 
 	// COSYNNC training parameters
 	const int episodes = 200000;
-	const int steps = 25;
+	const int steps = 10;
 	const int verboseEpisode = 2500;
 	const int verificationEpisode = 10000;
 
