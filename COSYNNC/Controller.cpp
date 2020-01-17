@@ -39,15 +39,18 @@ namespace COSYNNC {
 	}
 
 
+	// Returns a pointer to the neural network
+	NeuralNetwork* Controller::GetNeuralNetwork() const {
+		return _neuralNetwork;
+	}
+
+
 	// Read out the control action using the neural network with the quantized state as input
-	Vector Controller::GetControlAction(Vector state) {
+	Vector Controller::GetControlAction(Vector state, Vector* networkOutputVector) {
 		if (_neuralNetwork == NULL) return Vector(_inputSpaceDim);
 
 		auto quantizedNormalizedState = _stateQuantizer->NormalizeVector(_stateQuantizer->QuantizeVector(state));
 		auto networkOutput = _neuralNetwork->EvaluateNetwork(quantizedNormalizedState);
-
-		//auto denormalizedInput = _inputQuantizer->DenormalizeVector(networkOutput);
-		//auto quantizedInput = _inputQuantizer->QuantizeVector(denormalizedInput);
 
 		// Greedily pick the input
 		float highestProbability = 0.0;
@@ -64,7 +67,49 @@ namespace COSYNNC {
 
 		auto input = _inputQuantizer->GetVectorFromOneHot(oneHot);
 
+		if (networkOutputVector != NULL) *networkOutputVector = networkOutput;
+
 		return input;
+	}
+
+
+	// Get a control actions based on states in batch for computational efficiency
+	Vector* Controller::GetControlActionInBatch(Vector* states, unsigned int batchSize) {
+		Vector* inputs = new Vector[batchSize];
+		Vector* normalizedStates = new Vector[batchSize];
+
+		// Normalize states for neural network
+		for (unsigned int i = 0; i < batchSize; i++) {
+			auto state = states[i];
+			normalizedStates[i] = _stateQuantizer->NormalizeVector(_stateQuantizer->QuantizeVector(state));
+		}
+
+		// Get the network outputs
+		auto networkOutputs = _neuralNetwork->EvaluateNetworkInBatch(normalizedStates, batchSize);
+
+		for (unsigned int i = 0; i < batchSize; i++) {
+			auto networkOutput = networkOutputs[i];
+
+			// Greedily pick the input
+			float highestProbability = 0.0;
+			int highestProbabilityIndex = 0.0;
+			for (int j = 0; j < networkOutput.GetLength(); j++) {
+				if (networkOutput[j] > highestProbability) {
+					highestProbability = networkOutput[j];
+					highestProbabilityIndex = j;
+				}
+			}
+
+			Vector oneHot(networkOutput.GetLength());
+			oneHot[highestProbabilityIndex] = 1.0;
+
+			inputs[i] = _inputQuantizer->GetVectorFromOneHot(oneHot);
+		}
+
+		delete[] normalizedStates;
+		delete[] networkOutputs;
+
+		return inputs;
 	}
 
 

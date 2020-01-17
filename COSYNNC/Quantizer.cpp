@@ -9,7 +9,7 @@ Quantizer::Quantizer(bool isBounded) {
 
 // Set the quantization parameters for the space
 void Quantizer::SetQuantizeParameters(Vector spaceEta, Vector spaceReference) {
-	_spaceDim = spaceEta.GetLength();
+	_spaceDimension = spaceEta.GetLength();
 	_spaceEta = spaceEta;
 
 	_spaceReference = spaceReference;
@@ -20,16 +20,16 @@ void Quantizer::SetQuantizeParameters(Vector spaceEta, Vector spaceReference) {
 
 // Set the quantization parameters for the space, if the space is not bounded the lower bound will be used as the reference
 void Quantizer::SetQuantizeParameters(Vector spaceEta, Vector spaceLowerBound, Vector spaceUpperBound) {
-	_spaceDim = spaceEta.GetLength();
+	_spaceDimension = spaceEta.GetLength();
 	_spaceEta = spaceEta;
 		
 	if (_isBounded) {
 		_spaceLowerBound = spaceLowerBound;
 		_spaceUpperBound = spaceUpperBound;
 
-		_spaceCardinalityPerAxis = vector<long>(_spaceDim, 0);
+		_spaceCardinalityPerAxis = vector<long>(_spaceDimension, 0);
 
-		for (int i = 0; i < _spaceDim; i++) {
+		for (int i = 0; i < _spaceDimension; i++) {
 			if (i == 0) _spaceCardinality = round((_spaceUpperBound[i] - _spaceLowerBound[i]) / _spaceEta[i]);
 			else _spaceCardinality *= round((_spaceUpperBound[i] - _spaceLowerBound[i]) / _spaceEta[i]);
 
@@ -161,8 +161,8 @@ Vector Quantizer::GetVectorFromOneHot(Vector oneHot) {
 		if (oneHot[i] == 1.0) index = i;
 	}
 
-	Vector vec(_spaceDim);
-	for (int i = (_spaceDim - 1); i >= 0; i--) {
+	Vector vec(_spaceDimension);
+	for (int i = (_spaceDimension - 1); i >= 0; i--) {
 		int indexOnAxis = 0;
 		if (i > 0) indexOnAxis = floor(index / _spaceCardinalityPerAxis[i]);
 		else indexOnAxis = index;
@@ -176,8 +176,8 @@ Vector Quantizer::GetVectorFromOneHot(Vector oneHot) {
 
 // Returns the vector that corresponds to the index in the space
 Vector Quantizer::GetVectorFromIndex(long index) {
-	Vector vec(_spaceDim);
-	for (int i = (_spaceDim - 1); i >= 0; i--) {
+	Vector vec(_spaceDimension);
+	for (int i = (_spaceDimension - 1); i >= 0; i--) {
 		long indexOnAxis = indexOnAxis = (i != 0) ? floor(index / _spaceCardinalityPerAxis[i - 1]) : index;
 		
 		index -= indexOnAxis * _spaceCardinalityPerAxis[i];
@@ -196,7 +196,7 @@ long Quantizer::GetIndexFromVector(Vector vector) {
 
 	if (!IsInBounds(vector)) return -1;
 
-	for (int i = 0; i < _spaceDim; i++) {
+	for (int i = 0; i < _spaceDimension; i++) {
 		long indexPerAxis = (i != 0) ? _spaceCardinalityPerAxis[i - 1] : 1;
 
 		index += floor((vector[i] - _spaceLowerBound[i]) / _spaceEta[i]) * indexPerAxis;
@@ -220,10 +220,10 @@ bool Quantizer::IsInBounds(Vector vector) {
 
 // Gets a random vector within the bounded quantization space if isBounded is set
 Vector Quantizer::GetRandomVector() {
-	Vector randomVector(_spaceDim);
+	Vector randomVector(_spaceDimension);
 
 	if (_isBounded) {
-		for (int i = 0; i < _spaceDim; i++) {
+		for (int i = 0; i < _spaceDimension; i++) {
 			float randomFloat = (float)rand() / RAND_MAX;
 			randomVector[i] = _spaceLowerBound[i] + (_spaceUpperBound[i] - _spaceLowerBound[i]) * randomFloat;
 		}
@@ -241,7 +241,7 @@ long Quantizer::GetCardinality() const {
 
 // Returns the dimension of the space
 int Quantizer::GetSpaceDimension() const {
-	return _spaceDim;
+	return _spaceDimension;
 }
 
 
@@ -264,16 +264,16 @@ Vector Quantizer::GetSpaceEta() const {
 
 // Returns an array of vectors which are the vertices of the hyper cell
 Vector* Quantizer::GetHyperCellVertices(Vector cell) {
-	const unsigned int amountOfVertices = pow(2.0, (double)_spaceDim);
+	const unsigned int amountOfVertices = pow(2.0, (double)_spaceDimension);
 
 	auto cellCenter = QuantizeVector(cell);
 	Vector* vertices = new Vector[amountOfVertices];
 
 	auto baseVertex = cellCenter;
-	for (unsigned int i = 0; i < _spaceDim; i++) baseVertex[i] -= _spaceEta[i] * 0.5;
+	for (unsigned int i = 0; i < _spaceDimension; i++) baseVertex[i] -= _spaceEta[i] * 0.5;
 
 	unsigned int vertexIndex = 0;
-	for (unsigned int i = 0; i < _spaceDim; i++) {
+	for (unsigned int i = 0; i < _spaceDimension; i++) {
 		if (i == 0) vertices[vertexIndex++] = baseVertex;
 
 		auto verticesAllocated = vertexIndex;

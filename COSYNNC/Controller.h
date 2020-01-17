@@ -26,8 +26,14 @@ namespace COSYNNC {
 		// Set the neural network that will dictate the control input of the system
 		void SetNeuralNetwork(NeuralNetwork* neuralNetwork);
 
+		// Returns a pointer to the neural network
+		NeuralNetwork* GetNeuralNetwork() const;
+
 		// Get a control action based on the state in the stateSpace of the plant using a greedy strategy
-		Vector GetControlAction(Vector state);
+		Vector GetControlAction(Vector state, Vector* networkOutputVector = NULL);
+
+		// Get a control actions based on states in batch for computational efficiency
+		Vector* GetControlActionInBatch(Vector* states, unsigned int batchSize);
 
 		// Get a probabilistic control action based on the certainty of the network
 		Vector GetProbabilisticControlAction(Vector state, Vector& oneHot, Vector& networkOutput);

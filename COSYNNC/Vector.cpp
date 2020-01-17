@@ -6,6 +6,11 @@ namespace COSYNNC {
 		_values.resize(length, 0);
 	}
 
+	Vector::Vector(unsigned int length) {
+		_length = length;
+		_values.resize(length, 0);
+	}
+
 	Vector::Vector(float value) {
 		_length = 1;
 		_values.resize(1);

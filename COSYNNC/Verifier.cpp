@@ -9,6 +9,17 @@ namespace COSYNNC {
 
 		_specification = controller->GetControlSpecification();
 
+		// Initialize soft constants
+		_spaceDimension = _stateQuantizer->GetSpaceDimension();
+		_spaceCardinality = _stateQuantizer->GetCardinality();
+		_spaceEta = _stateQuantizer->GetSpaceEta();
+		
+		_inputDimension = _inputQuantizer->GetSpaceDimension();
+		_inputCardinality = _inputQuantizer->GetCardinality();
+
+		_amountOfVerticesPerCell = pow(2.0, (double)_spaceDimension);
+		_amountOfEdgesPerCell = _spaceDimension * pow(2.0, (double)_spaceDimension - 1);
+
 		// Initialize transitions and winning set
 		auto stateSpaceCardinality = _stateQuantizer->GetCardinality();
 
@@ -25,90 +36,132 @@ namespace COSYNNC {
 
 	// Calculates the transition function that transitions any state in the state space to a set of states in the state space based on the control law
 	void Verifier::ComputeTransitionFunction() {
-		const auto spaceDim = _stateQuantizer->GetSpaceDimension();
-		auto spaceEta = _stateQuantizer->GetSpaceEta();
+		const auto batchSize = _controller->GetNeuralNetwork()->GetBatchSize();
+		const long amountOfBatches = ceil(_spaceCardinality / batchSize);
 
-		const unsigned int amountOfVertices = pow(2.0, (double)spaceDim);
-		const unsigned int amountOfEdges = spaceDim * pow(2.0, (double)spaceDim - 1);
+		for (long batch = 0; batch <= amountOfBatches; batch++) {	
+			unsigned long indexOffset = batch * batchSize;
+			unsigned int currentBatchSize = batchSize;
+			if (batch == amountOfBatches) {
+				currentBatchSize = _spaceCardinality - indexOffset;
+			}
 
-		for (long index = 0; index < _stateQuantizer->GetCardinality(); index++) {
-			_transitions[index] = Transition(index);
+			// Collect all the states in the current batch
+			Vector* states = new Vector[currentBatchSize];
 
-			// Get the state that corresponds to the index
+			for (unsigned int i = 0; i < currentBatchSize; i++) {
+				long index = indexOffset + i;
+				states[i] = _stateQuantizer->GetVectorFromIndex(index);
+			}
+
+			// Get the corresponding inputs through batch network evaluation
+			Vector* inputs = new Vector[currentBatchSize];
+			inputs = _controller->GetControlActionInBatch(states, currentBatchSize);
+
+			// DEBUG: Testing if individual input retrieval does work
+			/*for (unsigned int i = 0; i < currentBatchSize; i++) {
+				inputs[i] = _controller->GetControlAction(states[i]);
+			}*/
+
+			// Compute the transition function for all the states in the batch
+			for (unsigned int i = 0; i < currentBatchSize; i++) {
+				long index = indexOffset + i;
+				
+				auto state = states[i];
+				auto input = inputs[i];
+				ComputeTransitionFunctionForIndex(index, states[i], inputs[i]);
+			}
+
+			delete[] inputs;
+			delete[] states;
+		}
+
+		// DEBUG: Go through all the indices 
+		/*for (long index = 0; index < _spaceCardinality; index++) {
 			auto state = _stateQuantizer->GetVectorFromIndex(index);
-			_plant->SetState(state);
 			auto input = _controller->GetControlAction(state);
-			auto newState = _plant->StepDynamics(input); // TODO: Switch for over approximation dynamics
 
-			// Evolve the vertices of the hyper cell to determine the new hyper cell
-			auto vertices = OverApproximateEvolution(state);
+			ComputeTransitionFunctionForIndex(index, state, input);
+		}*/
+	}
 
-			// Determine edges of the new vertices
-			auto edges = GetEdgesBetweenVertices(vertices);
+	// Computes the transition function for a single index
+	void Verifier::ComputeTransitionFunctionForIndex(long index, Vector state, Vector input) {
+		_transitions[index] = Transition(index);
 
-			// TODO: Floodfill through all the dimensions in order to get all the transitions
+		_plant->SetState(state);
+		auto newState = _plant->StepDynamics(input); // TODO: Switch for over approximation dynamics
 
-			// TEMPORARY: Over-approximate the evolved hyper cell in order to each transition calculation
-			// Find upper and lower bound that over-approximates the over-approximation
-			Vector lowerBoundVertex = newState;
-			Vector upperBoundVertex = newState;
+		// Evolve the vertices of the hyper cell to determine the new hyper cell
+		auto vertices = OverApproximateEvolution(state, input);
 
-			for (unsigned int i = 0; i < amountOfVertices; i++) {
-				auto vertex = vertices[i];
-				for (unsigned int j = 0; j < spaceDim; j++) {
-					lowerBoundVertex[j] = min(lowerBoundVertex[j], vertex[j]);
-					upperBoundVertex[j] = max(upperBoundVertex[j], vertex[j]);
-				}
+		// Determine edges of the new vertices
+		//auto edges = GetEdgesBetweenVertices(vertices);
+
+		// TODO: Floodfill through all the dimensions in order to get all the transitions
+		// TEMPORARY: Over-approximate the evolved hyper cell in order to each transition calculation
+
+		// Find upper and lower bound that over-approximates the over-approximation
+		Vector lowerBoundVertex = newState;
+		Vector upperBoundVertex = newState;
+
+		for (unsigned int i = 0; i < _amountOfVerticesPerCell; i++) {
+			auto vertex = vertices[i];
+			for (unsigned int j = 0; j < _spaceDimension; j++) {
+				lowerBoundVertex[j] = min(lowerBoundVertex[j], vertex[j]);
+				upperBoundVertex[j] = max(upperBoundVertex[j], vertex[j]);
 			}
-			lowerBoundVertex = _stateQuantizer->QuantizeVector(lowerBoundVertex);
-			upperBoundVertex = _stateQuantizer->QuantizeVector(upperBoundVertex);
+		}
+		lowerBoundVertex = _stateQuantizer->QuantizeVector(lowerBoundVertex);
+		upperBoundVertex = _stateQuantizer->QuantizeVector(upperBoundVertex);
 
-			// Find the amount of cells per dimension axis
-			Vector cellsPerDimension(spaceDim);
-			unsigned long amountOfCells = 1;
-			for (unsigned int i = 0; i < spaceDim; i++) {
-				float delta = upperBoundVertex[i] - lowerBoundVertex[i];
-				cellsPerDimension[i] = round(delta / spaceEta[i]) + 1;
-				amountOfCells *= cellsPerDimension[i];
-			}
+		// Find the amount of cells per dimension axis
+		Vector cellsPerDimension(_spaceDimension);
+		unsigned long amountOfCells = 1;
+		for (unsigned int i = 0; i < _spaceDimension; i++) {
+			float delta = upperBoundVertex[i] - lowerBoundVertex[i];
+			cellsPerDimension[i] = round(delta / _spaceEta[i]) + 1;
+			amountOfCells *= cellsPerDimension[i];
+		}
 
-			// Add all the cells in the over-approximation of the new hyper cell as transitions
-			Vector currentCell = lowerBoundVertex;
-			for (unsigned int i = 0; i < amountOfCells; i++) {
-				if (i != 0) {
-					for (unsigned int j = 1; j < spaceDim; j++) {
-						auto modulus = (i % (unsigned int)cellsPerDimension[j - 1]);
-						if (modulus == 0) {
-							currentCell[j] += spaceEta[j];
-							for (unsigned int k = 0; k < j; k++) {
-								currentCell[k] = lowerBoundVertex[k];
-							}
-							break;
+		// Add all the cells in the over-approximation of the new hyper cell as transitions
+		Vector currentCell = lowerBoundVertex;
+		for (unsigned int i = 0; i < amountOfCells; i++) {
+			if (i != 0) {
+				for (unsigned int j = 1; j < _spaceDimension; j++) {
+					auto modulus = (i % (unsigned int)cellsPerDimension[j - 1]);
+					if (modulus == 0) {
+						currentCell[j] += _spaceEta[j];
+						for (unsigned int k = 0; k < j; k++) {
+							currentCell[k] = lowerBoundVertex[k];
 						}
+						break;
 					}
 				}
-				
-				long end = (_stateQuantizer->IsInBounds(currentCell)) ? _stateQuantizer->GetIndexFromVector(_stateQuantizer->QuantizeVector(currentCell)) : -1;
-				_transitions[index].AddEnd(end);
-
-				currentCell[0] += spaceEta[0];
 			}
 
-			// Free up memory
-			delete[] vertices;
-			delete[] edges;
+			long end = (_stateQuantizer->IsInBounds(currentCell)) ? _stateQuantizer->GetIndexFromVector(_stateQuantizer->QuantizeVector(currentCell)) : -1;
+			_transitions[index].AddEnd(end);
+
+			currentCell[0] += _spaceEta[0];
 		}
+
+		// Temporay: Singular end for new state to bugfix invariance verification
+		long end = (_stateQuantizer->IsInBounds(newState)) ? _stateQuantizer->GetIndexFromVector(_stateQuantizer->QuantizeVector(newState)) : -1;
+		//_transitions[index].AddEnd(end);
+
+		// Free up memory
+		delete[] vertices;
+		//delete[] edges;
 	}
 
 
 	// Computes the winning set for which the controller currently is able to adhere to the control specification
 	void Verifier::ComputeWinningSet() {
-		auto stateSpaceCardinality = _stateQuantizer->GetCardinality();
-
 		bool verboseMode = true;
 
 		// Define initial winning domain for the fixed point operator
-		for (long index = 0; index < stateSpaceCardinality; index++) {
+		for (long index = 0; index < _spaceCardinality; index++) {
 			auto state = _stateQuantizer->GetVectorFromIndex(index);
 
 			switch (_specification->GetSpecificationType()) {
@@ -126,9 +179,12 @@ namespace COSYNNC {
 		}
 
 		// DEBUG: Print a map of the set to depict its evolution
+		const int indexDivider = round((_stateQuantizer->GetSpaceUpperBound()[0] - _stateQuantizer->GetSpaceLowerBound()[0]) / _spaceEta[0]); // Temporary divider for 2D systems
+		if (indexDivider > 250) verboseMode = false;
+
 		if (verboseMode) {
-			for (long index = 0; index < stateSpaceCardinality; index++) {
-				if (index % 32 == 0) std::cout << std::endl;
+			for (long index = 0; index < _spaceCardinality; index++) {
+				if (index % indexDivider == 0) std::cout << std::endl;
 				if (_winningSet[index]) std::cout << "X";
 				else std::cout << ".";
 			}
@@ -142,7 +198,7 @@ namespace COSYNNC {
 			bool setHasChanged = false;
 			iterations++;
 
-			for (long index = 0; index < stateSpaceCardinality; index++) {
+			for (long index = 0; index < _spaceCardinality; index++) {
 				// Determine if the transition always ends in the winning set
 				auto ends = _transitions[index].GetEnds();
 
@@ -175,8 +231,8 @@ namespace COSYNNC {
 
 			// DEBUG: Print a map of the set to depict its evolution
 			if (verboseMode) {
-				for (long index = 0; index < stateSpaceCardinality; index++) {
-					if (index % 32 == 0) std::cout << std::endl;
+				for (long index = 0; index < _spaceCardinality; index++) {
+					if (index % indexDivider == 0) std::cout << std::endl;
 					if (_winningSet[index]) std::cout << "X";
 					else std::cout << ".";
 				}
@@ -188,7 +244,7 @@ namespace COSYNNC {
 
 		// Collect losing indices for training purposes
 		_losingIndices.clear();
-		for (long index = 0; index < stateSpaceCardinality; index++) {
+		for (long index = 0; index < _spaceCardinality; index++) {
 			if (!_winningSet[index]) _losingIndices.push_back(index);
 		}
 
@@ -207,7 +263,8 @@ namespace COSYNNC {
 
 			auto quantizedState = _stateQuantizer->QuantizeVector(state);
 
-			auto input = _controller->GetControlAction(quantizedState);
+			Vector networkOutput((int)_inputCardinality);
+			auto input = _controller->GetControlAction(quantizedState, &networkOutput);
 
 			_plant->Evolve(input);
 
@@ -215,8 +272,13 @@ namespace COSYNNC {
 			//auto quantizedNewState = _stateQuantizer->QuantizeVector(newState);
 			auto satisfied = _specification->IsInSpecificationSet(newState);
 
-			std::cout << "\ti: " << i << "\tx0: " << newState[0] << "\tx1: " << newState[1] << "\tu: " << input[0] << "\ts: " << satisfied << std::endl;
-			
+			std::cout << "\ti: " << i << "\tx0: " << newState[0] << "\tx1: " << newState[1] << "\tu: " << input[0] << "\ts: " << satisfied;
+			for (unsigned int i = 0; i < (int)_inputCardinality; i++) {
+				std::cout << "\tn" << i << ": " << networkOutput[i];
+			}
+			std::cout << std::endl;
+
+
 			switch (_specification->GetSpecificationType()) {
 			case ControlSpecificationType::Invariance:
 				if (!satisfied) continueWalk = false;
@@ -272,14 +334,13 @@ namespace COSYNNC {
 
 	// Get a random vector in a radius to the goal based on training time
 	Vector Verifier::GetVectorRadialFromGoal(float progression) {
-		auto stateDim = _stateQuantizer->GetSpaceDimension();
-		Vector vector(stateDim);
+		Vector vector(_spaceDimension);
 		
 		auto goal = _specification->GetCenter();
 		auto lowerBound = _stateQuantizer->GetSpaceLowerBound();
 		auto upperBound = _stateQuantizer->GetSpaceUpperBound();
 
-		for (int i = 0; i < stateDim; i++) {
+		for (int i = 0; i < _spaceDimension; i++) {
 			float deltaLower = goal[i] - lowerBound[i];
 			float deltaUpper = upperBound[i] - goal[i];
 
@@ -303,20 +364,15 @@ namespace COSYNNC {
 
 
 	// Over approximates all the vertices and returns an array of the new vertices
-	Vector* Verifier::OverApproximateEvolution(Vector state) {
-		const auto spaceDim = _stateQuantizer->GetSpaceDimension();
-		const unsigned int amountOfVertices = pow(2.0, (double)spaceDim);
-
+	Vector* Verifier::OverApproximateEvolution(Vector state, Vector input) {
 		auto vertices = _stateQuantizer->GetHyperCellVertices(state);
 
-		Vector* newStateVertices = new Vector[amountOfVertices];
+		Vector* newStateVertices = new Vector[_amountOfVerticesPerCell];
 
-		for (unsigned int i = 0; i < amountOfVertices; i++) {
+		for (unsigned int i = 0; i < _amountOfVerticesPerCell; i++) {
 			auto vertex = vertices[i];
 
 			_plant->SetState(vertex);
-
-			auto input = _controller->GetControlAction(state);
 			//auto newStateVertex = _plant->StepOverApproximation(input);
 			auto newStateVertex = _plant->StepDynamics(input); // TODO: Switch this for the over approximation dynamics
 
@@ -331,17 +387,12 @@ namespace COSYNNC {
 
 	// Returns the edges between a set of vertices if the vertices are properly sorted
 	Edge* Verifier::GetEdgesBetweenVertices(Vector* vertices) {
-		const auto spaceDim = _stateQuantizer->GetSpaceDimension();
-		auto spaceEta = _stateQuantizer->GetSpaceEta();
-
-		const unsigned int amountOfEdges = spaceDim * pow(2.0, (double)spaceDim - 1);
-
-		Edge* edges = new Edge[amountOfEdges];
+		Edge* edges = new Edge[_amountOfEdgesPerCell];
 
 		unsigned int edgeIndex = 0;
 		unsigned int edgesAccountedFor = 0;
 
-		for (unsigned int i = 0; i < spaceDim; i++) {
+		for (unsigned int i = 0; i < _spaceDimension; i++) {
 			const unsigned int verticesForDimension = pow(2.0, (double)i + 1);
 
 			edgesAccountedFor = edgeIndex;
@@ -357,8 +408,8 @@ namespace COSYNNC {
 			for (unsigned int j = 0; j < edgesAccountedFor; j++) {
 				auto transposedEdge = edges[j];
 
-				auto transposeVector = Vector(spaceDim);
-				transposeVector[i] += spaceEta[i];
+				auto transposeVector = Vector(_spaceDimension);
+				transposeVector[i] += _spaceEta[i];
 
 				transposedEdge.Transpose(transposeVector);
 

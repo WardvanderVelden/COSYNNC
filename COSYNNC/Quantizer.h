@@ -75,7 +75,7 @@ namespace COSYNNC {
 	private:
 		bool _isBounded = false;
 
-		int _spaceDim = 0;
+		int _spaceDimension = 0;
 		int _inputSpaceDim = 0;
 
 		vector<long> _spaceCardinalityPerAxis;
