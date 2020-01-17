@@ -10,7 +10,7 @@ namespace COSYNNC {
 	// Initializates the control specification based on the control specification type and the plant
 	ControlSpecification::ControlSpecification(ControlSpecificationType type, Plant * plant) {
 		_type = type;
-		_spaceDim = plant->GetStateSpaceDimension();
+		_spaceDimension = plant->GetStateSpaceDimension();
 	}
 
 
@@ -62,9 +62,9 @@ namespace COSYNNC {
 
 	// Get a random vector from the specified winning space
 	Vector ControlSpecification::GetVectorFromSpecification() {
-		Vector randomVector(_spaceDim);
+		Vector randomVector(_spaceDimension);
 
-		for (int i = 0; i < _spaceDim; i++) {
+		for (int i = 0; i < _spaceDimension; i++) {
 			float randomFloat = (float)rand() / RAND_MAX;
 			randomVector[i] = _lowerVertex[i] + (_upperVertex[i] - _lowerVertex[i]) * randomFloat;
 		}

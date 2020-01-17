@@ -12,6 +12,9 @@ namespace COSYNNC {
 		// Initialize a vector by specifying the amount of elements in the vector
 		Vector(int length = 0);
 
+		// Initialize a vector by specifying the amount of elements in the vector
+		Vector(unsigned int length);
+
 		// Initialize a vector with only a single element
 		Vector(float value);
 

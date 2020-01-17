@@ -70,25 +70,59 @@ namespace COSYNNC {
 		vector<mx_float> data;
 		for (int i = 0; i < input.GetLength(); i++) data.push_back(input[i]);
 
-		NDArray networkInput(data, Shape(_batchSize, 2), _context);
+		NDArray networkInput(data, Shape(_batchSize, _inputDimension), _context);
+		networkInput.WaitToRead();
+
 		networkInput.CopyTo(&_arguments["input"]);
-		networkInput.WaitToWrite(); // DEBUG: May also need a wait to read to prevent memory leaks
+		networkInput.WaitToWrite();
 
 		_executor->Forward(false);
-		if (_justTrained) {
+		/*if (_justTrained) {
 			_executor->Forward(false);
 			_justTrained = false;
-		}
+		}*/
 
 		auto outputDimension = _layers.back();
 		Vector output(outputDimension);
-		for (int i = 0; i < outputDimension; i++)
+		for (int i = 0; i < outputDimension; i++) {
 			output[i] = _executor->outputs[0].At(0, i);
-
-		// DEBUG: Print network inputs and outputs to confirm behaviour
-		//std::cout << "\tx0: " << _arguments["input"].At(0, 0) << "\tx1: " << _arguments["input"].At(0, 1) << "\tp: " << _executor->outputs[0].At(0,0) << std::endl;
+		}
 
 		return output;
+	}
+
+
+	// Evaluates the neural network in batch
+	Vector* NeuralNetwork::EvaluateNetworkInBatch(Vector* inputs, unsigned int batchSize) {
+		// Format data
+		vector<mx_float> data;
+
+		for (unsigned int i = 0; i < _batchSize; i++) {
+			auto input = inputs[i % batchSize];
+			for (unsigned int j = 0; j < _inputDimension; j++)
+				data.push_back(input[j]);
+		}
+
+		NDArray networkInput(data, Shape(_batchSize, _inputDimension), _context);
+		networkInput.WaitToRead();
+
+		networkInput.CopyTo(&_arguments["input"]);
+		networkInput.WaitToWrite();
+
+		// Execute network operations
+		_executor->Forward(false);
+
+		// Get data
+		Vector* outputs = new Vector[batchSize];
+		auto outputDimension = _layers.back();
+		for (unsigned int i = 0; i < batchSize; i++) {
+			outputs[i] = Vector(outputDimension);
+			for (unsigned int j = 0; j < outputDimension; j++) {
+				outputs[i][j] = _executor->outputs[0].At(i, j);
+			}
+		}
+
+		return outputs;
 	}
 
 
@@ -100,6 +134,7 @@ namespace COSYNNC {
 		vector<mx_float> inputData;
 		vector<mx_float> labelData;
 
+		// TODO: Make it so that it does not repeat during training, as this emphesizes short episodes 
 		auto amountOfStates = states.size();
 		for (int i = 0; i < _batchSize; i++) {
 			auto state = states[i % amountOfStates];
@@ -121,7 +156,6 @@ namespace COSYNNC {
 		networkInputData.CopyTo(&_arguments["input"]);
 		networkLabelData.CopyTo(&_arguments["label"]);
 
-		// DEBUG: May also need a wait to read to prevent memory leaks
 		networkInputData.WaitToWrite(); 
 		networkLabelData.WaitToWrite();
 
@@ -166,5 +200,11 @@ namespace COSYNNC {
 	void NeuralNetwork::SetHiddenLayers(vector<int> hiddenLayers) {
 		_hiddenLayers = hiddenLayers;
 		_depth = hiddenLayers.size() + 1;
+	}
+
+
+	// Returns the batch size of the network
+	int NeuralNetwork::GetBatchSize() const {
+		return _batchSize;
 	}
 }

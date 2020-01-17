@@ -39,7 +39,7 @@ namespace COSYNNC {
 	private:
 		ControlSpecificationType _type;
 
-		int _spaceDim;
+		int _spaceDimension;
 
 		Vector _lowerVertex;
 		Vector _upperVertex;

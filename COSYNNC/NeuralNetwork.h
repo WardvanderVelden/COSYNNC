@@ -14,6 +14,11 @@ namespace COSYNNC {
 		Quadratic
 	};
 
+	enum class OutputType {
+		Labelled,
+		Range
+	};
+
 	class NeuralNetwork {
 	public:
 		// Initializes a default neural network
@@ -34,6 +39,9 @@ namespace COSYNNC {
 		// Evaluates the neural network
 		virtual Vector EvaluateNetwork(Vector input);
 
+		// Evaluates the neural network in batch
+		virtual Vector* EvaluateNetworkInBatch(Vector* inputs, unsigned int batchSize);
+
 		// Train the network based on inputs and labels
 		virtual void Train(vector<Vector> states, vector<Vector> labels);
 
@@ -45,6 +53,9 @@ namespace COSYNNC {
 
 		// Sets the hidden layers of the network
 		void SetHiddenLayers(vector<int> hiddenLayers);
+
+		// Returns the batch size of the network
+		int GetBatchSize() const;
 
 	protected:
 		vector<int> _layers;

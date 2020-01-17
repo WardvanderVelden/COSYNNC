@@ -16,20 +16,21 @@ int main() {
 	std::cout << "COSYNNC: A correct-by-design neural network synthesis tool." << std::endl << std::endl;
 
 	// TEMPORARY: Example switch variables
-	const bool isRocketExample = false;
+	const bool isRocketExample = true;
 	const bool isReachability = true;
 
 	// COSYNNC training parameters
-	const int episodes = 200000;
-	const int steps = 10;
+	const int episodes = 2500000;
+	const int steps = 15;
 	const int verboseEpisode = 2500;
-	const int verificationEpisode = 10000;
+	const int verificationEpisode = 25000;
 
 	const bool verboseMode = true;
 
 	// Initialize quantizers
 	Quantizer* stateQuantizer = new Quantizer(true);
-	if(isRocketExample)	stateQuantizer->SetQuantizeParameters(Vector({ 0.1, 0.1 }), Vector({ -5, -10 }), Vector({ 5, 10 }));
+	if (isRocketExample)	stateQuantizer->SetQuantizeParameters(Vector({ 0.25, 0.5 }), Vector({ -5, -10 }), Vector({ 5, 10 }));
+	//if (isRocketExample)	stateQuantizer->SetQuantizeParameters(Vector({ 0.125, 0.25 }), Vector({ -5, -10 }), Vector({ 5, 10 }));
 	else stateQuantizer->SetQuantizeParameters(Vector({ 0.0125, 0.0125 }), Vector({ 1.15, 5.45 }), Vector({ 1.55, 5.85 }));
 
 	Quantizer* inputQuantizer = new Quantizer(true);
@@ -49,8 +50,8 @@ int main() {
 	if (isRocketExample) {
 		if (isReachability) {
 			specification = ControlSpecification(ControlSpecificationType::Reachability, plant);
-			//specification.SetHyperInterval(Vector({ -1, -1 }), Vector({ 1, 1 }));
-			specification.SetHyperInterval(Vector({ 0.5, -0.5 }), Vector({ 1.5, 0.5 }));
+			specification.SetHyperInterval(Vector({ -1, -1 }), Vector({ 1, 1 }));
+			//specification.SetHyperInterval(Vector({ 0.5, -0.5 }), Vector({ 1.5, 0.5 }));
 		}
 		else {
 			specification = ControlSpecification(ControlSpecificationType::Invariance, plant);
@@ -61,11 +62,12 @@ int main() {
 		if (isReachability) {
 			specification = ControlSpecification(ControlSpecificationType::Reachability, plant);
 			specification.SetHyperInterval(Vector({ 1.35, 5.65 }), Vector({ 1.55, 5.85 }));
+			//specification.SetHyperInterval(Vector({ 1.35, 5.65 }), Vector({ 1.45, 5.75 }));
 		}
 		else {
 			specification = ControlSpecification(ControlSpecificationType::Invariance, plant);
 			//specification.SetHyperInterval(Vector({ 1.15, 5.45 }), Vector({ 1.55, 5.85 }));
-			specification.SetHyperInterval(Vector({ 1.2, 5.5 }), Vector({ 1.5, 5.8 }));
+			specification.SetHyperInterval(Vector({ 1.175, 5.475 }), Vector({ 1.525, 5.825 }));
 		}
 	}
 	controller.SetControlSpecification(&specification);
@@ -159,7 +161,7 @@ int main() {
 				std::cout << "i: " << i << "\tj: " << j << "\t\tx0: " << newState[0] << "\tx1: " << newState[1];
 				for (int i = 0; i < verboseLabels; i++) {
 					if (i == 0) std::cout << "\t";
-					std::cout << "\tp" << i << ": " << networkOutput[i];;
+					std::cout << "\tn" << i << ": " << networkOutput[i];;
 				}
 				std::cout <<"\tu: " << input[0] << "\ts: " << isInSpecificationSet << std::endl;
 			}
@@ -179,22 +181,21 @@ int main() {
 		}
 
 		// Train the neural network based on the performance of the network
-		//if (oldNorm < initialNorm || isInSpecificationSet) multilayerPerceptron->Train(states, reinforcingLabels);
-		//else multilayerPerceptron->Train(states, deterringLabels);
-
-		if (isInSpecificationSet) multilayerPerceptron->Train(states, reinforcingLabels);
+		if (oldNorm < initialNorm || isInSpecificationSet) multilayerPerceptron->Train(states, reinforcingLabels);
 		else multilayerPerceptron->Train(states, deterringLabels);
 
+		//if (isInSpecificationSet) multilayerPerceptron->Train(states, reinforcingLabels);
+		//else multilayerPerceptron->Train(states, deterringLabels);
 
 		// Verification routine for the neural network controller
 		if (i % verificationEpisode == 0 && i != 0) {
+			std::cout << std::endl;
+
 			verifier->ComputeTransitionFunction();
 			verifier->ComputeWinningSet();
 
 			auto winningSetSize = verifier->GetWinningSetSize();
 			float winningSetPercentage = (float)winningSetSize / (float)stateQuantizer->GetCardinality();
-
-			std::cout << "Winning set size percentage: " << winningSetPercentage * 100 << "%" << std::endl << std::endl;
 
 			// Empirical random walks
 			if (verboseMode) {
@@ -206,6 +207,9 @@ int main() {
 				}
 				std:cout << std::endl;
 			}
+
+			// Winning set
+			std::cout << "Winning set size percentage: " << winningSetPercentage * 100 << "%" << std::endl << std::endl;
 		}
 	}
 
