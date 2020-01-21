@@ -2,9 +2,10 @@
 
 namespace COSYNNC {
 	// Initializes a multilayer perceptron neural network topology
-	MultilayerPerceptron::MultilayerPerceptron(vector<int> hiddenLayers, ActivationActType activationFunction, LossFunctionType lossFunction) {
+	MultilayerPerceptron::MultilayerPerceptron(vector<int> hiddenLayers, ActivationActType activationFunction, LossFunctionType lossFunction, OutputType outputType) {
 		_activationFunction = activationFunction;
 		_lossFunction = lossFunction;
+		_outputType = outputType;
 
 		SetHiddenLayers(hiddenLayers);
 	}
@@ -51,6 +52,7 @@ namespace COSYNNC {
 			_network = SoftmaxOutput(_outputs.back(), label);
 			break;
 		case LossFunctionType::Proportional:
+		case LossFunctionType::Quadratic:
 			_network = LinearRegressionOutput(_outputs.back(), label);
 			break;
 		}

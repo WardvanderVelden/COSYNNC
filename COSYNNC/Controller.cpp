@@ -47,29 +47,12 @@ namespace COSYNNC {
 
 	// Read out the control action using the neural network with the quantized state as input
 	Vector Controller::GetControlAction(Vector state, Vector* networkOutputVector) {
-		if (_neuralNetwork == NULL) return Vector(_inputSpaceDim);
-
 		auto quantizedNormalizedState = _stateQuantizer->NormalizeVector(_stateQuantizer->QuantizeVector(state));
 		auto networkOutput = _neuralNetwork->EvaluateNetwork(quantizedNormalizedState);
 
-		// Greedily pick the input
-		float highestProbability = 0.0;
-		int highestProbabilityIndex = 0.0;
-		for (int i = 0; i < networkOutput.GetLength(); i++) {
-			if (networkOutput[i] > highestProbability) {
-				highestProbability = networkOutput[i];
-				highestProbabilityIndex = i;
-			}
-		}
-
-		Vector oneHot(networkOutput.GetLength());
-		oneHot[highestProbabilityIndex] = 1.0;
-
-		auto input = _inputQuantizer->GetVectorFromOneHot(oneHot);
-
 		if (networkOutputVector != NULL) *networkOutputVector = networkOutput;
 
-		return input;
+		return GetControlActionFromNetwork(networkOutput);
 	}
 
 
@@ -87,23 +70,9 @@ namespace COSYNNC {
 		// Get the network outputs
 		auto networkOutputs = _neuralNetwork->EvaluateNetworkInBatch(normalizedStates, batchSize);
 
+		// Get control action from the network outputs for all outputs in batch
 		for (unsigned int i = 0; i < batchSize; i++) {
-			auto networkOutput = networkOutputs[i];
-
-			// Greedily pick the input
-			float highestProbability = 0.0;
-			int highestProbabilityIndex = 0.0;
-			for (int j = 0; j < networkOutput.GetLength(); j++) {
-				if (networkOutput[j] > highestProbability) {
-					highestProbability = networkOutput[j];
-					highestProbabilityIndex = j;
-				}
-			}
-
-			Vector oneHot(networkOutput.GetLength());
-			oneHot[highestProbabilityIndex] = 1.0;
-
-			inputs[i] = _inputQuantizer->GetVectorFromOneHot(oneHot);
+			inputs[i] = GetControlActionFromNetwork(networkOutputs[i]);
 		}
 
 		delete[] normalizedStates;
@@ -114,12 +83,11 @@ namespace COSYNNC {
 
 
 	// Get a probabilistic control action based on the certainty of the network
-	Vector Controller::GetProbabilisticControlAction(Vector state, Vector& oneHot, Vector& networkOutput) {
+	Vector Controller::GetProbabilisticControlActionFromLabelledNeurons(Vector state, Vector& oneHot, Vector& networkOutput) {
 		auto normalizedQuantizedState = _stateQuantizer->NormalizeVector(_stateQuantizer->QuantizeVector(state));
 
 		// Get network output for the quantized state
 		networkOutput = _neuralNetwork->EvaluateNetwork(normalizedQuantizedState);
-		//if (j == 0) networkOutput = _neuralNetwork->EvaluateNetwork(normalizedQuantizedState); // TODO: Find a more expedient solution to this bug
 
 		auto amountOfOutputNeurons = networkOutput.GetLength();
 
@@ -147,6 +115,89 @@ namespace COSYNNC {
 		oneHot[oneHotIndex] = 1.0;
 
 		return _inputQuantizer->GetVectorFromOneHot(oneHot);
+	}
+
+
+	// Get a probabilistic control action based on the certainty of the network for range neurons
+	Vector Controller::GetProbabilisticControlActionFromRangeNeurons(Vector state, Vector& networkOutput) {
+		const auto inputDimension = _inputQuantizer->GetSpaceDimension();
+
+		auto normalizedQuantizedState = _stateQuantizer->NormalizeVector(_stateQuantizer->QuantizeVector(state));
+
+		// Get network output for the quantized state
+		networkOutput = _neuralNetwork->EvaluateNetwork(normalizedQuantizedState);
+
+		Vector normalInput(inputDimension);
+		for (unsigned int i = 0; i < inputDimension; i++) {
+			if (networkOutput[i * 2] < 0 || networkOutput[i * 2 + 1] < 0 || networkOutput[i * 2] > 1.0 || networkOutput[i * 2 + 1] > 1.0) {
+				normalInput[i] = 0.5;
+			}
+			else {
+				float randomValue = ((float)rand() / RAND_MAX);
+				normalInput[i] = randomValue * (networkOutput[i * 2 + 1] - networkOutput[i * 2]) + networkOutput[i * 2];
+			}
+		}
+
+		return _inputQuantizer->QuantizeVector(_inputQuantizer->DenormalizeVector(normalInput));
+	}
+
+
+	// Processes the network output to get the input based on the output type
+	Vector Controller::GetControlActionFromNetwork(Vector networkOutput) {
+		auto neuralNetworkOutputType = _neuralNetwork->GetOutputType();
+
+		switch (neuralNetworkOutputType) {
+			case OutputType::Labelled: {
+				return GetGreedyInputFromLabelledNeurons(networkOutput);
+				break;
+			}
+			case OutputType::Range: {
+				return GetGreedyInputFromRangeNeurons(networkOutput);
+				break;
+			}
+		}
+
+		return Vector();
+	}
+
+
+	// Processes network output for labelled neurons to get an input greedily
+	Vector Controller::GetGreedyInputFromLabelledNeurons(Vector networkOutput) {
+		auto networkOutputLength = networkOutput.GetLength();
+
+		float highestProbability = 0.0;
+		int highestProbabilityIndex = 0.0;
+		for (int i = 0; i < networkOutputLength; i++) {
+			if (networkOutput[i] > highestProbability) {
+				highestProbability = networkOutput[i];
+				highestProbabilityIndex = i;
+			}
+		}
+
+		Vector oneHot(networkOutputLength);
+		oneHot[highestProbabilityIndex] = 1.0;
+
+		return _inputQuantizer->GetVectorFromOneHot(oneHot);
+	}
+
+
+	// Processes network output for range neurosn to get an input greedily
+	Vector Controller::GetGreedyInputFromRangeNeurons(Vector networkOutput) {
+		auto inputDimension = _inputQuantizer->GetSpaceDimension();
+
+		Vector normalInput(inputDimension);
+		for (unsigned int i = 0; i < inputDimension; i++) {
+			if (networkOutput[i * 2] < 0 || networkOutput[i * 2 + 1] < 0 || networkOutput[i * 2] > 1.0 || networkOutput[i * 2 + 1] > 1.0) {
+				normalInput[i] = 0.5;
+			}
+			else {
+				float randomValue = ((float)rand() / RAND_MAX);
+				normalInput[i] = randomValue * (networkOutput[i * 2 + 1] - networkOutput[i * 2]) + networkOutput[i * 2];
+			}
+		}
+
+		auto denormalInput = _inputQuantizer->DenormalizeVector(normalInput);
+		return _inputQuantizer->QuantizeVector(denormalInput);
 	}
 
 

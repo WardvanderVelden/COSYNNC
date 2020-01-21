@@ -33,8 +33,16 @@ namespace COSYNNC {
 	// Configures the neural network to receive input and output data compatible with the state and input dimensions and batch size
 	void NeuralNetwork::ConfigurateInputOutput(Plant* plant, Quantizer* inputQuantizer, int batchSize, float initialDistribution) {
 		_inputDimension = plant->GetStateSpaceDimension();
-		//_labelDimension = plant->GetInputSpaceDimension();
-		_labelDimension = inputQuantizer->GetCardinality(); // For the labelled-inputs
+
+		// Define label dimension based on output type
+		switch (_outputType) {
+		case OutputType::Labelled:
+			_labelDimension = inputQuantizer->GetCardinality(); // Neuron for every potential input
+			break;
+		case OutputType::Range:
+			_labelDimension = inputQuantizer->GetSpaceDimension() * 2; // Two neurons per axis
+			break;
+		}
 
 		// Define layers based on label dimension
 		auto layers = vector<int>(_hiddenLayers);
@@ -76,11 +84,9 @@ namespace COSYNNC {
 		networkInput.CopyTo(&_arguments["input"]);
 		networkInput.WaitToWrite();
 
+		MXNDArrayWaitAll();
+
 		_executor->Forward(false);
-		/*if (_justTrained) {
-			_executor->Forward(false);
-			_justTrained = false;
-		}*/
 
 		auto outputDimension = _layers.back();
 		Vector output(outputDimension);
@@ -98,9 +104,9 @@ namespace COSYNNC {
 		vector<mx_float> data;
 
 		for (unsigned int i = 0; i < _batchSize; i++) {
-			auto input = inputs[i % batchSize];
-			for (unsigned int j = 0; j < _inputDimension; j++)
-				data.push_back(input[j]);
+				auto input = inputs[i % batchSize];
+				for (unsigned int j = 0; j < _inputDimension; j++)
+					data.push_back(input[j]);
 		}
 
 		NDArray networkInput(data, Shape(_batchSize, _inputDimension), _context);
@@ -108,6 +114,8 @@ namespace COSYNNC {
 
 		networkInput.CopyTo(&_arguments["input"]);
 		networkInput.WaitToWrite();
+
+		MXNDArrayWaitAll();
 
 		// Execute network operations
 		_executor->Forward(false);
@@ -159,6 +167,8 @@ namespace COSYNNC {
 		networkInputData.WaitToWrite(); 
 		networkLabelData.WaitToWrite();
 
+		MXNDArrayWaitAll();
+
 		// Train
 		_executor->Forward(true);
 		_executor->Backward();
@@ -177,6 +187,40 @@ namespace COSYNNC {
 		}
 
 		_justTrained = true;
+	}
+
+
+	// Saves the current network
+	void NeuralNetwork::Save(string path) {
+		// If the path is null create a timestamp
+		if (path == "") {
+			char timestamp[26];
+			time_t t = time(0);
+
+			ctime_s(timestamp, sizeof(timestamp), &t);
+
+			string timestampString;
+			for (unsigned int i = 0; i < sizeof(timestamp) - 2; i++) {
+				if (timestamp[i] != ' ') timestampString += timestamp[i];
+			}
+
+			std::cout << "Generated neural network name: " << path << std::endl;
+
+			// Concatenate string and chars to form path
+			path = "networks/";
+			path += timestampString;
+			path += ".nn";
+		}
+
+		_network.Save(path);
+	}
+
+
+	// Loads a network
+	void NeuralNetwork::Load(string path) {
+		if (path == "") std::cout << "Attempted to load a network without specifying path!" << std::endl;
+
+		_network = mxnet::cpp::Symbol::Load(path);
 	}
 
 
@@ -203,8 +247,26 @@ namespace COSYNNC {
 	}
 
 
+	// Sets the output type of the network
+	void NeuralNetwork::SetOutputType(OutputType outputType) {
+		_outputType = outputType;
+	}
+
+
+	// Returns the output type of the network
+	OutputType NeuralNetwork::GetOutputType() const {
+		return _outputType;
+	}
+
+
 	// Returns the batch size of the network
 	int NeuralNetwork::GetBatchSize() const {
 		return _batchSize;
+	}
+
+
+	// Returns the label dimension
+	int NeuralNetwork::GetLabelDimension() const {
+		return _labelDimension;
 	}
 }

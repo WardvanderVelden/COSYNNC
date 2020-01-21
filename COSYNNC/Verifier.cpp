@@ -44,6 +44,8 @@ namespace COSYNNC {
 			unsigned int currentBatchSize = batchSize;
 			if (batch == amountOfBatches) {
 				currentBatchSize = _spaceCardinality - indexOffset;
+
+				if (currentBatchSize == 0) break;
 			}
 
 			// Collect all the states in the current batch
@@ -58,11 +60,6 @@ namespace COSYNNC {
 			Vector* inputs = new Vector[currentBatchSize];
 			inputs = _controller->GetControlActionInBatch(states, currentBatchSize);
 
-			// DEBUG: Testing if individual input retrieval does work
-			/*for (unsigned int i = 0; i < currentBatchSize; i++) {
-				inputs[i] = _controller->GetControlAction(states[i]);
-			}*/
-
 			// Compute the transition function for all the states in the batch
 			for (unsigned int i = 0; i < currentBatchSize; i++) {
 				long index = indexOffset + i;
@@ -75,14 +72,6 @@ namespace COSYNNC {
 			delete[] inputs;
 			delete[] states;
 		}
-
-		// DEBUG: Go through all the indices 
-		/*for (long index = 0; index < _spaceCardinality; index++) {
-			auto state = _stateQuantizer->GetVectorFromIndex(index);
-			auto input = _controller->GetControlAction(state);
-
-			ComputeTransitionFunctionForIndex(index, state, input);
-		}*/
 	}
 
 	// Computes the transition function for a single index
@@ -147,7 +136,7 @@ namespace COSYNNC {
 		}
 
 		// Temporay: Singular end for new state to bugfix invariance verification
-		long end = (_stateQuantizer->IsInBounds(newState)) ? _stateQuantizer->GetIndexFromVector(_stateQuantizer->QuantizeVector(newState)) : -1;
+		//long end = (_stateQuantizer->IsInBounds(newState)) ? _stateQuantizer->GetIndexFromVector(_stateQuantizer->QuantizeVector(newState)) : -1;
 		//_transitions[index].AddEnd(end);
 
 		// Free up memory
@@ -263,7 +252,8 @@ namespace COSYNNC {
 
 			auto quantizedState = _stateQuantizer->QuantizeVector(state);
 
-			Vector networkOutput((int)_inputCardinality);
+			auto networkOutputDimension = (int)_controller->GetNeuralNetwork()->GetLabelDimension();
+			Vector networkOutput(networkOutputDimension);
 			auto input = _controller->GetControlAction(quantizedState, &networkOutput);
 
 			_plant->Evolve(input);
@@ -273,7 +263,7 @@ namespace COSYNNC {
 			auto satisfied = _specification->IsInSpecificationSet(newState);
 
 			std::cout << "\ti: " << i << "\tx0: " << newState[0] << "\tx1: " << newState[1] << "\tu: " << input[0] << "\ts: " << satisfied;
-			for (unsigned int i = 0; i < (int)_inputCardinality; i++) {
+			for (unsigned int i = 0; i < networkOutputDimension; i++) {
 				std::cout << "\tn" << i << ": " << networkOutput[i];
 			}
 			std::cout << std::endl;
