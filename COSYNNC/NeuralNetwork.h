@@ -1,12 +1,13 @@
 #pragma once
+#include <time.h>
+#include <stdlib.h>
+#include <fstream>
+
 #include "mxnet-cpp/MxNetCpp.h"
 #include <vector>
 #include "Vector.h"
 #include "Plant.h"
 #include "Quantizer.h"
-
-#include <time.h>
-#include <stdlib.h>
 
 using namespace mxnet::cpp;
 
@@ -48,12 +49,15 @@ namespace COSYNNC {
 		// Train the network based on inputs and labels
 		virtual void Train(vector<Vector> states, vector<Vector> labels);
 
-		// Saves the current network
-		virtual void Save(string path = "");
-
 		// Loads a network
 		virtual void Load(string path = "");
 
+		// Saves the current network
+		virtual void Save(string path = "");
+
+		// Writes the neural network weights and biases to MATLAB file
+		virtual void WriteNetworkToMATLAB(string path);
+		
 		// Print network weights
 		void PrintWeights() const;
 

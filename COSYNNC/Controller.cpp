@@ -5,7 +5,6 @@ namespace COSYNNC {
 		_stateSpaceDim = 0;
 		_inputSpaceDim = 0;
 
-		_tau = 0.0;
 	}
 
 	Controller::Controller(Plant* plant) {
@@ -191,8 +190,7 @@ namespace COSYNNC {
 				normalInput[i] = 0.5;
 			}
 			else {
-				float randomValue = ((float)rand() / RAND_MAX);
-				normalInput[i] = randomValue * (networkOutput[i * 2 + 1] - networkOutput[i * 2]) + networkOutput[i * 2];
+				normalInput[i] = (networkOutput[i * 2 + 1] - networkOutput[i * 2]) / 2 + networkOutput[i * 2];
 			}
 		}
 

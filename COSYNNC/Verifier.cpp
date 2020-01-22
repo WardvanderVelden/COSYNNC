@@ -147,8 +147,6 @@ namespace COSYNNC {
 
 	// Computes the winning set for which the controller currently is able to adhere to the control specification
 	void Verifier::ComputeWinningSet() {
-		bool verboseMode = true;
-
 		// Define initial winning domain for the fixed point operator
 		for (long index = 0; index < _spaceCardinality; index++) {
 			auto state = _stateQuantizer->GetVectorFromIndex(index);
@@ -169,9 +167,9 @@ namespace COSYNNC {
 
 		// DEBUG: Print a map of the set to depict its evolution
 		const int indexDivider = round((_stateQuantizer->GetSpaceUpperBound()[0] - _stateQuantizer->GetSpaceLowerBound()[0]) / _spaceEta[0]); // Temporary divider for 2D systems
-		if (indexDivider > 250) verboseMode = false;
+		if (indexDivider > 250) _verboseMode = false;
 
-		if (verboseMode) {
+		if (_verboseMode) {
 			for (long index = 0; index < _spaceCardinality; index++) {
 				if (index % indexDivider == 0) std::cout << std::endl;
 				if (_winningSet[index]) std::cout << "X";
@@ -219,7 +217,7 @@ namespace COSYNNC {
 			}
 
 			// DEBUG: Print a map of the set to depict its evolution
-			if (verboseMode) {
+			if (_verboseMode) {
 				for (long index = 0; index < _spaceCardinality; index++) {
 					if (index % indexDivider == 0) std::cout << std::endl;
 					if (_winningSet[index]) std::cout << "X";
@@ -237,7 +235,9 @@ namespace COSYNNC {
 			if (!_winningSet[index]) _losingIndices.push_back(index);
 		}
 
-		if(verboseMode)	std::cout << std::endl << "Fixed point iterations: " << iterations << std::endl;
+		if(_verboseMode) std::cout << std::endl << "Fixed point iterations: " << iterations << std::endl;
+
+		_winningDomainPercentage = (float)GetWinningSetSize() / (float)_stateQuantizer->GetCardinality() * 100;
 	}
 
 
@@ -259,11 +259,12 @@ namespace COSYNNC {
 			_plant->Evolve(input);
 
 			auto newState = _plant->GetState();
-			//auto quantizedNewState = _stateQuantizer->QuantizeVector(newState);
 			auto satisfied = _specification->IsInSpecificationSet(newState);
 
+			auto displayedOutputs = (networkOutputDimension < 5) ? networkOutputDimension : 5;
+
 			std::cout << "\ti: " << i << "\tx0: " << newState[0] << "\tx1: " << newState[1] << "\tu: " << input[0] << "\ts: " << satisfied;
-			for (unsigned int i = 0; i < networkOutputDimension; i++) {
+			for (unsigned int i = 0; i < displayedOutputs; i++) {
 				std::cout << "\tn" << i << ": " << networkOutput[i];
 			}
 			std::cout << std::endl;
@@ -295,6 +296,12 @@ namespace COSYNNC {
 	}
 
 
+	// Returns the last calculated percentage of the winning domain compared to the state space
+	float Verifier::GetWinningDomainPercentage() {
+		return _winningDomainPercentage;
+	}
+
+
 	// Sets a part of the winning domain, returns whether or not that element has changed
 	bool Verifier::SetWinningDomain(long index, bool value) {
 		auto currentValue = _winningSet[index];
@@ -305,6 +312,12 @@ namespace COSYNNC {
 		else {
 			return false;
 		}
+	}
+
+
+	// Sets the verbose mode
+	void Verifier::SetVerboseMode(bool verboseMode) {
+		_verboseMode = verboseMode;
 	}
 
 
@@ -319,37 +332,6 @@ namespace COSYNNC {
 		else {
 			return _stateQuantizer->GetRandomVector();
 		}
-	}
-
-
-	// Get a random vector in a radius to the goal based on training time
-	Vector Verifier::GetVectorRadialFromGoal(float progression) {
-		Vector vector(_spaceDimension);
-		
-		auto goal = _specification->GetCenter();
-		auto lowerBound = _stateQuantizer->GetSpaceLowerBound();
-		auto upperBound = _stateQuantizer->GetSpaceUpperBound();
-
-		for (int i = 0; i < _spaceDimension; i++) {
-			float deltaLower = goal[i] - lowerBound[i];
-			float deltaUpper = upperBound[i] - goal[i];
-
-			float spaceSpan = deltaLower + deltaUpper;
-			float randomValue = ((float)rand() / RAND_MAX);
-
-			float lowerSpaceProbability = (deltaLower / spaceSpan);
-
-			if (randomValue < lowerSpaceProbability) {
-				randomValue = randomValue /  lowerSpaceProbability;
-				vector[i] = goal[i] - deltaLower * randomValue * progression;
-			}
-			else {
-				randomValue = (randomValue - lowerSpaceProbability) / (1.0 - lowerSpaceProbability);
-				vector[i] = goal[i] + deltaUpper * randomValue * progression;
-			}
-		}
-
-		return vector;
 	}
 
 

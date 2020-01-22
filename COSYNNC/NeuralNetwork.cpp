@@ -190,6 +190,14 @@ namespace COSYNNC {
 	}
 
 
+	// Loads a network
+	void NeuralNetwork::Load(string path) {
+		if (path == "") std::cout << "Attempted to load a network without specifying path!" << std::endl;
+
+		_network = mxnet::cpp::Symbol::Load(path);
+	}
+
+
 	// Saves the current network
 	void NeuralNetwork::Save(string path) {
 		// If the path is null create a timestamp
@@ -200,27 +208,70 @@ namespace COSYNNC {
 			ctime_s(timestamp, sizeof(timestamp), &t);
 
 			string timestampString;
-			for (unsigned int i = 0; i < sizeof(timestamp) - 2; i++) {
-				if (timestamp[i] != ' ') timestampString += timestamp[i];
+			for (unsigned int i = 0; i < sizeof(timestamp) - 6; i++) {
+				if (timestamp[i] != ' ' && timestamp[i] != ':') timestampString += timestamp[i];
 			}
-
-			std::cout << "Generated neural network name: " << path << std::endl;
 
 			// Concatenate string and chars to form path
 			path = "networks/";
 			path += timestampString;
-			path += ".nn";
 		}
 
-		_network.Save(path);
+		// Write the network to a MATLAB file
+		WriteNetworkToMATLAB(path);
+
+		// Print name
+		std::cout << "Saver: \t\tNetwork saved to: " << path << ".m" << std::endl;
 	}
 
 
-	// Loads a network
-	void NeuralNetwork::Load(string path) {
-		if (path == "") std::cout << "Attempted to load a network without specifying path!" << std::endl;
+	// Writes the neural network weights and biases to MATLAB file
+	void NeuralNetwork::WriteNetworkToMATLAB(string path) {
+		ofstream file(path + ".m", std::ios_base::out);
 
-		_network = mxnet::cpp::Symbol::Load(path);
+		// Save output type of the network
+		file << "outputType = '";
+		switch (_outputType) {
+		case OutputType::Labelled: file << "labelled"; break;
+		case OutputType::Range: file << "range"; break;
+		}
+		file << "';\n";
+
+		// Save activation function
+		file << "activationFunction = 'relu';\n"; // TODO: Make this change based on the activation function
+
+		file << "\n";
+		for (unsigned int i = 0; i < _argumentNames.size(); i++) {
+			auto argumentName = _argumentNames[i];
+			auto argument = _arguments[argumentName];
+			if (argumentName == "input" || argumentName == "label") continue;
+
+			auto shape = argument.GetShape();
+
+			// Vector
+			if (shape.size() == 1) {
+				file << argumentName << " = [";
+				for (unsigned int i = 0; i < shape[0]; i++) {
+					file << argument.At(i);
+					if (i != shape[0] - 1) file << ", ";
+				}
+				file << "];\n";
+			}
+			else { // Matrix
+				file << argumentName << " = [\n";
+
+				for (unsigned int j = 0; j < shape[0]; j++) {
+					file << "\t[";
+					for (unsigned int i = 0; i < shape[1]; i++) {
+						file << argument.At(j, i);
+						if (i != (shape[1] - 1)) file << ", ";
+					}
+					file << "],\n";
+				}
+				file << "];\n";
+			}
+		}
+		file.close();
 	}
 
 

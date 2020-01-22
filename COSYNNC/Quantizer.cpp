@@ -161,16 +161,7 @@ Vector Quantizer::GetVectorFromOneHot(Vector oneHot) {
 		if (oneHot[i] == 1.0) index = i;
 	}
 
-	Vector vec(_spaceDimension);
-	for (int i = (_spaceDimension - 1); i >= 0; i--) {
-		int indexOnAxis = 0;
-		if (i > 0) indexOnAxis = floor(index / _spaceCardinalityPerAxis[i]);
-		else indexOnAxis = index;
-		index -= indexOnAxis * _spaceCardinalityPerAxis[i];
-		vec[i] = indexOnAxis * _spaceEta[i] + _spaceLowerBound[i] + _spaceEta[i] * 0.5;
-	}
-
-	return vec;
+	return GetVectorFromIndex(index);
 }
 
 
@@ -178,13 +169,11 @@ Vector Quantizer::GetVectorFromOneHot(Vector oneHot) {
 Vector Quantizer::GetVectorFromIndex(long index) {
 	Vector vec(_spaceDimension);
 	for (int i = (_spaceDimension - 1); i >= 0; i--) {
-		long indexOnAxis = indexOnAxis = (i != 0) ? floor(index / _spaceCardinalityPerAxis[i - 1]) : index;
+		long indexOnAxis = (i > 0) ? floor(index / _spaceCardinalityPerAxis[i - 1]) : index;
 		
-		index -= indexOnAxis * _spaceCardinalityPerAxis[i];
+		if(i > 0) index -= indexOnAxis * _spaceCardinalityPerAxis[i - 1];
 		vec[i] = indexOnAxis * _spaceEta[i] + _spaceLowerBound[i] + _spaceEta[i] * 0.5;
 	}
-
-	//if (IsInBounds(vec)) return vec;
 	
 	return vec;
 }

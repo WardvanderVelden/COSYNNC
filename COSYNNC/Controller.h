@@ -61,12 +61,12 @@ namespace COSYNNC {
 		int _stateSpaceDim;
 		int _inputSpaceDim;
 
-		Quantizer* _stateQuantizer = NULL;
-		Quantizer* _inputQuantizer = NULL;
+		Quantizer* _stateQuantizer = nullptr;
+		Quantizer* _inputQuantizer = nullptr;
 
-		ControlSpecification* _controlSpecification;
+		ControlSpecification* _controlSpecification = nullptr;
 
-		NeuralNetwork* _neuralNetwork;
+		NeuralNetwork* _neuralNetwork = nullptr;
 	};
 }
 
