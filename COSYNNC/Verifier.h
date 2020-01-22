@@ -29,17 +29,20 @@ namespace COSYNNC {
 		// Sets a part of the winning domain, returns whether or not that element has changed
 		bool SetWinningDomain(long index, bool value);
 
+		// Sets the verbose mode
+		void SetVerboseMode(bool verboseMode);
+
 		// Get a random vector from the space of the lossing domain
 		Vector GetVectorFromLosingDomain();
-
-		// Get a random vector in a radius to the goal based on training time
-		Vector GetVectorRadialFromGoal(float progression);
 
 		// Over approximates all the vertices based on the input and returns an array of the new vertices
 		Vector* OverApproximateEvolution(Vector state, Vector input);
 
 		// Returns the edges between a set of vertices if the vertices are properly sorted
 		Edge* GetEdgesBetweenVertices(Vector* vertices);
+
+		// Returns the last calculated percentage of the winning domain compared to the state space
+		float GetWinningDomainPercentage();
 	private:
 		Plant* _plant;
 		Controller* _controller;
@@ -50,6 +53,8 @@ namespace COSYNNC {
 		Transition* _transitions;
 		bool* _winningSet;
 		vector<long> _losingIndices;
+
+		float _winningDomainPercentage = 0.0;
 
 		const unsigned int _maxSteps = 50;
 
@@ -64,5 +69,7 @@ namespace COSYNNC {
 
 		unsigned int _amountOfVerticesPerCell;
 		unsigned int _amountOfEdgesPerCell;
+
+		bool _verboseMode = false;
 	};
 }

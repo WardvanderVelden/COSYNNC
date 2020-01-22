@@ -1,4 +1,8 @@
 #pragma once
+#include <time.h>
+#include <stdlib.h>
+#include <fstream>
+
 #include "mxnet-cpp/MxNetCpp.h"
 #include <vector>
 #include "Vector.h"
@@ -45,6 +49,15 @@ namespace COSYNNC {
 		// Train the network based on inputs and labels
 		virtual void Train(vector<Vector> states, vector<Vector> labels);
 
+		// Loads a network
+		virtual void Load(string path = "");
+
+		// Saves the current network
+		virtual void Save(string path = "");
+
+		// Writes the neural network weights and biases to MATLAB file
+		virtual void WriteNetworkToMATLAB(string path);
+		
 		// Print network weights
 		void PrintWeights() const;
 
@@ -54,8 +67,17 @@ namespace COSYNNC {
 		// Sets the hidden layers of the network
 		void SetHiddenLayers(vector<int> hiddenLayers);
 
+		// Sets the output type of the network
+		void SetOutputType(OutputType outputType);
+
+		// Returns the output type of the network
+		OutputType GetOutputType() const;
+
 		// Returns the batch size of the network
 		int GetBatchSize() const;
+
+		// Returns the label dimension
+		int GetLabelDimension() const;
 
 	protected:
 		vector<int> _layers;
@@ -80,6 +102,7 @@ namespace COSYNNC {
 		Optimizer* _optimizer = NULL;
 
 		LossFunctionType _lossFunction = LossFunctionType::Proportional;
+		OutputType _outputType = OutputType::Labelled;
 
 		// TEMPORARY: For now we are running on the cpu
 		Context _context = Context::cpu();

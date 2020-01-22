@@ -35,8 +35,20 @@ namespace COSYNNC {
 		// Get a control actions based on states in batch for computational efficiency
 		Vector* GetControlActionInBatch(Vector* states, unsigned int batchSize);
 
-		// Get a probabilistic control action based on the certainty of the network
-		Vector GetProbabilisticControlAction(Vector state, Vector& oneHot, Vector& networkOutput);
+		// Get a probabilistic control action based on the certainty of the network for labelled neurons
+		Vector GetProbabilisticControlActionFromLabelledNeurons(Vector state, Vector& oneHot, Vector& networkOutput);
+
+		// Get a probabilistic control action based on the certainty of the network for range neurons
+		Vector GetProbabilisticControlActionFromRangeNeurons(Vector state, Vector& networkOutput);
+
+		// Processes the network output to get the input based on the output type
+		Vector GetControlActionFromNetwork(Vector networkOutput);
+
+		// Processes network output for labelled neurons to get an input greedily
+		Vector GetGreedyInputFromLabelledNeurons(Vector networkOutput);
+
+		// Processes network output for range neurosn to get an input greedily
+		Vector GetGreedyInputFromRangeNeurons(Vector networkOutput);
 
 		// Returns the control specification that is currently assigned to the controller
 		ControlSpecification* GetControlSpecification() const;
@@ -49,12 +61,12 @@ namespace COSYNNC {
 		int _stateSpaceDim;
 		int _inputSpaceDim;
 
-		Quantizer* _stateQuantizer = NULL;
-		Quantizer* _inputQuantizer = NULL;
+		Quantizer* _stateQuantizer = nullptr;
+		Quantizer* _inputQuantizer = nullptr;
 
-		ControlSpecification* _controlSpecification;
+		ControlSpecification* _controlSpecification = nullptr;
 
-		NeuralNetwork* _neuralNetwork;
+		NeuralNetwork* _neuralNetwork = nullptr;
 	};
 }
 
