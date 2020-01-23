@@ -143,6 +143,10 @@ namespace COSYNNC {
 					Log(); Log("Verifier", "Performing fixed-point verification.");
 
 					Verify(); // TODO: Stop if verification is in specs
+
+					Log();
+
+					_neuralNetwork->Save("networks/network");
 						
 					Log(); Log("Trainer");
 				}
@@ -310,9 +314,6 @@ namespace COSYNNC {
 
 		// Wait for all the MXNet operations to have finished
 		MXNDArrayWaitAll();
-
-		// Save network
-		_neuralNetwork->Save();
 	}
 
 

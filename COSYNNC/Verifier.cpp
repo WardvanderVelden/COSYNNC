@@ -171,7 +171,7 @@ namespace COSYNNC {
 
 		if (_verboseMode) {
 			for (long index = 0; index < _spaceCardinality; index++) {
-				if (index % indexDivider == 0) std::cout << std::endl;
+				if (index % indexDivider == 0) std::cout << std::endl << "\t";
 				if (_winningSet[index]) std::cout << "X";
 				else std::cout << ".";
 			}
@@ -219,7 +219,7 @@ namespace COSYNNC {
 			// DEBUG: Print a map of the set to depict its evolution
 			if (_verboseMode) {
 				for (long index = 0; index < _spaceCardinality; index++) {
-					if (index % indexDivider == 0) std::cout << std::endl;
+					if (index % indexDivider == 0) std::cout << std::endl << "\t";
 					if (_winningSet[index]) std::cout << "X";
 					else std::cout << ".";
 				}
@@ -235,7 +235,7 @@ namespace COSYNNC {
 			if (!_winningSet[index]) _losingIndices.push_back(index);
 		}
 
-		if(_verboseMode) std::cout << std::endl << "Fixed point iterations: " << iterations << std::endl;
+		if(_verboseMode) std::cout << std::endl << "\tFixed point iterations: " << iterations << std::endl;
 
 		_winningDomainPercentage = (float)GetWinningSetSize() / (float)_stateQuantizer->GetCardinality() * 100;
 	}
