@@ -31,12 +31,15 @@
     <Filter Include="Source Files\Control">
       <UniqueIdentifier>{6dfb83f2-2607-4b3d-886e-67caa4a99b41}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Utilities">
+      <UniqueIdentifier>{fd471dc7-4fb8-4a4c-af3e-6f94363ffdab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Utilities">
+      <UniqueIdentifier>{2cf1578c-0ffc-446f-99cf-019d2574ce26}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Vector.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MultilayerPerceptron.cpp">
@@ -66,20 +69,20 @@
     <ClCompile Include="Verifier.cpp">
       <Filter>Source Files\Control</Filter>
     </ClCompile>
-    <ClCompile Include="Edge.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Transition.cpp">
       <Filter>Source Files\Control</Filter>
     </ClCompile>
     <ClCompile Include="Procedure.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Edge.cpp">
+      <Filter>Source Files\Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Vector.cpp">
+      <Filter>Source Files\Utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Vector.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="NeuralNetwork.h">
       <Filter>Header Files\Neural Networks</Filter>
     </ClInclude>
@@ -107,14 +110,17 @@
     <ClInclude Include="Verifier.h">
       <Filter>Header Files\Control</Filter>
     </ClInclude>
-    <ClInclude Include="Edge.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Transition.h">
       <Filter>Header Files\Control</Filter>
     </ClInclude>
     <ClInclude Include="Procedure.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Edge.h">
+      <Filter>Header Files\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Vector.h">
+      <Filter>Header Files\Utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
