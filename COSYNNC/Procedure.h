@@ -3,6 +3,7 @@
 #include "Plant.h"
 #include "Controller.h"
 #include "Verifier.h"
+#include "FileManager.h"
 
 namespace COSYNNC {
 	class Procedure {
@@ -31,6 +32,9 @@ namespace COSYNNC {
 		// Specify the norm to be used during training
 		void SpecifyNorm(vector<float> normWeights);
 
+		// Specify the verbosity of the procedure
+		void SpecifyVerbosity(bool verboseTrainer = false, bool verboseVerifier = false);
+
 		// Set the plant
 		void SetPlant(Plant* plant);
 
@@ -52,6 +56,12 @@ namespace COSYNNC {
 		// Run the verification phase
 		void Verify();
 
+		// Save the neural network
+		void SaveNetwork(string path = "");
+
+		// Save the neural network as a timestamp
+		void SaveTimestampedNetwork();
+		
 		// Log a message 
 		void Log(string phase = "", string message = "");
 
@@ -62,12 +72,12 @@ namespace COSYNNC {
 		Vector GetVectorRadialFromGoal(float radius);
 	private:
 		Quantizer* _stateQuantizer;
-		unsigned int _stateDimension;
-		unsigned long _stateCardinality;
+		unsigned int _stateDimension = 1;
+		unsigned long _stateCardinality = 0;
 
 		Quantizer* _inputQuantizer;
-		unsigned int _inputDimension;
-		unsigned long _inputCardinality;
+		unsigned int _inputDimension = 1;
+		unsigned long _inputCardinality = 0;
 
 		Plant* _plant;
 
@@ -80,14 +90,16 @@ namespace COSYNNC {
 
 		ControlSpecification _specification;
 
+		FileManager _fileManager;
+
 		// Synthesis parameters
-		unsigned int _maxEpisodeHorizonTrainer;
-		unsigned int _maxEpisodeHorizonVerifier;
+		unsigned int _maxEpisodeHorizonTrainer = 10;
+		unsigned int _maxEpisodeHorizonVerifier = 50;
 
-		unsigned int _maxEpisodes;
+		unsigned int _maxEpisodes = 100000;
 
-		unsigned int _verboseEpisode;
-		unsigned int _verificationEpisode;
+		unsigned int _verboseEpisode = 2500;
+		unsigned int _verificationEpisode = 25000;
 
 		bool _radialInitialStateAvailable = false;
 		float _radialInitialStateLower = 0.0;
@@ -97,6 +109,8 @@ namespace COSYNNC {
 		vector<float> _normWeights = { 1.0, 1.0 };
 
 		// Debug and logging parameters
-		bool _verboseMode = true;
+		bool _verboseTrainer = true;
+		bool _verboseVerifier = true;
+		string _lastLoggedPhase = "";
 	};
 }

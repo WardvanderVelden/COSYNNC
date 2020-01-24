@@ -4,7 +4,8 @@
 namespace COSYNNC {
 	class DCDC : public Plant {
 	public:
-		DCDC() : Plant(2, 1, 0.25) { }
+		//DCDC() : Plant(2, 1, 0.25) { }
+		DCDC() : Plant(2, 1, 0.1) { }
 
 		Vector StepDynamics(Vector input) override; // Dynamics are described by two modes, hence input is binary ( < 0.5, > 0.5)
 

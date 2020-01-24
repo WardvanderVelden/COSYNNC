@@ -36,6 +36,11 @@ namespace COSYNNC {
 
 	// Calculates the transition function that transitions any state in the state space to a set of states in the state space based on the control law
 	void Verifier::ComputeTransitionFunction() {
+		// Free up previous transitions
+		delete[] _transitions;
+		_transitions = new Transition[_stateQuantizer->GetCardinality()];
+
+		// Determine amount of batches
 		const auto batchSize = _controller->GetNeuralNetwork()->GetBatchSize();
 		const long amountOfBatches = ceil(_spaceCardinality / batchSize);
 
@@ -147,6 +152,10 @@ namespace COSYNNC {
 
 	// Computes the winning set for which the controller currently is able to adhere to the control specification
 	void Verifier::ComputeWinningSet() {
+		// Free up previous winning set
+		delete[] _winningSet;
+		_winningSet = new bool[_stateQuantizer->GetCardinality()] { false };
+
 		// Define initial winning domain for the fixed point operator
 		for (long index = 0; index < _spaceCardinality; index++) {
 			auto state = _stateQuantizer->GetVectorFromIndex(index);
@@ -229,15 +238,50 @@ namespace COSYNNC {
 			if (!setHasChanged) iterationConverged = true;
 		}
 
-		// Collect losing indices for training purposes
-		_losingIndices.clear();
-		for (long index = 0; index < _spaceCardinality; index++) {
-			if (!_winningSet[index]) _losingIndices.push_back(index);
-		}
+		DetermineLosingSet();
 
 		if(_verboseMode) std::cout << std::endl << "\tFixed point iterations: " << iterations << std::endl;
 
 		_winningDomainPercentage = (float)GetWinningSetSize() / (float)_stateQuantizer->GetCardinality() * 100;
+	}
+
+
+	// Determines the losing set and the set of losing cells which are next to the winning domain
+	void Verifier::DetermineLosingSet() {
+		// Clear losing indices
+		_losingIndices.clear();
+		_losingWinningNeighborIndices.clear();
+
+		// Determine a list of all the neighboring directions
+		auto spaceDimension = _stateQuantizer->GetSpaceDimension();
+		auto spaceEta = _stateQuantizer->GetSpaceEta();
+
+		vector<Vector> directions;
+		for (unsigned int i = 0; i < spaceDimension; i++) {
+			auto dir = Vector(spaceDimension);
+
+			dir[i] = -spaceEta[i];
+			directions.push_back(dir);
+			directions.push_back(dir * -1);
+		}
+
+		// Find losing indices
+		for (long index = 0; index < _spaceCardinality; index++) {
+			if (!_winningSet[index]) {
+				_losingIndices.push_back(index);
+
+				auto state = _stateQuantizer->GetVectorFromIndex(index);
+				for (unsigned int i = 0; i < directions.size(); i++) {
+					auto neighbor = state + directions[i];
+					if (_stateQuantizer->IsInBounds(neighbor)) {
+						auto neighborIndex = _stateQuantizer->GetIndexFromVector(neighbor);
+
+						if (IsIndexInWinningSet(neighborIndex))
+							_losingWinningNeighborIndices.push_back(neighborIndex);
+					}
+				}
+			}
+		}
 	}
 
 
@@ -321,13 +365,27 @@ namespace COSYNNC {
 	}
 
 
-	// Get a random vector from the space of the lossing domain
+	// Get a random vector from the space of the losing domain
 	Vector Verifier::GetVectorFromLosingDomain() {
 		auto losingIndicesSize = _losingIndices.size();
 
 		if (losingIndicesSize > 0) {
 			long randomIndex = floor(((float)rand() / RAND_MAX) * (losingIndicesSize - 1));
 			return _stateQuantizer->GetVectorFromIndex(_losingIndices[randomIndex]);
+		}
+		else {
+			return _stateQuantizer->GetRandomVector();
+		}
+	}
+
+
+	// Get a random vector from the set of losing states which neighbor winning states
+	Vector Verifier::GetVectorFromLosingNeighborDomain() {
+		auto losingNeighborIndicesSize = _losingWinningNeighborIndices.size();
+
+		if (losingNeighborIndicesSize > 0) {
+			long randomIndex = floor(((float)rand() / RAND_MAX) * (losingNeighborIndicesSize - 1));
+			return _stateQuantizer->GetVectorFromIndex(_losingWinningNeighborIndices[randomIndex]);
 		}
 		else {
 			return _stateQuantizer->GetRandomVector();
@@ -390,5 +448,13 @@ namespace COSYNNC {
 		}
 
 		return edges;
+	}
+
+
+	// Returns whether or not an index is in the winning domain
+	bool Verifier::IsIndexInWinningSet(unsigned long index) {
+		if (index < 0 || index > _stateQuantizer->GetCardinality()) return false;
+	
+		return _winningSet[index];
 	}
 }

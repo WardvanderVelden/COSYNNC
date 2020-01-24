@@ -133,6 +133,7 @@
     <ClCompile Include="ControlSpecification.cpp" />
     <ClCompile Include="DCDC.cpp" />
     <ClCompile Include="Edge.cpp" />
+    <ClCompile Include="FileManager.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MultilayerPerceptron.cpp" />
     <ClCompile Include="NeuralNetwork.cpp" />
@@ -149,6 +150,7 @@
     <ClInclude Include="ControlSpecification.h" />
     <ClInclude Include="DCDC.h" />
     <ClInclude Include="Edge.h" />
+    <ClInclude Include="FileManager.h" />
     <ClInclude Include="MultilayerPerceptron.h" />
     <ClInclude Include="NeuralNetwork.h" />
     <ClInclude Include="Plant.h" />
