@@ -20,6 +20,9 @@ namespace COSYNNC {
 		// Computes the winning set for which the controller currently is able to adhere to the control specification
 		void ComputeWinningSet();
 
+		// Determines the losing set and the set of losing cells which are next to the winning domain
+		void DetermineLosingSet();
+
 		//  Prints a verbose walk of the current controller using greedy inputs
 		void PrintVerboseWalk(Vector initialState);
 
@@ -32,8 +35,11 @@ namespace COSYNNC {
 		// Sets the verbose mode
 		void SetVerboseMode(bool verboseMode);
 
-		// Get a random vector from the space of the lossing domain
+		// Get a random vector from the space of the losing domain
 		Vector GetVectorFromLosingDomain();
+
+		// Get a random vector from the set of losing states which neighbor winning states
+		Vector GetVectorFromLosingNeighborDomain();
 
 		// Over approximates all the vertices based on the input and returns an array of the new vertices
 		Vector* OverApproximateEvolution(Vector state, Vector input);
@@ -43,6 +49,9 @@ namespace COSYNNC {
 
 		// Returns the last calculated percentage of the winning domain compared to the state space
 		float GetWinningDomainPercentage();
+
+		// Returns whether or not an index is in the winning domain
+		bool IsIndexInWinningSet(unsigned long index);
 	private:
 		Plant* _plant;
 		Controller* _controller;
@@ -52,7 +61,9 @@ namespace COSYNNC {
 
 		Transition* _transitions;
 		bool* _winningSet;
+
 		vector<long> _losingIndices;
+		vector<long> _losingWinningNeighborIndices;
 
 		float _winningDomainPercentage = 0.0;
 

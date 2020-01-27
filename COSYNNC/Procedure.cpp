@@ -8,8 +8,7 @@ namespace COSYNNC {
 
 		_plant = nullptr;
 
-		Log("COSYNNC", "A correct-by-design neural network synthesis procedure");
-		Log();
+		std::cout << "COSYNNC:\tA correct-by-design neural network controller synthesis procedure." << std::endl;
 	}
 
 
@@ -32,7 +31,7 @@ namespace COSYNNC {
 		_stateDimension = _stateQuantizer->GetSpaceDimension();
 		_stateCardinality = _stateQuantizer->GetCardinality();
 
-		Log("COSYYNC", "State quantizer specified.");
+		Log("COSYNNC", "State quantizer specified.");
 	}
 
 
@@ -44,7 +43,7 @@ namespace COSYNNC {
 		_inputDimension = _inputQuantizer->GetSpaceDimension();
 		_inputCardinality = _inputQuantizer->GetCardinality();
 
-		Log("COSYYNC", "Input quantizer specified.");
+		Log("COSYNNC", "Input quantizer specified.");
 	}
 
 
@@ -52,7 +51,7 @@ namespace COSYNNC {
 	void Procedure::SetPlant(Plant* plant) {
 		_plant = plant;
 
-		Log("COSYYNC", "Plant linked.");
+		Log("COSYNNC", "Plant linked.");
 	}
 
 
@@ -63,7 +62,7 @@ namespace COSYNNC {
 
 		_outputType = _neuralNetwork->GetOutputType();
 
-		Log("COSYYNC", "Neural network linked.");
+		Log("COSYNNC", "Neural network linked.");
 	}
 
 
@@ -77,7 +76,7 @@ namespace COSYNNC {
 		_maxEpisodeHorizonTrainer = maxEpisodeHorizonTrainer;
 		_maxEpisodeHorizonVerifier = (maxEpisodeHorizonVerifier == 0) ? _maxEpisodeHorizonTrainer * 3 : maxEpisodeHorizonVerifier;
 
-		Log("COSYYNC", "Synthesis parameters specified.");
+		Log("COSYNNC", "Synthesis parameters specified.");
 	}
 
 
@@ -88,7 +87,7 @@ namespace COSYNNC {
 
 		_controller.SetControlSpecification(&_specification);
 
-		Log("COSYYNC", "Control specification defined.");
+		Log("COSYNNC", "Control specification defined.");
 	}
 
 
@@ -113,6 +112,18 @@ namespace COSYNNC {
 	}
 
 
+	// Specify the verbosity of the procedure
+	void Procedure::SpecifyVerbosity(bool verboseTrainer, bool verboseVerifier) {
+		_verboseTrainer = verboseTrainer;
+		if (_verboseTrainer) Log("COSYNNC", "Trainer set to verbose");
+		else Log("COSYNNC", "Trainer set to non-verbose");
+
+		_verboseVerifier = verboseVerifier;
+		if (_verboseVerifier) Log("COSYNNC", "Verifier set to verbose");
+		else Log("COSYNNC", "Verifier set to non-verbose");
+	}
+
+
 	// Initialize the procedure, returns false if not all required parameters are specified
 	bool Procedure::Initialize() {
 		_controller = Controller(_plant, _stateQuantizer, _inputQuantizer);
@@ -120,7 +131,9 @@ namespace COSYNNC {
 		_controller.SetControlSpecification(&_specification);
 
 		_verifier = new Verifier(_plant, &_controller, _stateQuantizer, _inputQuantizer);
-		_verifier->SetVerboseMode(_verboseMode);
+		_verifier->SetVerboseMode(_verboseVerifier);
+
+		_fileManager = FileManager(_neuralNetwork, _verifier, _stateQuantizer, _inputQuantizer, &_specification);
 
 		// TODO: Test if all required parameters are specified before the 
 
@@ -133,24 +146,27 @@ namespace COSYNNC {
 		auto succesfullyInitialized = Initialize();
 
 		if (succesfullyInitialized) {
-			Log("COSYNNC", "Procedure was succesfully initialized, synthesize procedure started!"); Log();
+			Log("COSYNNC", "Procedure was succesfully initialized, synthesize procedure started!");
 
 			Log("Trainer", "Starting training");
 			for (int i = 0; i <= _maxEpisodes; i++) {
 				Train(i);
 
 				if (i % _verificationEpisode == 0 && i != 0) {
-					Log(); Log("Verifier", "Performing fixed-point verification.");
+					Log("Verifier", "Performing fixed-point verification.");
+					Verify(); 
 
-					Verify(); // TODO: Stop if verification is in specs
+					Log("File Manager", "Saving neural network with a timestamp.");
+					SaveTimestampedNetwork();
 
-					Log();
-
-					_neuralNetwork->Save("networks/network");
-						
-					Log(); Log("Trainer");
+					// TODO: Stop if verification is in specs
+					Log("Trainer", "Continuing training.");
 				}
 			}
+
+			// Save the final neural network
+			Log("File Manager", "Saving neural network.");
+			SaveNetwork("controllers/controller");
 		}
 		else {
 			Log("COSYNNC", "Procedure was not succesfully initialized, check if all required parameters are specified.");
@@ -162,7 +178,7 @@ namespace COSYNNC {
 
 	// Run the training phase
 	void Procedure::Train(unsigned int episodeNumber) {
-		if (episodeNumber % _verboseEpisode == 0 && _verboseMode) std::cout << std::endl;
+		if (episodeNumber % _verboseEpisode == 0 && _verboseTrainer) std::cout << std::endl;
 
 		vector<Vector> states;
 		vector<Vector> reinforcingLabels;
@@ -195,7 +211,7 @@ namespace COSYNNC {
 			GetDataForTrainingStep(state, &reinforcingLabels, &deterringLabels, &input, &networkOutput, &newState, &isInSpecificationSet, &norm);
 
 			// DEBUG: Print simulation for verification purposes
-			if (episodeNumber % _verboseEpisode == 0 && _verboseMode) {
+			if (episodeNumber % _verboseEpisode == 0 && _verboseTrainer) {
 				auto verboseLabels = (_neuralNetwork->GetLabelDimension() <= 5) ? _neuralNetwork->GetLabelDimension() : 5;
 
 				std::cout << "\ti: " << episodeNumber << "\tj: " << j << "\t\tx0: " << newState[0] << "\tx1: " << newState[1];
@@ -299,14 +315,14 @@ namespace COSYNNC {
 		_verifier->ComputeWinningSet();
 
 		// Empirical random walks
-		if (_verboseMode) {
-			Log(); Log("Verifier", "Empirical verification walks");
+		if (_verboseVerifier) {
+			Log("Verifier", "Empirical verification walks");
 			for (unsigned int j = 0; j < 5; j++) {
 				std::cout << std::endl;
 				auto initialState = _stateQuantizer->GetRandomVector();
 				_verifier->PrintVerboseWalk(initialState);
 			}
-			Log();
+			std::cout << std::endl;
 		}
 
 		// Log winning set
@@ -317,10 +333,43 @@ namespace COSYNNC {
 	}
 
 
+	// Save the neural network
+	void Procedure::SaveNetwork(string path) {
+		_fileManager.SaveNetworkAsMATLAB(path, "net");
+		_fileManager.SaveVerifiedDomainAsMATLAB(path, "dom");
+	}
+
+
+	// Save the neural network as a timestamp
+	void Procedure::SaveTimestampedNetwork() {
+		// Generate timestamp
+		char timestamp[26];
+		time_t t = time(0);
+
+		ctime_s(timestamp, sizeof(timestamp), &t);
+
+		string timestampString;
+		for (unsigned int i = 0; i < sizeof(timestamp) - 6; i++) {
+			if (timestamp[i] != ' ' && timestamp[i] != ':') timestampString += timestamp[i];
+		}
+
+		// Concatenate string and chars to form path
+		string path = "controllers/timestamps";
+
+		Log("File Manager", "Saving to path: '" + path + "'");
+
+		// Save network to a matlab file under the timestamp
+		_fileManager.SaveNetworkAsMATLAB(path, timestampString + "net");
+		_fileManager.SaveVerifiedDomainAsMATLAB(path, timestampString + "dom");
+	}
+
+
 	// Log a message 
 	void Procedure::Log(string phase, string message) {
-		if (phase == "" && message == "") std::cout << std::endl;
-		else std::cout << phase << ": \t" << message << std::endl;
+		if (phase != _lastLoggedPhase) std::cout << std::endl;
+		std::cout << phase << ": \t" << message << std::endl;
+
+		_lastLoggedPhase = phase;
 	}
 
 
@@ -336,9 +385,24 @@ namespace COSYNNC {
 		case ControlSpecificationType::Reachability:
 			initialState = _specification.GetCenter();
 
-			while (_specification.IsInSpecificationSet(initialState)) {
-				if (episodeCount < _verificationEpisode || episodeCount % 2 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
-				else initialState = _verifier->GetVectorFromLosingDomain();
+			for(unsigned int i = 0; i < 10; i++) {
+				//if (episodeCount < _verificationEpisode || episodeCount % 2 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
+				//else initialState = _verifier->GetVectorFromLosingDomain();
+				//else initialState = _verifier->GetVectorFromLosingNeighborDomain();
+
+				//initialState = _verifier->GetVectorFromLosingNeighborDomain();
+				//initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
+
+				//if (episodeCount % 3 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
+				//else if ((episodeCount + 1) % 3 == 0) initialState = _verifier->GetVectorFromLosingDomain();
+				//else initialState = _verifier->GetVectorFromLosingNeighborDomain();
+
+				//if (episodeCount % 2 == 0) initialState = _verifier->GetVectorFromLosingNeighborDomain();
+				//else initialState = _verifier->GetVectorFromLosingDomain();
+
+				initialState = Vector({ 1.2, 5.3 });
+
+				if (!_specification.IsInSpecificationSet(initialState)) break;
 			}
 			break;
 		}

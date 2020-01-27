@@ -48,15 +48,6 @@ namespace COSYNNC {
 
 		// Train the network based on inputs and labels
 		virtual void Train(vector<Vector> states, vector<Vector> labels);
-
-		// Loads a network
-		virtual void Load(string path = "");
-
-		// Saves the current network
-		virtual void Save(string path = "");
-
-		// Writes the neural network weights and biases to MATLAB file
-		virtual void WriteNetworkToMATLAB(string path);
 		
 		// Print network weights
 		void PrintWeights() const;
@@ -79,6 +70,14 @@ namespace COSYNNC {
 		// Returns the label dimension
 		int GetLabelDimension() const;
 
+		// Returns the list of argument names
+		vector<string> GetArgumentNames() const;
+
+		// Returns the shape of an argument in the network
+		vector<index_t> GetArgumentShape(string name);
+
+		// Returns a value in the argument
+		mx_float GetArgumentValue(string name, vector<unsigned int> index);
 	protected:
 		vector<int> _layers;
 		vector<int> _hiddenLayers;
