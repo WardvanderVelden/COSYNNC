@@ -385,13 +385,24 @@ namespace COSYNNC {
 		case ControlSpecificationType::Reachability:
 			initialState = _specification.GetCenter();
 
-			while (_specification.IsInSpecificationSet(initialState)) {
+			for(unsigned int i = 0; i < 10; i++) {
 				//if (episodeCount < _verificationEpisode || episodeCount % 2 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
 				//else initialState = _verifier->GetVectorFromLosingDomain();
 				//else initialState = _verifier->GetVectorFromLosingNeighborDomain();
 
 				//initialState = _verifier->GetVectorFromLosingNeighborDomain();
-				initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
+				//initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
+
+				//if (episodeCount % 3 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
+				//else if ((episodeCount + 1) % 3 == 0) initialState = _verifier->GetVectorFromLosingDomain();
+				//else initialState = _verifier->GetVectorFromLosingNeighborDomain();
+
+				//if (episodeCount % 2 == 0) initialState = _verifier->GetVectorFromLosingNeighborDomain();
+				//else initialState = _verifier->GetVectorFromLosingDomain();
+
+				initialState = Vector({ 1.2, 5.3 });
+
+				if (!_specification.IsInSpecificationSet(initialState)) break;
 			}
 			break;
 		}

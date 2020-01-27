@@ -56,17 +56,18 @@ void SynthesizeReachabilityControllerDCDC() {
 
 	// Specify the state and input quantizers
 	//cosynnc.SpecifyStateQuantizer(Vector({ 0.005, 0.005 }), Vector({ 1.15, 5.45 }), Vector({ 1.55, 5.85 }));
-	cosynnc.SpecifyStateQuantizer(Vector({ 0.005, 0.005 }), Vector({ 0.65, 4.95 }), Vector({ 1.65, 5.95 }));
+	//cosynnc.SpecifyStateQuantizer(Vector({ 0.005, 0.005 }), Vector({ 0.65, 4.95 }), Vector({ 1.65, 5.95 }));
+	cosynnc.SpecifyStateQuantizer(Vector({ 0.01, 0.01 }), Vector({ 0.65, 4.95 }), Vector({ 1.65, 5.95 }));
 	cosynnc.SpecifyInputQuantizer(Vector((float)0.5), Vector((float)0.0), Vector((float)1.0));
 
 	// Specify the synthesis parameters
-	cosynnc.SpecifySynthesisParameters(1000000, 20, 2500, 25000, 50);
+	cosynnc.SpecifySynthesisParameters(1000000, 10, 2500, 25000, 50);
 	//cosynnc.SpecifyRadialInitialState(0.25, 0.25);
 	cosynnc.SpecifyRadialInitialState(0.5, 0.8);
 	cosynnc.SpecifyNorm({ 1.0, 1.0 });
 
 	// Link a neural network to the procedure
-	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 4, 4 }, ActivationActType::kRelu, LossFunctionType::CrossEntropy, OutputType::Labelled);
+	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 8, 8 }, ActivationActType::kRelu, LossFunctionType::CrossEntropy, OutputType::Labelled);
 	multilayerPerceptron->InitializeOptimizer("adam", 0.005, 0.001, false);
 	cosynnc.SetNeuralNetwork(multilayerPerceptron);
 

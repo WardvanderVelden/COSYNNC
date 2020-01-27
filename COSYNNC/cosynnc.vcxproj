@@ -141,6 +141,7 @@
     <ClCompile Include="Procedure.cpp" />
     <ClCompile Include="Quantizer.cpp" />
     <ClCompile Include="Rocket.cpp" />
+    <ClCompile Include="RungeKutta.cpp" />
     <ClCompile Include="Transition.cpp" />
     <ClCompile Include="Vector.cpp" />
     <ClCompile Include="Verifier.cpp" />
@@ -157,6 +158,7 @@
     <ClInclude Include="Procedure.h" />
     <ClInclude Include="Quantizer.h" />
     <ClInclude Include="Rocket.h" />
+    <ClInclude Include="RungeKutta.h" />
     <ClInclude Include="Transition.h" />
     <ClInclude Include="Vector.h" />
     <ClInclude Include="Verifier.h" />
