@@ -11,14 +11,14 @@ namespace COSYNNC {
 		_stateSpaceDim = plant->GetStateSpaceDimension();
 		_inputSpaceDim = plant->GetInputSpaceDimension();
 
-		_tau = plant->GetTau();
+		_h = plant->GetStepSize();
 	}
 
 	Controller::Controller(Plant* plant, Quantizer* stateQuantizer, Quantizer* inputQuantizer) {
 		_stateSpaceDim = plant->GetStateSpaceDimension();
 		_inputSpaceDim = plant->GetInputSpaceDimension();
 
-		_tau = plant->GetTau();
+		_h = plant->GetStepSize();
 		//_lastState = plant->GetState();
 
 		_stateQuantizer = stateQuantizer;

@@ -2,11 +2,13 @@
 
 namespace COSYNNC {
 	// Simple second order rocket dynamics in one axis
-	Vector Rocket::StepDynamics(Vector input) {
-		Vector newState(GetStateSpaceDimension());
+	Vector Rocket::EvaluateDynamics(Vector input) {
+		_u = input;
 
-		newState[0] = GetState()[0] + GetState()[1] * GetTau();
-		newState[1] = GetState()[1] + GetTau() / _mass * input[0] + _g * GetTau();
+		Vector newState(_stateSpaceDim);
+
+		newState[0] = _x[0] + _x[1] * _h;
+		newState[1] = _x[1] + _h / _mass * _u[0] + _g * _h;
 
 		return newState;
 	}

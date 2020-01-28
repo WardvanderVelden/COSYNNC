@@ -132,6 +132,7 @@ namespace COSYNNC {
 
 		_verifier = new Verifier(_plant, &_controller, _stateQuantizer, _inputQuantizer);
 		_verifier->SetVerboseMode(_verboseVerifier);
+		_verifier->SetUseOverApproximation(true);
 
 		_fileManager = FileManager(_neuralNetwork, _verifier, _stateQuantizer, _inputQuantizer, &_specification);
 
@@ -393,14 +394,14 @@ namespace COSYNNC {
 				//initialState = _verifier->GetVectorFromLosingNeighborDomain();
 				//initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
 
-				//if (episodeCount % 3 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
-				//else if ((episodeCount + 1) % 3 == 0) initialState = _verifier->GetVectorFromLosingDomain();
-				//else initialState = _verifier->GetVectorFromLosingNeighborDomain();
+				if (episodeCount % 3 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
+				else if ((episodeCount + 1) % 3 == 0) initialState = _verifier->GetVectorFromLosingDomain();
+				else initialState = _verifier->GetVectorFromLosingNeighborDomain();
 
 				//if (episodeCount % 2 == 0) initialState = _verifier->GetVectorFromLosingNeighborDomain();
 				//else initialState = _verifier->GetVectorFromLosingDomain();
 
-				initialState = Vector({ 1.2, 5.3 });
+				//initialState = Vector({ 1.2, 5.3 });
 
 				if (!_specification.IsInSpecificationSet(initialState)) break;
 			}

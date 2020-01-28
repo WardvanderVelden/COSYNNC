@@ -84,7 +84,8 @@ namespace COSYNNC {
 		_transitions[index] = Transition(index);
 
 		_plant->SetState(state);
-		auto newState = _plant->StepDynamics(input); // TODO: Switch for over approximation dynamics
+		//auto newState = _plant->EvaluateDynamics(input); // TODO: Switch for over approximation dynamics
+		auto newState = _plant->EvaluateOverApproximation(input);
 
 		// Evolve the vertices of the hyper cell to determine the new hyper cell
 		auto vertices = OverApproximateEvolution(state, input);
@@ -403,8 +404,8 @@ namespace COSYNNC {
 			auto vertex = vertices[i];
 
 			_plant->SetState(vertex);
-			//auto newStateVertex = _plant->StepOverApproximation(input);
-			auto newStateVertex = _plant->StepDynamics(input); // TODO: Switch this for the over approximation dynamics
+			auto newStateVertex = _plant->EvaluateOverApproximation(input);
+			//auto newStateVertex = _plant->EvaluateDynamics(input); // TODO: Switch this for the over approximation dynamics
 
 			newStateVertices[i] = newStateVertex;
 		}
@@ -456,5 +457,11 @@ namespace COSYNNC {
 		if (index < 0 || index > _stateQuantizer->GetCardinality()) return false;
 	
 		return _winningSet[index];
+	}
+
+
+	// Sets whether or not to use the over approximation for verifier
+	void Verifier::SetUseOverApproximation(bool value) {
+		_useOverApproximation = value;
 	}
 }
