@@ -6,6 +6,18 @@
 #include "FileManager.h"
 
 namespace COSYNNC {
+	enum class TrainingFocus {
+		SingleState,
+		AllStates,
+		RadialOutwards,
+		LosingStates,
+		NeighboringLosingStates,
+
+		AlternatingRadialSingle,
+		AlternatingRadialLosing,
+		AlternatingRadialNeighboringLosing,
+	};
+
 	class Procedure {
 	public:
 		// Default constructor
@@ -34,6 +46,9 @@ namespace COSYNNC {
 
 		// Specify the verbosity of the procedure
 		void SpecifyVerbosity(bool verboseTrainer = false, bool verboseVerifier = false);
+
+		// Specify the training focus that should be used during training
+		void SpecifyTrainingFocus(TrainingFocus trainingFocus, Vector singleStateTrainingFocus = Vector((unsigned int)0));
 
 		// Set the plant
 		void SetPlant(Plant* plant);
@@ -104,6 +119,9 @@ namespace COSYNNC {
 		bool _radialInitialStateAvailable = false;
 		float _radialInitialStateLower = 0.0;
 		float _radialInitialStateUpper = 1.0;
+
+		TrainingFocus _trainingFocus;
+		Vector _singleStateTrainingFocus;
 
 		bool _useNorm = false;
 		vector<float> _normWeights = { 1.0, 1.0 };

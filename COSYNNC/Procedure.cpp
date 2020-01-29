@@ -31,6 +31,8 @@ namespace COSYNNC {
 		_stateDimension = _stateQuantizer->GetSpaceDimension();
 		_stateCardinality = _stateQuantizer->GetCardinality();
 
+		_singleStateTrainingFocus = Vector(_stateDimension);
+
 		Log("COSYNNC", "State quantizer specified.");
 	}
 
@@ -121,6 +123,24 @@ namespace COSYNNC {
 		_verboseVerifier = verboseVerifier;
 		if (_verboseVerifier) Log("COSYNNC", "Verifier set to verbose");
 		else Log("COSYNNC", "Verifier set to non-verbose");
+	}
+
+
+	// Specify the training focus that should be used during training
+	void Procedure::SpecifyTrainingFocus(TrainingFocus trainingFocus, Vector singleStateTrainingFocus) {
+		_trainingFocus = trainingFocus;
+
+		switch (_trainingFocus) {
+		case TrainingFocus::AllStates: Log("COSYNNC", "Training focus set to all states"); break;
+		case TrainingFocus::LosingStates: Log("COSYNNC", "Training focus set to the losing domain"); break;
+		case TrainingFocus::NeighboringLosingStates: Log("COSYNNC", "Training focus set states in the losing domain bordering the winning domain"); break;
+		case TrainingFocus::SingleState: Log("COSYNNC", "Training focus set to a single state"); break;
+		case TrainingFocus::AlternatingRadialSingle: Log("COSYNNC", "Training focus set to alternating between radial outwards states and a single state"); break;
+		case TrainingFocus::AlternatingRadialLosing: Log("COSYNNC", "Training focus set to alternating between radial outwards states and losing states"); break;
+		case TrainingFocus::AlternatingRadialNeighboringLosing: Log("COSYNNC", "Training focus set to alternating between radial outwards states and losing states neighboring winning states"); break;
+		}
+		
+		if (singleStateTrainingFocus.GetLength() != 0) _singleStateTrainingFocus = singleStateTrainingFocus;
 	}
 
 
@@ -381,27 +401,51 @@ namespace COSYNNC {
 
 		switch (_specification.GetSpecificationType()) {
 		case ControlSpecificationType::Invariance:
-			initialState = _specification.GetVectorFromSpecification();
+			switch (_trainingFocus) {
+			case TrainingFocus::SingleState: initialState = _singleStateTrainingFocus; break;
+			case TrainingFocus::AllStates: initialState = _specification.GetVectorFromSpecification(); break;
+			case TrainingFocus::RadialOutwards: initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper); break;
+			case TrainingFocus::LosingStates: initialState = _verifier->GetVectorFromLosingDomain(); break;
+			case TrainingFocus::NeighboringLosingStates: initialState = _verifier->GetVectorFromLosingNeighborDomain(); break;
+
+			case TrainingFocus::AlternatingRadialSingle:
+				if (episodeCount % 2 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
+				else initialState = _singleStateTrainingFocus;
+				break;
+			case TrainingFocus::AlternatingRadialLosing:
+				if (episodeCount % 2 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
+				else initialState = _verifier->GetVectorFromLosingDomain();
+				break;
+			case TrainingFocus::AlternatingRadialNeighboringLosing:
+				if (episodeCount % 2 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
+				else initialState = _verifier->GetVectorFromLosingNeighborDomain();
+				break;
+			}
 			break;
 		case ControlSpecificationType::Reachability:
 			initialState = _specification.GetCenter();
 
 			for(unsigned int i = 0; i < 10; i++) {
-				//if (episodeCount < _verificationEpisode || episodeCount % 2 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
-				//else initialState = _verifier->GetVectorFromLosingDomain();
-				//else initialState = _verifier->GetVectorFromLosingNeighborDomain();
+				switch (_trainingFocus) {
+				case TrainingFocus::SingleState: initialState = _singleStateTrainingFocus; break;
+				case TrainingFocus::AllStates: initialState = _stateQuantizer->GetRandomVector(); break;
+				case TrainingFocus::RadialOutwards: initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper); break;
+				case TrainingFocus::LosingStates: initialState = _verifier->GetVectorFromLosingDomain(); break;
+				case TrainingFocus::NeighboringLosingStates: initialState = _verifier->GetVectorFromLosingNeighborDomain(); break;
 
-				//initialState = _verifier->GetVectorFromLosingNeighborDomain();
-				//initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
-
-				if (episodeCount % 3 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
-				else if ((episodeCount + 1) % 3 == 0) initialState = _verifier->GetVectorFromLosingDomain();
-				else initialState = _verifier->GetVectorFromLosingNeighborDomain();
-
-				//if (episodeCount % 2 == 0) initialState = _verifier->GetVectorFromLosingNeighborDomain();
-				//else initialState = _verifier->GetVectorFromLosingDomain();
-
-				//initialState = Vector({ 1.2, 5.3 });
+				case TrainingFocus::AlternatingRadialSingle:
+					if (episodeCount % 2 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
+					else initialState = _singleStateTrainingFocus;
+					break;
+				case TrainingFocus::AlternatingRadialLosing:
+					if (episodeCount % 2 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
+					else initialState = _verifier->GetVectorFromLosingDomain();
+					break;
+				case TrainingFocus::AlternatingRadialNeighboringLosing:
+					if (episodeCount % 2 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
+					else initialState = _verifier->GetVectorFromLosingNeighborDomain();
+					break;
+				}
 
 				if (!_specification.IsInSpecificationSet(initialState)) break;
 			}

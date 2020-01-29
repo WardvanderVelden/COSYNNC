@@ -142,17 +142,26 @@ namespace COSYNNC {
 		vector<mx_float> inputData;
 		vector<mx_float> labelData;
 
+		// Generate a zero gradient label
+		//auto zeroState = Vector(_inputDimension);
+		//auto zeroLabel = EvaluateNetwork(zeroState);
+
 		// TODO: Make it so that it does not repeat during training, as this emphesizes short episodes 
 		auto amountOfStates = states.size();
 		for (int i = 0; i < _batchSize; i++) {
-			auto state = states[i % amountOfStates];
-			for (int j = 0; j < _inputDimension; j++)
-				inputData.push_back(state[j]);
+			//if (i < amountOfStates) {
+				auto state = states[i % amountOfStates];
+				for (int j = 0; j < _inputDimension; j++) inputData.push_back(state[j]);
 
-			auto label = labels[i % amountOfStates];
-			for (int j = 0; j < _labelDimension; j++)
-				labelData.push_back(label[j]);
+				auto label = labels[i % amountOfStates];
+				for (int j = 0; j < _labelDimension; j++) labelData.push_back(label[j]);
+			/*}
+			else {
+				for (int j = 0; j < _inputDimension; j++) inputData.push_back(zeroState[j]);
+				for (int j = 0; j < _labelDimension; j++) labelData.push_back(zeroLabel[j]);
+			}*/
 		}
+
 
 		NDArray networkInputData(inputData, Shape(_batchSize, _inputDimension), _context);
 		NDArray networkLabelData(labelData, Shape(_batchSize, _labelDimension), _context);
@@ -183,7 +192,11 @@ namespace COSYNNC {
 		// Update parameters
 		for (int i = 0; i < _argumentNames.size(); ++i) {
 			if (_argumentNames[i] == "input" || _argumentNames[i] == "label") continue;
-			_optimizer->Update(i, _executor->arg_arrays[i], _executor->grad_arrays[i]);
+
+			auto arguments = _executor->arg_arrays[i];
+			auto gradients = _executor->grad_arrays[i];
+
+			_optimizer->Update(i, arguments, gradients);
 		}
 
 		_justTrained = true;
