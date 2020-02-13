@@ -4,7 +4,7 @@
 namespace COSYNNC {
 	class Rocket : public Plant {
 	public:
-		Rocket() : Plant(2, 1, 0.05) { }
+		Rocket() : Plant(2, 1, 0.1) { }
 
 		// Simple second order rocket dynamics in one axis
 		Vector PlantODE(Vector x, float t) override;

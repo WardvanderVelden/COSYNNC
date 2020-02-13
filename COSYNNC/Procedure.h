@@ -16,6 +16,7 @@ namespace COSYNNC {
 		AlternatingRadialSingle,
 		AlternatingRadialLosing,
 		AlternatingRadialNeighboringLosing,
+		AlternatingRadialLosingNeighborLosing,
 	};
 
 	class Procedure {

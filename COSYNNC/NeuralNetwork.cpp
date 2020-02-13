@@ -250,6 +250,12 @@ namespace COSYNNC {
 	}
 
 
+	// Returns the layer depth
+	int NeuralNetwork::GetLayerDepth() const {
+		return _depth;
+	}
+
+
 	// Returns the list of argument names
 	vector<string> NeuralNetwork::GetArgumentNames() const {
 		return _argumentNames;

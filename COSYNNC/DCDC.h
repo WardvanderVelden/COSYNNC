@@ -8,7 +8,7 @@ namespace COSYNNC {
 
 		Vector PlantODE(Vector x, float t) override;
 
-		Vector OverApproximationODE(Vector x, float t) override;
+		//Vector OverApproximationODE(Vector x, float t) override;
 	private:
 		float _xc = 70;
 		float _xl = 3;

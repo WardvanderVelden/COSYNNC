@@ -138,6 +138,7 @@ namespace COSYNNC {
 		case TrainingFocus::AlternatingRadialSingle: Log("COSYNNC", "Training focus set to alternating between radial outwards states and a single state"); break;
 		case TrainingFocus::AlternatingRadialLosing: Log("COSYNNC", "Training focus set to alternating between radial outwards states and losing states"); break;
 		case TrainingFocus::AlternatingRadialNeighboringLosing: Log("COSYNNC", "Training focus set to alternating between radial outwards states and losing states neighboring winning states"); break;
+		case TrainingFocus::AlternatingRadialLosingNeighborLosing: Log("COSYNNC", "Training focus set to alternating between radial outwards states, losing states and losing states neighboring winning states"); break;
 		}
 		
 		if (singleStateTrainingFocus.GetLength() != 0) _singleStateTrainingFocus = singleStateTrainingFocus;
@@ -420,6 +421,11 @@ namespace COSYNNC {
 				if (episodeCount % 2 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
 				else initialState = _verifier->GetVectorFromLosingNeighborDomain();
 				break;
+			case TrainingFocus::AlternatingRadialLosingNeighborLosing:
+				if (episodeCount % 3 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
+				else if ((episodeCount + 2) % 3 == 0) initialState = _verifier->GetVectorFromLosingDomain();
+				else initialState = _verifier->GetVectorFromLosingNeighborDomain();
+				break;
 			}
 			break;
 		case ControlSpecificationType::Reachability:
@@ -445,6 +451,10 @@ namespace COSYNNC {
 					if (episodeCount % 2 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
 					else initialState = _verifier->GetVectorFromLosingNeighborDomain();
 					break;
+				case TrainingFocus::AlternatingRadialLosingNeighborLosing:
+					if (episodeCount % 3 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
+					else if ((episodeCount + 2) % 3 == 0) initialState = _verifier->GetVectorFromLosingDomain();
+					else initialState = _verifier->GetVectorFromLosingNeighborDomain();
 				}
 
 				if (!_specification.IsInSpecificationSet(initialState)) break;
