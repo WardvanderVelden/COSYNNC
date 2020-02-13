@@ -52,6 +52,9 @@ namespace COSYNNC {
 
 		// Returns whether or not an index is in the winning domain
 		bool IsIndexInWinningSet(unsigned long index);
+
+		// Sets whether or not to use the over approximation for verifier
+		void SetUseOverApproximation(bool value);
 	private:
 		Plant* _plant;
 		Controller* _controller;
@@ -80,6 +83,8 @@ namespace COSYNNC {
 
 		unsigned int _amountOfVerticesPerCell;
 		unsigned int _amountOfEdgesPerCell;
+
+		bool _useOverApproximation = true;
 
 		bool _verboseMode = false;
 	};

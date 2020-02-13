@@ -39,6 +39,7 @@ namespace COSYNNC {
 				else {
 					_outputs[i] = Activation(fullyConnected, ActivationActType::kRelu);
 				}
+				//_outputs[i] = Activation(fullyConnected, _activationFunction);
 				break;
 			case LossFunctionType::Proportional:
 				_outputs[i] = Activation(fullyConnected, _activationFunction);

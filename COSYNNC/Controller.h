@@ -53,7 +53,7 @@ namespace COSYNNC {
 		// Returns the control specification that is currently assigned to the controller
 		ControlSpecification* GetControlSpecification() const;
 	private:
-		float _tau;
+		float _h;
 
 		Vector _lastControlAction;
 		//Vector _lastState;

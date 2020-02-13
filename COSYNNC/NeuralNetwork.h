@@ -70,6 +70,9 @@ namespace COSYNNC {
 		// Returns the label dimension
 		int GetLabelDimension() const;
 
+		// Returns the layer depth
+		int GetLayerDepth() const;
+
 		// Returns the list of argument names
 		vector<string> GetArgumentNames() const;
 

@@ -1,48 +1,39 @@
 #include "DCDC.h"
 
 namespace COSYNNC {
-	Vector DCDC::StepDynamics(Vector input) {
-		auto stateDim = GetStateSpaceDimension();
-		auto tau = GetTau();
+	Vector DCDC::PlantODE(Vector x, float t) {
+		Vector dxdt = Vector(_stateSpaceDim);
 
-		Vector derivative(stateDim);
-		auto state = GetState();
-
-		if (input[0] < 0.5) {
-			derivative[0] = (-_rl / _xl) * state[0] + _vs / _xl;
-			derivative[1] = ((-1 / _xc) * (1 / (_r0 + _rc))) * state[1];
+		if (_u[0] < 0.5) {
+			dxdt[0] = (-_rl / _xl) * x[0];
+			dxdt[1] = ((-1 / _xc) * (1 / (_r0 + _rc))) * x[1];
 		}
 		else {
-			derivative[0] = ((-1 / _xl) * (_rl + ((_r0 * _rc) / (_r0 + _rc)))) * state[0] + (((-1 / _xl) * (_r0 / (_r0 + _rc))) / 5) * state[1] + _vs / _xl;
-			derivative[1] = (5 * (_r0 / (_r0 + _rc)) * (1 / _xc)) * state[0] + ((-1 / _xc) * (1 / (_r0 + _rc))) * state[1];
+			dxdt[0] = ((-1 / _xl) * (_rl + ((_r0 * _rc) / (_r0 + _rc)))) * x[0] + (((-1 / _xl) * (_r0 / (_r0 + _rc))) / 5) * x[1];
+			dxdt[1] = ((5 * (_r0 / (_r0 + _rc)) * (1 / _xc))) * x[0] + ((-1 / _xc) * (1 / (_r0 + _rc))) * x[1];
 		}
 
-		Vector newState(stateDim);
-		newState = state + derivative * tau;
+		// Add bias
+		dxdt[0] = dxdt[0] + _vs / _xl;
 
-		return newState;
+		return dxdt;
 	}
 
 
-	Vector DCDC::StepOverApproximation(Vector input) {
-		auto stateDim = GetStateSpaceDimension();
-		auto tau = GetTau();
+	/*Vector DCDC::OverApproximationODE(Vector x, float t) {
+		Vector dxdt = Vector(_stateSpaceDim);
 
-		Vector derivative(stateDim);
-		auto state = GetState();
-
-		if (input[0] < 0.5) {
-			derivative[0] = (-_rl / _xl) * state[0];
-			derivative[1] = ((-1 / _xc) * (1 / (_r0 + _rc))) * state[1];
+		if (_u[0] < 0.5) {
+			dxdt[0] = (-_rl / _xl) * x[0];
+			dxdt[1] = ((-1 / _xc) * (1 / (_r0 + _rc))) * x[1];
 		}
 		else {
-			derivative[0] = ((-1 / _xl) * (_rl + ((_r0 * _rc) / (_r0 + _rc)))) * state[0] + (((-1 / _xl) * (_r0 / (_r0 + _rc))) / 5) * state[1];
-			derivative[1] = (5 * (_r0 / (_r0 + _rc)) * (1 / _xc)) * state[0] + ((-1 / _xc) * (1 / (_r0 + _rc))) * state[1];
+			//dxdt[0] = ((-1 / _xl) * (_rl + ((_r0 * _rc) / (_r0 + _rc)))) * x[0] + (((-1 / _xl) * (_r0 / (_r0 + _rc))) / 5) * x[1];
+			//dxdt[1] = (5 * (_r0 / (_r0 + _rc)) * (1 / _xc)) * x[0] + ((-1 / _xc) * (1 / (_r0 + _rc))) * x[1];
+			dxdt[0] = ((-1 / _xl) * (_rl + ((_r0 * _rc) / (_r0 + _rc)))) * x[0] + (((1 / _xl) * (_r0 / (_r0 + _rc))) / 5) * x[1];
+			dxdt[1] = (5 * (_r0 / (_r0 + _rc)) * (1 / _xc)) * x[0] + ((-1 / _xc) * (1 / (_r0 + _rc))) * x[1];
 		}
 
-		Vector newState(stateDim);
-		newState = state + derivative * tau;
-
-		return newState;
-	}
+		return dxdt;
+	}*/
 }

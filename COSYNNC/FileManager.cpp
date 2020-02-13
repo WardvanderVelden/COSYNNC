@@ -51,6 +51,9 @@ namespace COSYNNC {
 		// Save activation function
 		file << "activationFunction = 'relu';\n"; // TODO: Make this change based on the activation function
 
+		// Save depth
+		file << "layerDepth = " << _neuralNetwork->GetLayerDepth() << ";\n";
+
 		// Save the quantization parameters to the network
 		WriteQuantizationParametersToFile(&file);
 

@@ -44,7 +44,12 @@ namespace COSYNNC {
 		const auto batchSize = _controller->GetNeuralNetwork()->GetBatchSize();
 		const long amountOfBatches = ceil(_spaceCardinality / batchSize);
 
-		for (long batch = 0; batch <= amountOfBatches; batch++) {	
+		if (_spaceCardinality > 10000) std::cout << "\t";
+		for (long batch = 0; batch <= amountOfBatches; batch++) {
+			if (_spaceCardinality > 10000) {
+				if (batch % ((long)floor(amountOfBatches / 20)) == 0) std::cout << (float)((float)batch / (float)amountOfBatches * 100.0) << "% . ";
+			}
+
 			unsigned long indexOffset = batch * batchSize;
 			unsigned int currentBatchSize = batchSize;
 			if (batch == amountOfBatches) {
@@ -77,6 +82,7 @@ namespace COSYNNC {
 			delete[] inputs;
 			delete[] states;
 		}
+		if (_spaceCardinality > 10000) std::cout << std::endl;
 	}
 
 	// Computes the transition function for a single index
@@ -84,7 +90,14 @@ namespace COSYNNC {
 		_transitions[index] = Transition(index);
 
 		_plant->SetState(state);
-		auto newState = _plant->StepDynamics(input); // TODO: Switch for over approximation dynamics
+		auto newState = _plant->EvaluateOverApproximation(input);
+		//auto newState = _plant->EvaluateDynamics(input);
+
+		// Check if newState is in bound, if not we know the transition already
+		if (!_stateQuantizer->IsInBounds(newState)) {
+			_transitions[index].AddEnd(-1);
+			return;
+		}
 
 		// Evolve the vertices of the hyper cell to determine the new hyper cell
 		auto vertices = OverApproximateEvolution(state, input);
@@ -134,14 +147,14 @@ namespace COSYNNC {
 				}
 			}
 
-			long end = (_stateQuantizer->IsInBounds(currentCell)) ? _stateQuantizer->GetIndexFromVector(_stateQuantizer->QuantizeVector(currentCell)) : -1;
+			long end = _stateQuantizer->GetIndexFromVector(_stateQuantizer->QuantizeVector(currentCell));
 			_transitions[index].AddEnd(end);
 
 			currentCell[0] += _spaceEta[0];
 		}
 
 		// Temporay: Singular end for new state to bugfix invariance verification
-		//long end = (_stateQuantizer->IsInBounds(newState)) ? _stateQuantizer->GetIndexFromVector(_stateQuantizer->QuantizeVector(newState)) : -1;
+		//long end = _stateQuantizer->GetIndexFromVector(_stateQuantizer->QuantizeVector(newState));
 		//_transitions[index].AddEnd(end);
 
 		// Free up memory
@@ -193,6 +206,10 @@ namespace COSYNNC {
 		while (!iterationConverged) {
 			bool setHasChanged = false;
 			iterations++;
+
+			if (_spaceCardinality > 10000) {
+				std::cout << "\t i: " << iterations << std::endl;
+			}
 
 			for (long index = 0; index < _spaceCardinality; index++) {
 				// Determine if the transition always ends in the winning set
@@ -403,8 +420,8 @@ namespace COSYNNC {
 			auto vertex = vertices[i];
 
 			_plant->SetState(vertex);
-			//auto newStateVertex = _plant->StepOverApproximation(input);
-			auto newStateVertex = _plant->StepDynamics(input); // TODO: Switch this for the over approximation dynamics
+			auto newStateVertex = _plant->EvaluateOverApproximation(input);
+			//auto newStateVertex = _plant->EvaluateDynamics(input); // TODO: Switch this for the over approximation dynamics
 
 			newStateVertices[i] = newStateVertex;
 		}
@@ -456,5 +473,11 @@ namespace COSYNNC {
 		if (index < 0 || index > _stateQuantizer->GetCardinality()) return false;
 	
 		return _winningSet[index];
+	}
+
+
+	// Sets whether or not to use the over approximation for verifier
+	void Verifier::SetUseOverApproximation(bool value) {
+		_useOverApproximation = value;
 	}
 }
