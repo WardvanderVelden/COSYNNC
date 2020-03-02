@@ -91,11 +91,11 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\Work\Thesis\cosynnc\Cosynnc.Engine;D:\Work\Thesis\mxnet\cpp-package\include;D:\Work\Thesis\mxnet\include;D:\Work\Thesis\mxnet\3rdparty\dmlc-core\include;D:\Work\Thesis\mxnet\3rdparty\tvm\nnvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Work\Thesis\cosynnc\Cosynnc.Engine;D:\Work\Thesis\mxnet\cpp-package\include;D:\Work\Thesis\mxnet\include;D:\Work\Thesis\mxnet\3rdparty\dmlc-core\include;D:\Work\Thesis\mxnet\3rdparty\tvm\nnvm\include;C:\msys64\mingw64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>D:\Work\Thesis\mxnet\build\Release\libmxnet.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>D:\Work\Thesis\mxnet\build\Release\libmxnet.lib;C:\msys64\mingw64\lib\libcudd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -141,6 +141,7 @@
     <ClCompile Include="Procedure.cpp" />
     <ClCompile Include="Quantizer.cpp" />
     <ClCompile Include="Rocket.cpp" />
+    <ClCompile Include="StringHelper.cpp" />
     <ClCompile Include="Transition.cpp" />
     <ClCompile Include="Vector.cpp" />
     <ClCompile Include="Verifier.cpp" />
@@ -157,6 +158,7 @@
     <ClInclude Include="Procedure.h" />
     <ClInclude Include="Quantizer.h" />
     <ClInclude Include="Rocket.h" />
+    <ClInclude Include="StringHelper.h" />
     <ClInclude Include="Transition.h" />
     <ClInclude Include="Vector.h" />
     <ClInclude Include="Verifier.h" />

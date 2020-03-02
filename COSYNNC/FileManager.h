@@ -3,6 +3,7 @@
 
 #include "mxnet-cpp/MxNetCpp.h"
 
+#include "StringHelper.h"
 #include "NeuralNetwork.h"
 #include "Verifier.h"
 
@@ -22,7 +23,7 @@ namespace COSYNNC {
 		FileManager(NeuralNetwork* neuralNetwork, Verifier* verifier, Quantizer* stateQuantizer, Quantizer* inputQuantizer, ControlSpecification* specification);
 
 		// Loads a neural network
-		void LoadNetwork(string path);
+		void LoadNetworkFromMATLAB(string path, string name);
 
 		// Save the structure of a neural network to a MATLAB file
 		void SaveNetworkAsMATLAB(string path, string name);

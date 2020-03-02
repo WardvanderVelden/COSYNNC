@@ -60,7 +60,8 @@ namespace COSYNNC {
 	// Set the neural network
 	void Procedure::SetNeuralNetwork(NeuralNetwork* neuralNetwork) {
 		_neuralNetwork = neuralNetwork;
-		_neuralNetwork->ConfigurateInputOutput(_plant, _inputQuantizer, _maxEpisodeHorizonTrainer, 1.0);
+		//_neuralNetwork->ConfigurateInputOutput(_plant, _inputQuantizer, _maxEpisodeHorizonTrainer, 1.0);
+		_neuralNetwork->ConfigurateInputOutput(_plant, _inputQuantizer, 10, 1.0);
 
 		_outputType = _neuralNetwork->GetOutputType();
 
@@ -145,6 +146,16 @@ namespace COSYNNC {
 	}
 
 
+	// Load a neural network
+	void Procedure::LoadNeuralNetwork(string path, string name) {
+		auto extensionStart = name.find('.');
+		auto extension = name.substr(extensionStart + 1, name.size() - extensionStart - 1);
+
+		// Case MATLAB
+		if (extension == "m") _fileManager.LoadNetworkFromMATLAB(path, name);
+	}
+
+
 	// Initialize the procedure, returns false if not all required parameters are specified
 	bool Procedure::Initialize() {
 		_controller = Controller(_plant, _stateQuantizer, _inputQuantizer);
@@ -159,20 +170,19 @@ namespace COSYNNC {
 
 		// TODO: Test if all required parameters are specified before the 
 
+		_hasSuccesfullyInitialized = true;
 		return true;
 	}
 
 
 	// Run the synthesis procedure
 	void Procedure::Synthesize() {
-		auto succesfullyInitialized = Initialize();
-
-		if (succesfullyInitialized) {
+		if (_hasSuccesfullyInitialized) {
 			Log("COSYNNC", "Procedure was succesfully initialized, synthesize procedure started!");
 
 			Log("Trainer", "Starting training");
 			for (int i = 0; i <= _maxEpisodes; i++) {
-				Train(i);
+				RunEpisode(i);
 
 				if (i % _verificationEpisode == 0 && i != 0) {
 					Log("Verifier", "Performing fixed-point verification.");
@@ -189,6 +199,8 @@ namespace COSYNNC {
 			// Save the final neural network
 			Log("File Manager", "Saving neural network.");
 			SaveNetwork("controllers/controller");
+
+			Log("COSYNNC", "Synthesis terminated!");
 		}
 		else {
 			Log("COSYNNC", "Procedure was not succesfully initialized, check if all required parameters are specified.");
@@ -199,7 +211,7 @@ namespace COSYNNC {
 
 
 	// Run the training phase
-	void Procedure::Train(unsigned int episodeNumber) {
+	void Procedure::RunEpisode(unsigned int episodeNumber) {
 		if (episodeNumber % _verboseEpisode == 0 && _verboseTrainer) std::cout << std::endl;
 
 		vector<Vector> states;
@@ -255,11 +267,14 @@ namespace COSYNNC {
 		}
 
 		// Train the neural network based on the performance of the network
-		if ((norm < initialNorm || isInSpecificationSet) && _useNorm) _neuralNetwork->Train(states, reinforcingLabels);
+		/*if ((norm < initialNorm || isInSpecificationSet) && _useNorm) _neuralNetwork->Train(states, reinforcingLabels);
 		else if(isInSpecificationSet && !_useNorm) _neuralNetwork->Train(states, reinforcingLabels);
-		else _neuralNetwork->Train(states, deterringLabels);
-	}
+		else _neuralNetwork->Train(states, deterringLabels);*/
 
+		if ((norm < initialNorm || isInSpecificationSet) && _useNorm) AddToTrainingQueue(states, reinforcingLabels);
+		else if (isInSpecificationSet && !_useNorm) AddToTrainingQueue(states, reinforcingLabels);
+		else AddToTrainingQueue(states, deterringLabels);
+	}
 
 	// Retrieve the training data for a single trianing step
 	void Procedure::GetDataForTrainingStep(Vector state, vector<Vector>* reinforcingLabels, vector<Vector>* deterringLabels, Vector* input, Vector* networkOutput, Vector* newState, bool* isInSpecificationSet, float* norm) {
@@ -327,6 +342,39 @@ namespace COSYNNC {
 
 				break;
 			}
+		}
+	}
+
+
+	// Adds data to the training queue, if the training queue is full the network will train
+	void Procedure::AddToTrainingQueue(vector<Vector> states, vector<Vector> labels) {
+		auto episodeSize = states.size();
+
+		// Add states and inputs to the queue
+		for (unsigned int i = 0; i < episodeSize; i++) {
+			_trainingQueueStates.push_back(states[i]);
+			_trainingQueueLabels.push_back(labels[i]);
+		}
+
+		// Check if the queue is now overflowing, if so train the neural network using the available data
+		auto sizeOfQueue = _trainingQueueStates.size();
+		auto neuralNetworkBatchSize = _neuralNetwork->GetBatchSize();
+
+		while (sizeOfQueue >= neuralNetworkBatchSize) {
+			vector<Vector> trainingStates;
+			vector<Vector> trainingLabels;
+
+			for (unsigned int i = 0; i < neuralNetworkBatchSize; i++) {
+				trainingStates.push_back(_trainingQueueStates[0]);
+				_trainingQueueStates.erase(_trainingQueueStates.begin());
+
+				trainingLabels.push_back(_trainingQueueLabels[0]);
+				_trainingQueueLabels.erase(_trainingQueueLabels.begin());
+			}
+
+			_neuralNetwork->Train(trainingStates, trainingLabels);
+
+			sizeOfQueue = _trainingQueueStates.size();
 		}
 	}
 

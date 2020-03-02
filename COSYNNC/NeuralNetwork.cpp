@@ -20,9 +20,7 @@ namespace COSYNNC {
 
 	
 	// Initializes the optimizer for training
-	void NeuralNetwork::InitializeOptimizer(string optimizer, float learningRate, float weightDecayRate, bool verboseOptimizationInspection) {
-		_verboseOptimizationInspection = verboseOptimizationInspection;
-
+	void NeuralNetwork::InitializeOptimizer(string optimizer, float learningRate, float weightDecayRate) {
 		_optimizer = OptimizerRegistry::Find(optimizer);
 		_optimizer->SetParam("rescale_grad", 1.0 / _batchSize);
 		_optimizer->SetParam("lr", learningRate);
@@ -142,26 +140,14 @@ namespace COSYNNC {
 		vector<mx_float> inputData;
 		vector<mx_float> labelData;
 
-		// Generate a zero gradient label
-		//auto zeroState = Vector(_inputDimension);
-		//auto zeroLabel = EvaluateNetwork(zeroState);
-
-		// TODO: Make it so that it does not repeat during training, as this emphesizes short episodes 
 		auto amountOfStates = states.size();
 		for (int i = 0; i < _batchSize; i++) {
-			//if (i < amountOfStates) {
 				auto state = states[i % amountOfStates];
 				for (int j = 0; j < _inputDimension; j++) inputData.push_back(state[j]);
 
 				auto label = labels[i % amountOfStates];
 				for (int j = 0; j < _labelDimension; j++) labelData.push_back(label[j]);
-			/*}
-			else {
-				for (int j = 0; j < _inputDimension; j++) inputData.push_back(zeroState[j]);
-				for (int j = 0; j < _labelDimension; j++) labelData.push_back(zeroLabel[j]);
-			}*/
 		}
-
 
 		NDArray networkInputData(inputData, Shape(_batchSize, _inputDimension), _context);
 		NDArray networkLabelData(labelData, Shape(_batchSize, _labelDimension), _context);
@@ -181,13 +167,6 @@ namespace COSYNNC {
 		// Train
 		_executor->Forward(true);
 		_executor->Backward();
-
-		// DEBUG: Print to debug
-		if (_verboseOptimizationInspection) {
-			for (int i = 0; i < _batchSize; i++) {
-				std::cout << "\tx0: " << _arguments["input"].At(i, 0) << "\tx1: " << _arguments["input"].At(i, 1) << "\tp: " << _executor->outputs[0].At(i, 0) << "\tl: " << _arguments["label"].At(i, 0) << std::endl;
-			}
-		}
 
 		// Update parameters
 		for (int i = 0; i < _argumentNames.size(); ++i) {
@@ -229,6 +208,16 @@ namespace COSYNNC {
 	// Sets the output type of the network
 	void NeuralNetwork::SetOutputType(OutputType outputType) {
 		_outputType = outputType;
+	}
+
+
+	// Sets the value of an argument in the neural network
+	void NeuralNetwork::SetArgument(string name, vector<mx_float> data) {
+		NDArray ndarray(data, Shape(GetArgumentShape(name)), _context);
+		ndarray.WaitToRead();
+
+		ndarray.CopyTo(&_arguments[name]);
+		ndarray.WaitToWrite();
 	}
 
 
