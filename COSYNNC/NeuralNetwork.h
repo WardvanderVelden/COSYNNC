@@ -15,7 +15,8 @@ namespace COSYNNC {
 	enum class LossFunctionType {
 		CrossEntropy,
 		Proportional,
-		Quadratic
+		Quadratic,
+		Log
 	};
 
 	enum class OutputType {
@@ -35,7 +36,7 @@ namespace COSYNNC {
 		virtual void InitializeGraph();
 
 		// Initializes the optimizer for training
-		virtual void InitializeOptimizer(string optimizer = "sgd", float learningRate = 0.1, float weightDecayRate = 0.1, bool verboseOptimizationInspection = false);
+		virtual void InitializeOptimizer(string optimizer = "sgd", float learningRate = 0.1, float weightDecayRate = 0.1);
 
 		// Configures the neural network to receive input and output data compatible with the state and input dimensions and batch size
 		virtual void ConfigurateInputOutput(Plant* plant, Quantizer* inputQuantizer, int batchSize = 1, float initialDistribution = 0.1);
@@ -60,6 +61,9 @@ namespace COSYNNC {
 
 		// Sets the output type of the network
 		void SetOutputType(OutputType outputType);
+
+		// Sets an argument in the neural network to the assigned data
+		void SetArgument(string name, vector<mx_float> data);
 
 		// Returns the output type of the network
 		OutputType GetOutputType() const;
@@ -90,8 +94,6 @@ namespace COSYNNC {
 
 		int _inputDimension = 1;
 		int _labelDimension = 1;
-
-		bool _verboseOptimizationInspection = false;
 
 		bool _justTrained = true;
 

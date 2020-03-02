@@ -27,8 +27,55 @@ namespace COSYNNC {
 
 
 	// Loads a neural network
-	void FileManager::LoadNetwork(string filename) {
+	void FileManager::LoadNetworkFromMATLAB(string path, string name) {
+		ifstream file(path + "/" + name, std::ios_base::in);
 
+		if (file.is_open()) {
+			StringHelper stringHelper;
+
+			string line;
+			
+			string currentArgument = "";
+			bool readingArgument = false;
+			vector<mx_float> data;
+
+			while (getline(file, line)) {
+				// Weight information
+				if (line[0] == 'w' || line[0] == 'b') {
+					if (line.find(' ') > 5) continue;
+
+					auto firstSpace = line.find(' ');
+					currentArgument = line.substr(0, firstSpace);
+					line = line.substr(firstSpace + 1, line.size() - firstSpace - 1);
+
+					readingArgument = true;
+				}
+
+				if (readingArgument) {
+					if (line.find(';') != -1) readingArgument = false;
+
+					stringHelper.ReplaceAll(line, '\t');
+					stringHelper.ReplaceAll(line, '\n');
+					stringHelper.ReplaceAll(line, '=');
+					stringHelper.ReplaceAll(line, ';');
+					stringHelper.ReplaceAll(line, '[');
+					stringHelper.ReplaceAll(line, ']');
+					stringHelper.ReplaceAll(line, ' ');
+					
+					auto vec = stringHelper.Split(line, ',');
+
+					if (vec.size() > 0) {
+						for (unsigned int i = 0; i < vec.size(); i++) data.push_back(stof(vec[i]));
+					}
+
+					if(!readingArgument) {
+						_neuralNetwork->SetArgument(currentArgument, data);
+						data.clear();
+					}
+				}
+			}
+		}
+		file.close();
 	}
 
 

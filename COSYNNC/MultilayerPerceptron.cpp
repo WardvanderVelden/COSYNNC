@@ -1,6 +1,19 @@
 #include "MultilayerPerceptron.h"
 
 namespace COSYNNC {
+	// Initializes a neural network of the multilayer perceptron topology
+	MultilayerPerceptron::MultilayerPerceptron(vector<int> hiddenLayers, ActivationActType activationFunction, OutputType outputType) {
+		_activationFunction = activationFunction;
+		_outputType = outputType;
+
+		switch (_outputType) {
+			case OutputType::Labelled: _lossFunction = LossFunctionType::CrossEntropy; break;
+			case OutputType::Range: _lossFunction = LossFunctionType::Proportional; break;
+		}
+
+		SetHiddenLayers(hiddenLayers);
+	}
+
 	// Initializes a multilayer perceptron neural network topology
 	MultilayerPerceptron::MultilayerPerceptron(vector<int> hiddenLayers, ActivationActType activationFunction, LossFunctionType lossFunction, OutputType outputType) {
 		_activationFunction = activationFunction;
@@ -44,6 +57,9 @@ namespace COSYNNC {
 			case LossFunctionType::Proportional:
 				_outputs[i] = Activation(fullyConnected, _activationFunction);
 				break;
+			case LossFunctionType::Log:
+				_outputs[i] = Activation(fullyConnected, ActivationActType::kSigmoid);
+				break;
 			}
 		}
 
@@ -55,6 +71,9 @@ namespace COSYNNC {
 		case LossFunctionType::Proportional:
 		case LossFunctionType::Quadratic:
 			_network = LinearRegressionOutput(_outputs.back(), label);
+			break;
+		case LossFunctionType::Log:
+			_network = LogisticRegressionOutput(_outputs.back(), label);
 			break;
 		}
 	}

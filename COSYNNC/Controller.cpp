@@ -190,7 +190,7 @@ namespace COSYNNC {
 				normalInput[i] = 0.5;
 			}
 			else {
-				normalInput[i] = (networkOutput[i * 2 + 1] - networkOutput[i * 2]) / 2 + networkOutput[i * 2];
+				normalInput[i] = (max(networkOutput[i * 2], networkOutput[i * 2 + 1]) - min(networkOutput[i * 2], networkOutput[i * 2 + 1])) / 2 + min(networkOutput[i * 2], networkOutput[i * 2 + 1]);
 			}
 		}
 

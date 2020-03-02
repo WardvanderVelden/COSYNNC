@@ -57,17 +57,23 @@ namespace COSYNNC {
 		// Set the neural network
 		void SetNeuralNetwork(NeuralNetwork* neuralNetwork);
 
+		// Load a neural network
+		void LoadNeuralNetwork(string path, string name);
+
 		// Initialize the procedure, returns false if not all required parameters are specified
 		bool Initialize();
 
 		// Run the synthesis procedure
 		void Synthesize();
 
-		// Run the training phase
-		void Train(unsigned int episodeNumber);
+		// Run a training episode
+		void RunEpisode(unsigned int episodeNumber);
 
 		// Retrieve the training data for a single trianing step
 		void GetDataForTrainingStep(Vector state, vector<Vector>* reinforcingLabels, vector<Vector>* deterringLabels, Vector* input, Vector* networkOutput, Vector* newState, bool* isInSpecificationSet, float* norm);
+
+		// Adds data to the training queue, if the network is full the network will train
+		void AddToTrainingQueue(vector<Vector> states, vector<Vector> labels);
 
 		// Run the verification phase
 		void Verify();
@@ -108,6 +114,10 @@ namespace COSYNNC {
 
 		FileManager _fileManager;
 
+		// Training queue
+		vector<Vector> _trainingQueueStates;
+		vector<Vector> _trainingQueueLabels;
+
 		// Synthesis parameters
 		unsigned int _maxEpisodeHorizonTrainer = 10;
 		unsigned int _maxEpisodeHorizonVerifier = 50;
@@ -131,5 +141,7 @@ namespace COSYNNC {
 		bool _verboseTrainer = true;
 		bool _verboseVerifier = true;
 		string _lastLoggedPhase = "";
+
+		bool _hasSuccesfullyInitialized = false;
 	};
 }
