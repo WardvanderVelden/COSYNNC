@@ -4,6 +4,7 @@
 #include "Controller.h"
 #include "Verifier.h"
 #include "FileManager.h"
+#include "BddManager.h"
 
 namespace COSYNNC {
 	enum class TrainingFocus {
@@ -50,6 +51,9 @@ namespace COSYNNC {
 
 		// Specify the training focus that should be used during training
 		void SpecifyTrainingFocus(TrainingFocus trainingFocus, Vector singleStateTrainingFocus = Vector((unsigned int)0));
+
+		// Specify if the network should reinforce upon reaching the winning set (only applicable to reachability)
+		void SpecifyWinningSetReinforcement(bool reinforce = false);
 
 		// Set the plant
 		void SetPlant(Plant* plant);
@@ -113,6 +117,7 @@ namespace COSYNNC {
 		ControlSpecification _specification;
 
 		FileManager _fileManager;
+		BddManager _bddManager;
 
 		// Training queue
 		vector<Vector> _trainingQueueStates;
@@ -136,6 +141,8 @@ namespace COSYNNC {
 
 		bool _useNorm = false;
 		vector<float> _normWeights = { 1.0, 1.0 };
+
+		bool _useWinningSetReinforcement = false;
 
 		// Debug and logging parameters
 		bool _verboseTrainer = true;

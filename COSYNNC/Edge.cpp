@@ -9,6 +9,9 @@ namespace COSYNNC {
 	Edge::Edge(Vector start, Vector end) {
 		_start = start;
 		_end = end;
+
+		_direction = _end - _start;
+		_direction.Normalize();
 	}
 
 
@@ -32,5 +35,11 @@ namespace COSYNNC {
 	// Get end vector
 	Vector Edge::GetEnd() const {
 		return _end;
+	}
+
+
+	// Get direction
+	Vector Edge::GetDirection() const {
+		return _direction;
 	}
 }

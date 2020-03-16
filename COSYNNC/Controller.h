@@ -19,7 +19,6 @@ namespace COSYNNC {
 		// Initialize the controller based on the plant and both the state and input quantizers
 		Controller(Plant* plant, Quantizer* stateQuantizer, Quantizer* inputQuantizer);
 
-
 		// Set the control specification of the controller
 		void SetControlSpecification(ControlSpecification* specification);
 
@@ -52,6 +51,12 @@ namespace COSYNNC {
 
 		// Returns the control specification that is currently assigned to the controller
 		ControlSpecification* GetControlSpecification() const;
+
+		// Compile the inputs array that states the input for every index in the state space
+		void CompileInputArray();
+
+		// Get input from the input array based on the index
+		Vector GetInputFromIndex(long index) const;
 	private:
 		float _h;
 
@@ -67,6 +72,8 @@ namespace COSYNNC {
 		ControlSpecification* _controlSpecification = nullptr;
 
 		NeuralNetwork* _neuralNetwork = nullptr;
+
+		Vector* _inputArray = nullptr;
 	};
 }
 

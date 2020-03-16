@@ -14,7 +14,8 @@ namespace COSYNNC {
 		_inputQuantizer = inputQuantizer;
 	}
 
-	// Constructor that initializes the file manager for use
+
+	// Constructor that initializes the filemanager for use with control goal included
 	FileManager::FileManager(NeuralNetwork* neuralNetwork, Verifier* verifier, Quantizer* stateQuantizer, Quantizer* inputQuantizer, ControlSpecification* specification) {
 		_neuralNetwork = neuralNetwork;
 		_verifier = verifier;
@@ -24,6 +25,21 @@ namespace COSYNNC {
 
 		_specification = specification;
 	}
+
+
+	// Constructor that initializes the filemanager for use with control goal and controller included
+	FileManager::FileManager(NeuralNetwork* neuralNetwork, Verifier* verifier, Quantizer* stateQuantizer, Quantizer* inputQuantizer, ControlSpecification* specification, Controller* controller) {
+		_neuralNetwork = neuralNetwork;
+		_verifier = verifier;
+
+		_stateQuantizer = stateQuantizer;
+		_inputQuantizer = inputQuantizer;
+
+		_specification = specification;
+
+		_controller = controller;
+	}
+
 
 
 	// Loads a neural network
@@ -79,6 +95,51 @@ namespace COSYNNC {
 	}
 
 
+	// Save network in its binary form to yield the most compressed representation
+	void FileManager::SaveNetwork(string path, string name) {
+		ofstream file(path + "/" + name + ".nn", std::ios_base::binary);
+
+		// Writes the layer depth with counts the amount of layers minus the input layer
+		WriteByte(&file, (unsigned char)_neuralNetwork->GetLayerDepth());
+
+		// Writes the amount of nodes per layer so the network structure is emplied
+		WriteByte(&file, (unsigned char)_neuralNetwork->GetInputDimension());
+
+		auto layers = _neuralNetwork->GetLayers();
+		for (unsigned int i = 0; i < _neuralNetwork->GetLayerDepth(); i++) {
+			WriteByte(&file, (unsigned char)layers[i]);
+		}
+
+		// Writes all the weights and biases to the file
+		auto argumentNames = _neuralNetwork->GetArgumentNames();
+		for (unsigned int i = 0; i < argumentNames.size(); i++) {
+			auto argumentName = argumentNames[i];
+			if (argumentName == "input" || argumentName == "label") continue;
+			auto argumentShape = _neuralNetwork->GetArgumentShape(argumentName);
+
+			// Vector
+			if (argumentShape.size() == 1) {
+				for (unsigned int i = 0; i < argumentShape[0]; i++) {
+					//file << _neuralNetwork->GetArgumentValue(argumentName, vector<unsigned int>({ i }));
+					WriteFloatAsBytes(&file, _neuralNetwork->GetArgumentValue(argumentName, vector<unsigned int>({ i })));
+				}
+			}
+			// Matrix
+			else {
+				for (unsigned int i = 0; i < argumentShape[0]; i++) {
+					for (unsigned int j = 0; j < argumentShape[1]; j++) {
+						//file << _neuralNetwork->GetArgumentValue(argumentName, vector<unsigned int>({ i, j }));
+						WriteFloatAsBytes(&file, _neuralNetwork->GetArgumentValue(argumentName, vector<unsigned int>({ i, j })));
+					}
+				}
+			}
+		}
+
+		// Close file
+		file.close();
+	}
+
+
 	// Save the structure of a neural network to a MATLAB file
 	// TODO: Adapt this depending on which type of neural network is currently being trained
 	void FileManager::SaveNetworkAsMATLAB(string path, string name) {
@@ -102,7 +163,7 @@ namespace COSYNNC {
 		file << "layerDepth = " << _neuralNetwork->GetLayerDepth() << ";\n";
 
 		// Save the quantization parameters to the network
-		WriteQuantizationParametersToFile(&file);
+		WriteQuantizationParametersToMATLABFile(&file);
 
 		// Save the arguments of the network
 		file << "\n";
@@ -146,9 +207,10 @@ namespace COSYNNC {
 
 		// Save the winning domain to the domain file
 		file << "winningDomainPercentage = " << _verifier->GetWinningDomainPercentage() << ";\n";
+		file << "networkDataSize = " << _neuralNetwork->GetDataSize() << ";\n";
 
 		// Save the quantization parameters to the domain file
-		WriteQuantizationParametersToFile(&file);
+		WriteQuantizationParametersToMATLABFile(&file);
 
 		// Save the controller goal which the domain describes
 		if (_specification != nullptr) {
@@ -169,8 +231,37 @@ namespace COSYNNC {
 		file.close();
 	}
 
+
+	// Save the controller as a static controller, just like old versions of SCOTS used to do
+	void FileManager::SaveControllerAsStaticController(string path, string name) {
+		ofstream file(path + "/" + name + ".scs", std::ios_base::out);
+
+		file << "#SCOTS:v0.2\n#TYPE:STATICCONTROLLER\n";
+
+		WriteQuantizationParametersToStaticController(&file);
+
+		file << "#TYPE:WINNINGDOMAIN\n#MATRIX:DATA\n";
+		file << "#BEGIN:" << _verifier->GetWinningSetSize() << " " << _inputQuantizer->GetCardinality() << "\n";
+
+		// State inputs that the neural network gives for every state
+		const auto _spaceCardinality = _stateQuantizer->GetCardinality();
+
+		for (unsigned long index = 0; index < _spaceCardinality; index++) {
+			if (_verifier->IsIndexInWinningSet(index)) {
+				auto input = _controller->GetInputFromIndex(index);
+				auto inputIndex = _inputQuantizer->GetIndexFromVector(input);
+
+				file << index << " " << inputIndex << "\n";
+			}
+		}
+		file << "#END";
+
+		file.close();
+	}
+
+
 	// Writes the quantization parameters for the state and input quantizer to the file
-	void FileManager::WriteQuantizationParametersToFile(ofstream* file) {
+	void FileManager::WriteQuantizationParametersToMATLABFile(ofstream* file) {
 		auto stateDimension = _stateQuantizer->GetSpaceDimension();
 
 		// Save state space quantization parameters
@@ -187,6 +278,24 @@ namespace COSYNNC {
 	}
 
 
+	// Write the quantization parameters for the state and input quantizer to a static controller file
+	void FileManager::WriteQuantizationParametersToStaticController(ofstream* file) {
+		*file << "SCOTS:STATE_SPACE\n#TYPE:UNIFORMGRID\nMEMBER:DIM\n";
+		*file << _stateQuantizer->GetSpaceDimension() << "\n";
+
+		WriteVectorToStaticController(file, "ETA", _stateQuantizer->GetSpaceEta());
+		WriteVectorToStaticController(file, "LOWER_LEFT", _stateQuantizer->GetSpaceLowerBound());
+		WriteVectorToStaticController(file, "UPPER_RIGHT", _stateQuantizer->GetSpaceUpperBound());
+
+		*file << "#SCOTS:INPUT_SPACE\n#TYPE:UNIFORMGRID\nMEMBER:DIM\n";
+		*file << _inputQuantizer->GetSpaceDimension() << "\n";
+
+		WriteVectorToStaticController(file, "ETA", _inputQuantizer->GetSpaceEta());
+		WriteVectorToStaticController(file, "LOWER_LEFT", _inputQuantizer->GetSpaceLowerBound());
+		WriteVectorToStaticController(file, "UPPER_RIGHT", _inputQuantizer->GetSpaceUpperBound());
+	}
+
+
 	// Writes a vector to a file
 	void FileManager::WriteVectorToMATLABFile(ofstream* file, string variableName, Vector vector) {
 		*file << variableName << " = [";
@@ -195,5 +304,47 @@ namespace COSYNNC {
 			if (i != (vector.GetLength() - 1)) *file << ", ";
 		}
 		*file << "];\n";
+	}
+
+
+	// Writes a vector in static controller SCOTS format
+	void FileManager::WriteVectorToStaticController(ofstream* file, string variableName, Vector vector) {
+		*file << "#VECTOR:" << variableName << "\n";
+		*file << "#BEGIN:" << vector.GetLength() << "\n";
+
+		for (unsigned int i = 0; i < vector.GetLength(); i++) {
+			*file << vector[i] << "\n";
+		}
+		*file << "#END\n";
+	}
+
+
+	// Writes a byte into a file
+	void FileManager::WriteByte(ofstream* file, unsigned char value) {
+		unsigned char* b = (unsigned char*)&value;
+
+		for (unsigned int i = 0; i < sizeof(value); i++) {
+			*file << b[i];
+		}
+	}
+
+
+	// Writes an int as bytes into a file
+	void FileManager::WriteIntAsBytes(ofstream* file, int value) {
+		unsigned char* b = (unsigned char*)&value;
+
+		for (unsigned int i = 0; i < sizeof(value); i++) {
+			*file << b[i];
+		}
+	}
+
+
+	// Writes a float as bytes into a file
+	void FileManager::WriteFloatAsBytes(ofstream* file, float value) {
+		unsigned char *b = (unsigned char *)&value;
+
+		for (unsigned int i = 0; i < sizeof(value); i++) {
+			*file << b[i];
+		}
 	}
 }
