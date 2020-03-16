@@ -38,60 +38,28 @@ namespace COSYNNC {
 	void Verifier::ComputeTransitionFunction() {
 		// Free up previous transitions
 		delete[] _transitions;
-		_transitions = new Transition[_stateQuantizer->GetCardinality()];
+		_transitions = new Transition[_spaceCardinality];
 
-		// Determine amount of batches
-		const auto batchSize = _controller->GetNeuralNetwork()->GetBatchSize();
-		const long amountOfBatches = ceil(_spaceCardinality / batchSize);
+		if (_spaceCardinality > 10000) std::cout << "\t\t";
+		for (long index = 0; index < _spaceCardinality; index++) {
+			// Print status to monitor progression
+			if (_spaceCardinality > 10000 && index % ((long)floor(_spaceCardinality / 20)) == 0) std::cout << (float)((float)index / (float)_spaceCardinality * 100.0) << "% . ";
+		
+			auto input = _controller->GetInputFromIndex(index);
 
-		if (_spaceCardinality > 10000) std::cout << "\t";
-		for (long batch = 0; batch <= amountOfBatches; batch++) {
-			if (_spaceCardinality > 10000) {
-				if (batch % ((long)floor(amountOfBatches / 20)) == 0) std::cout << (float)((float)batch / (float)amountOfBatches * 100.0) << "% . ";
-			}
-
-			unsigned long indexOffset = batch * batchSize;
-			unsigned int currentBatchSize = batchSize;
-			if (batch == amountOfBatches) {
-				currentBatchSize = _spaceCardinality - indexOffset;
-
-				if (currentBatchSize == 0) break;
-			}
-
-			// Collect all the states in the current batch
-			Vector* states = new Vector[currentBatchSize];
-
-			for (unsigned int i = 0; i < currentBatchSize; i++) {
-				long index = indexOffset + i;
-				states[i] = _stateQuantizer->GetVectorFromIndex(index);
-			}
-
-			// Get the corresponding inputs through batch network evaluation
-			Vector* inputs = new Vector[currentBatchSize];
-			inputs = _controller->GetControlActionInBatch(states, currentBatchSize);
-
-			// Compute the transition function for all the states in the batch
-			for (unsigned int i = 0; i < currentBatchSize; i++) {
-				long index = indexOffset + i;
-				
-				auto state = states[i];
-				auto input = inputs[i];
-				ComputeTransitionFunctionForIndex(index, states[i], inputs[i]);
-			}
-
-			delete[] inputs;
-			delete[] states;
+			ComputeTransitionFunctionForIndex(index, input);
 		}
 		if (_spaceCardinality > 10000) std::cout << std::endl;
 	}
 
 	// Computes the transition function for a single index
-	void Verifier::ComputeTransitionFunctionForIndex(long index, Vector state, Vector input) {
+	void Verifier::ComputeTransitionFunctionForIndex(long index, Vector input) {
 		_transitions[index] = Transition(index);
+
+		auto state = _stateQuantizer->GetVectorFromIndex(index);
 
 		_plant->SetState(state);
 		auto newState = _plant->EvaluateOverApproximation(input);
-		//auto newState = _plant->EvaluateDynamics(input);
 
 		// Check if newState is in bound, if not we know the transition already
 		if (!_stateQuantizer->IsInBounds(newState)) {
@@ -102,14 +70,18 @@ namespace COSYNNC {
 		// Evolve the vertices of the hyper cell to determine the new hyper cell
 		auto vertices = OverApproximateEvolution(state, input);
 
-		// Determine edges of the new vertices
-		//auto edges = GetEdgesBetweenVertices(vertices);
-
 		// TODO: Floodfill through all the dimensions in order to get all the transitions
-		// TEMPORARY: Over-approximate the evolved hyper cell in order to each transition calculation
+		// Get the edges between all the vertices
+		auto edges = GetEdgesBetweenVertices(vertices);
+		for (unsigned int i = 0; i < _amountOfEdgesPerCell; i++) {
+			auto edge = edges[_amountOfEdgesPerCell];
 
+			AddEdgeToTransitions(&edge, index);
+		}
+		
+		// TEMPORARY: Over-approximate the evolved hyper cell in order to each transition calculation
 		// Find upper and lower bound that over-approximates the over-approximation
-		Vector lowerBoundVertex = newState;
+		/*Vector lowerBoundVertex = newState;
 		Vector upperBoundVertex = newState;
 
 		for (unsigned int i = 0; i < _amountOfVerticesPerCell; i++) {
@@ -151,15 +123,11 @@ namespace COSYNNC {
 			_transitions[index].AddEnd(end);
 
 			currentCell[0] += _spaceEta[0];
-		}
-
-		// Temporay: Singular end for new state to bugfix invariance verification
-		//long end = _stateQuantizer->GetIndexFromVector(_stateQuantizer->QuantizeVector(newState));
-		//_transitions[index].AddEnd(end);
+		}*/
 
 		// Free up memory
 		delete[] vertices;
-		//delete[] edges;
+		delete[] edges;
 	}
 
 
@@ -167,7 +135,7 @@ namespace COSYNNC {
 	void Verifier::ComputeWinningSet() {
 		// Free up previous winning set
 		delete[] _winningSet;
-		_winningSet = new bool[_stateQuantizer->GetCardinality()] { false };
+		_winningSet = new bool[_spaceCardinality] { false };
 
 		// Define initial winning domain for the fixed point operator
 		for (long index = 0; index < _spaceCardinality; index++) {
@@ -293,8 +261,9 @@ namespace COSYNNC {
 					if (_stateQuantizer->IsInBounds(neighbor)) {
 						auto neighborIndex = _stateQuantizer->GetIndexFromVector(neighbor);
 
-						if (IsIndexInWinningSet(neighborIndex))
+						if (IsIndexInWinningSet(neighborIndex)) {
 							_losingWinningNeighborIndices.push_back(neighborIndex);
+						}
 					}
 				}
 			}
@@ -421,7 +390,6 @@ namespace COSYNNC {
 
 			_plant->SetState(vertex);
 			auto newStateVertex = _plant->EvaluateOverApproximation(input);
-			//auto newStateVertex = _plant->EvaluateDynamics(input); // TODO: Switch this for the over approximation dynamics
 
 			newStateVertices[i] = newStateVertex;
 		}
@@ -465,6 +433,34 @@ namespace COSYNNC {
 		}
 
 		return edges;
+	}
+
+
+	// Walks over a single edge and adds all the cells it crosses to the transitions for flood filling
+	void Verifier::AddEdgeToTransitions(Edge* edge, unsigned long index) {
+		auto direction = edge->GetDirection();
+
+		auto currentPoint = edge->GetStart();
+		auto currentCellIndex = _stateQuantizer->GetIndexFromVector(currentPoint);
+		auto currentCellCenter = _stateQuantizer->GetVectorFromIndex(currentCellIndex);
+		_transitions[index].AddEnd(currentCellIndex);
+
+		auto endCellIndex = _stateQuantizer->GetIndexFromVector(edge->GetEnd());
+
+		while (currentCellIndex != endCellIndex) {
+			// Project current point to edge and see if it lays in the edge
+			for (unsigned int dim = 0; dim < _spaceDimension; dim++) {
+				float edgePosInDim = currentCellCenter[dim] - _spaceEta[dim] * 0.5;
+				float distanceToEdge = abs(edgePosInDim - currentPoint[dim]);
+
+				Vector projectedPos = (1 / currentPoint[dim]) * distanceToEdge;
+			}
+
+			// Update current cell
+
+
+			_transitions[index].AddEnd(currentCellIndex);
+		}
 	}
 
 

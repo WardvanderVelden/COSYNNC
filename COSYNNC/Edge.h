@@ -23,8 +23,13 @@ namespace COSYNNC {
 
 		// Get end vector
 		Vector GetEnd() const;
+
+		// Get direction
+		Vector GetDirection() const; 
 	private:
 		Vector _start;
 		Vector _end;
+
+		Vector _direction;
 	};
 }

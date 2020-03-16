@@ -142,11 +142,11 @@ namespace COSYNNC {
 
 		auto amountOfStates = states.size();
 		for (int i = 0; i < _batchSize; i++) {
-				auto state = states[i % amountOfStates];
-				for (int j = 0; j < _inputDimension; j++) inputData.push_back(state[j]);
+			auto state = states[i % amountOfStates];
+			for (int j = 0; j < _inputDimension; j++) inputData.push_back(state[j]);
 
-				auto label = labels[i % amountOfStates];
-				for (int j = 0; j < _labelDimension; j++) labelData.push_back(label[j]);
+			auto label = labels[i % amountOfStates];
+			for (int j = 0; j < _labelDimension; j++) labelData.push_back(label[j]);
 		}
 
 		NDArray networkInputData(inputData, Shape(_batchSize, _inputDimension), _context);
@@ -234,6 +234,12 @@ namespace COSYNNC {
 
 
 	// Returns the label dimension
+	int NeuralNetwork::GetInputDimension() const {
+		return _inputDimension;
+	}
+
+
+	// Returns the label dimension
 	int NeuralNetwork::GetLabelDimension() const {
 		return _labelDimension;
 	}
@@ -242,6 +248,12 @@ namespace COSYNNC {
 	// Returns the layer depth
 	int NeuralNetwork::GetLayerDepth() const {
 		return _depth;
+	}
+
+
+	// Returns the layers
+	vector<int> NeuralNetwork::GetLayers() const {
+		return _layers;
 	}
 
 
@@ -255,6 +267,34 @@ namespace COSYNNC {
 	vector<index_t> NeuralNetwork::GetArgumentShape(string name) {
 		auto argument = _arguments[name];
 		return argument.GetShape();
+	}
+
+
+	// Returns the data size of the neural network in bytes
+	int NeuralNetwork::GetDataSize() {
+		unsigned int floats = 0;
+
+		for (unsigned int i = 0; i < _arguments.size(); i++) {
+			auto argumentName = _argumentNames[i];
+			if (argumentName == "input" || argumentName == "label") continue;
+
+			auto argument = _arguments[argumentName];
+
+			auto shape = argument.GetShape();
+
+			unsigned int argumentFloats = 0;
+			for (unsigned int j = 0; j < shape.size(); j++) {
+				if (j == 0) argumentFloats += shape[j];
+				else argumentFloats *= shape[j];
+			}
+
+			floats += argumentFloats;
+		}
+
+		_dataSize = floats * 4;
+		_dataSize += 2 + _depth; // data required to emply the matrix structure
+
+		return _dataSize;
 	}
 
 

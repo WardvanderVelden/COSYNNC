@@ -80,14 +80,26 @@ namespace COSYNNC {
 		return _values[index];
 	}
 
+
+	// Normalizes the vector
+	void Vector::Normalize() {
+		auto norm = GetNorm();
+		for (unsigned int i = 0; i < _length; i++) {
+			_values[i] = _values[i] / norm;
+		}
+	}
+
+
 	// Getters and setters
 	int Vector::GetLength() const {
 		return _length;
 	}
 
+
 	void Vector::SetLength(int size) {
 		_values.resize(size, 0);
 	}
+
 
 	// Returns the norm of the vector
 	float Vector::GetNorm() {
@@ -98,6 +110,7 @@ namespace COSYNNC {
 		return sqrt(norm);
 	}
 
+
 	// Returns the weighted norm of the vector
 	float Vector::GetWeightedNorm(vector<float> weights) {
 		float norm = 0.0;
@@ -106,6 +119,7 @@ namespace COSYNNC {
 		}
 		return sqrt(norm);
 	}
+
 
 	void Vector::PrintValues() const {
 		for (int i = 0; i < _length; i++) {

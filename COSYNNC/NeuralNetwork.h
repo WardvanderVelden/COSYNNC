@@ -1,4 +1,4 @@
-#pragma once
+ #pragma once
 #include <time.h>
 #include <stdlib.h>
 #include <fstream>
@@ -72,16 +72,25 @@ namespace COSYNNC {
 		int GetBatchSize() const;
 
 		// Returns the label dimension
+		int GetInputDimension() const;
+
+		// Returns the label dimension
 		int GetLabelDimension() const;
 
 		// Returns the layer depth
 		int GetLayerDepth() const;
+
+		// Returns the layers
+		vector<int> GetLayers() const;
 
 		// Returns the list of argument names
 		vector<string> GetArgumentNames() const;
 
 		// Returns the shape of an argument in the network
 		vector<index_t> GetArgumentShape(string name);
+
+		// Returns the data size of the neural network in bytes
+		int GetDataSize();
 
 		// Returns a value in the argument
 		mx_float GetArgumentValue(string name, vector<unsigned int> index);
@@ -91,6 +100,7 @@ namespace COSYNNC {
 
 		int _depth = 0;
 		int _batchSize = 1;
+		int _dataSize = 0;
 
 		int _inputDimension = 1;
 		int _labelDimension = 1;

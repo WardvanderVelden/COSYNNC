@@ -34,6 +34,9 @@ namespace COSYNNC {
 		// Indexing operator
 		float& operator[](const int index);
 
+		// Normalizes the vector
+		void Normalize();
+
 		// Returns the amount of elements in the vector
 		int GetLength() const;
 

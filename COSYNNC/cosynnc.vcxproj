@@ -129,6 +129,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="BddManager.cpp" />
     <ClCompile Include="Controller.cpp" />
     <ClCompile Include="ControlSpecification.cpp" />
     <ClCompile Include="DCDC.cpp" />
@@ -147,6 +148,7 @@
     <ClCompile Include="Verifier.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BddManager.h" />
     <ClInclude Include="Controller.h" />
     <ClInclude Include="ControlSpecification.h" />
     <ClInclude Include="DCDC.h" />

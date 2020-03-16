@@ -15,7 +15,7 @@ namespace COSYNNC {
 		void ComputeTransitionFunction();
 
 		// Computes the transition function for a single index
-		void ComputeTransitionFunctionForIndex(long index, Vector state, Vector input);
+		void ComputeTransitionFunctionForIndex(long index, Vector input);
 
 		// Computes the winning set for which the controller currently is able to adhere to the control specification
 		void ComputeWinningSet();
@@ -46,6 +46,9 @@ namespace COSYNNC {
 
 		// Returns the edges between a set of vertices if the vertices are properly sorted
 		Edge* GetEdgesBetweenVertices(Vector* vertices);
+
+		// Walks over a single edge and adds all the cells it crosses to the transitions for flood filling
+		void AddEdgeToTransitions(Edge* edge, unsigned long index);
 
 		// Returns the last calculated percentage of the winning domain compared to the state space
 		float GetWinningDomainPercentage();

@@ -203,4 +203,57 @@ namespace COSYNNC {
 	ControlSpecification* Controller::GetControlSpecification() const {
 		return _controlSpecification;
 	}
+
+
+	// Compile the inputs array that states the input for every index in the state space
+	void Controller::CompileInputArray() {
+		delete[] _inputArray;
+
+		// Setup input array
+		const auto _spaceCardinality = _stateQuantizer->GetCardinality();
+		_inputArray = new Vector[_spaceCardinality];
+
+		// Calculate amount of batches required
+		const auto batchSize = GetNeuralNetwork()->GetBatchSize();
+		const long amountOfBatches = ceil(_spaceCardinality / batchSize);
+
+		// Go through all the indices through batches
+		for (unsigned long batch = 0; batch <= amountOfBatches; batch++) {
+			unsigned long indexOffset = batch * batchSize;
+			unsigned int currentBatchSize = batchSize;
+			if (batch == amountOfBatches) {
+				currentBatchSize = _spaceCardinality - indexOffset;
+
+				if (currentBatchSize == 0) break;
+			}
+
+			// Collect all the states in the current batch
+			Vector* states = new Vector[currentBatchSize];
+
+			for (unsigned int i = 0; i < currentBatchSize; i++) {
+				long index = indexOffset + i;
+				states[i] = _stateQuantizer->GetVectorFromIndex(index);
+			}
+
+			// Get the corresponding inputs through batch network evaluation
+			Vector* inputs = new Vector[currentBatchSize];
+			inputs = GetControlActionInBatch(states, currentBatchSize);
+
+			// Compute the transition function for all the states in the batch
+			for (unsigned int i = 0; i < currentBatchSize; i++) {
+				long index = indexOffset + i;
+
+				_inputArray[index] = inputs[i];
+			}
+
+			delete[] inputs;
+			delete[] states;
+		}
+	}
+
+
+	// Get input from the input array based on the index
+	Vector Controller::GetInputFromIndex(long index) const {
+		return _inputArray[index];
+	}
 }

@@ -49,6 +49,19 @@ namespace COSYNNC {
 	}
 
 
+	// Specify if the network should reinforce upon reaching the winning set (only applicable to reachability)
+	void Procedure::SpecifyWinningSetReinforcement(bool reinforce) {
+		_useWinningSetReinforcement = reinforce;
+
+		if (reinforce) {
+			Log("COSYNNC", "Network will reinforce upon reaching the winning set.");
+		}
+		else {
+			Log("COSYNNC", "Network will not reinforce upon reaching the winning set.");
+		}
+	}
+
+
 	// Set the plant
 	void Procedure::SetPlant(Plant* plant) {
 		_plant = plant;
@@ -66,6 +79,9 @@ namespace COSYNNC {
 		_outputType = _neuralNetwork->GetOutputType();
 
 		Log("COSYNNC", "Neural network linked.");
+
+		auto dataSize = _neuralNetwork->GetDataSize();
+		Log("COSYNNC", "Neural network has data size: " + std::to_string(dataSize) + " bytes");
 	}
 
 
@@ -166,9 +182,10 @@ namespace COSYNNC {
 		_verifier->SetVerboseMode(_verboseVerifier);
 		_verifier->SetUseOverApproximation(true);
 
-		_fileManager = FileManager(_neuralNetwork, _verifier, _stateQuantizer, _inputQuantizer, &_specification);
+		_fileManager = FileManager(_neuralNetwork, _verifier, _stateQuantizer, _inputQuantizer, &_specification, &_controller);
+		_bddManager = BddManager(&_controller, _verifier, _stateQuantizer, _inputQuantizer);
 
-		// TODO: Test if all required parameters are specified before the 
+		// TODO: Test if all required parameters are specified before the synthesis procedure begins
 
 		_hasSuccesfullyInitialized = true;
 		return true;
@@ -228,6 +245,7 @@ namespace COSYNNC {
 		float norm = initialNorm;
 
 		bool isInSpecificationSet = false;
+		bool isInWinningSet = false;
 
 		// Simulate the episode using the neural network
 		for (int j = 0; j < _maxEpisodeHorizonTrainer; j++) {
@@ -243,6 +261,7 @@ namespace COSYNNC {
 
 			// Get data for a single training step
 			GetDataForTrainingStep(state, &reinforcingLabels, &deterringLabels, &input, &networkOutput, &newState, &isInSpecificationSet, &norm);
+			isInWinningSet = _verifier->IsIndexInWinningSet(_stateQuantizer->GetIndexFromVector(newState));
 
 			// DEBUG: Print simulation for verification purposes
 			if (episodeNumber % _verboseEpisode == 0 && _verboseTrainer) {
@@ -263,16 +282,15 @@ namespace COSYNNC {
 				case ControlSpecificationType::Reachability: if (isInSpecificationSet) stopEpisode = true; break;
 			}
 
+			if (_useWinningSetReinforcement && isInWinningSet) stopEpisode = true;
+
 			if (!_stateQuantizer->IsInBounds(newState) || stopEpisode) break;
 		}
 
 		// Train the neural network based on the performance of the network
-		/*if ((norm < initialNorm || isInSpecificationSet) && _useNorm) _neuralNetwork->Train(states, reinforcingLabels);
-		else if(isInSpecificationSet && !_useNorm) _neuralNetwork->Train(states, reinforcingLabels);
-		else _neuralNetwork->Train(states, deterringLabels);*/
-
 		if ((norm < initialNorm || isInSpecificationSet) && _useNorm) AddToTrainingQueue(states, reinforcingLabels);
-		else if (isInSpecificationSet && !_useNorm) AddToTrainingQueue(states, reinforcingLabels);
+		else if (isInWinningSet && _useWinningSetReinforcement) AddToTrainingQueue(states, reinforcingLabels);
+		else if (isInSpecificationSet) AddToTrainingQueue(states, reinforcingLabels);
 		else AddToTrainingQueue(states, deterringLabels);
 	}
 
@@ -381,6 +399,8 @@ namespace COSYNNC {
 
 	// Run the verification phase
 	void Procedure::Verify() {
+		_controller.CompileInputArray();
+
 		_verifier->ComputeTransitionFunction();
 		_verifier->ComputeWinningSet();
 
@@ -407,6 +427,8 @@ namespace COSYNNC {
 	void Procedure::SaveNetwork(string path) {
 		_fileManager.SaveNetworkAsMATLAB(path, "net");
 		_fileManager.SaveVerifiedDomainAsMATLAB(path, "dom");
+		_fileManager.SaveControllerAsStaticController(path, "ctl");
+		_fileManager.SaveNetwork(path, "raw");
 	}
 
 
@@ -426,11 +448,13 @@ namespace COSYNNC {
 		// Concatenate string and chars to form path
 		string path = "controllers/timestamps";
 
-		Log("File Manager", "Saving to path: '" + path + "'");
+		Log("File Manager", "Saving to path: '" + path + "/" + timestampString + "'");
 
 		// Save network to a matlab file under the timestamp
 		_fileManager.SaveNetworkAsMATLAB(path, timestampString + "net");
 		_fileManager.SaveVerifiedDomainAsMATLAB(path, timestampString + "dom");
+		_fileManager.SaveControllerAsStaticController(path, timestampString + "ctl");
+		_fileManager.SaveNetwork(path, timestampString + "raw");
 	}
 
 
