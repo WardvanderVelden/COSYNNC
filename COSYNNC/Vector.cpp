@@ -56,8 +56,25 @@ namespace COSYNNC {
 
 		return vec;
 	}
+	Vector Vector::operator*(const Vector other) {
+		Vector vec(*this);
+
+		for (int i = 0; i < _length; i++)
+			vec[i] *= other._values[i];
+
+		return vec;
+	}
+
 	Vector Vector::operator/(const float scalar) {
 		return *this * (1 / scalar);
+	}
+	Vector Vector::operator/(const Vector other) {
+		Vector vec(*this);
+
+		for (int i = 0; i < _length; i++)
+			vec[i] /= other._values[i];
+
+		return vec;
 	}
 
 	Vector Vector::operator=(const vector<float> values) {
@@ -87,6 +104,19 @@ namespace COSYNNC {
 		for (unsigned int i = 0; i < _length; i++) {
 			_values[i] = _values[i] / norm;
 		}
+	}
+
+
+	// Returns the dot product of the vector with another vector of the same length
+	float Vector::Dot(Vector other) {
+		if (_length != other.GetLength()) return 0.0;
+
+		float value = 0.0;
+		for (unsigned int i = 0; i < _length; i++) {
+			value += (_values[i] * other[i]);
+		}
+
+		return value;
 	}
 
 

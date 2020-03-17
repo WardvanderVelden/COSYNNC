@@ -27,7 +27,9 @@ namespace COSYNNC {
 		Vector operator-(const Vector other);
 		Vector operator-=(const Vector other);
 		Vector operator*(const float scalar);
+		Vector operator*(const Vector other);
 		Vector operator/(const float scalar);
+		Vector operator/(const Vector other);
 		Vector operator=(const vector<float> values);
 		bool operator==(const Vector other);
 
@@ -36,6 +38,9 @@ namespace COSYNNC {
 
 		// Normalizes the vector
 		void Normalize();
+
+		// Returns the dot product of the vector with another vector of the same length
+		float Dot(Vector other);
 
 		// Returns the amount of elements in the vector
 		int GetLength() const;

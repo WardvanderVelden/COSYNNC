@@ -72,6 +72,7 @@ namespace COSYNNC {
 
 		// Returns an array of vectors which are the vertices of the hyper cell
 		Vector* GetHyperCellVertices(Vector cell);
+		Vector* GetHyperCellVertices(unsigned long cellIndex);
 	private:
 		bool _isBounded = false;
 

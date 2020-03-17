@@ -94,7 +94,7 @@ void SynthesizeReachabilityControllerDCDC() {
 	cosynnc.Initialize();
 
 	// Load a previously trained network
-	cosynnc.LoadNeuralNetwork("controllers/timestamps", "WedMar11142054net.m"); 
+	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "WedMar11142054net.m"); 
 
 	// Run the synthesize procedure
 	cosynnc.Synthesize();
@@ -157,7 +157,7 @@ void SynthesizeReachabilityControllerRocket() {
 	// Specify the state and input quantizers
 	//cosynnc.SpecifyStateQuantizer(Vector({ 0.25, 0.5 }), Vector({ -5, -10 }), Vector({ 5, 10 }));
 	cosynnc.SpecifyStateQuantizer(Vector({ 0.1, 0.1 }), Vector({ -5, -10 }), Vector({ 5, 10 }));
-	cosynnc.SpecifyInputQuantizer(Vector((float)1000.0), Vector((float)0.0), Vector((float)5000.0));
+	cosynnc.SpecifyInputQuantizer(Vector((float)2500.0), Vector((float)0.0), Vector((float)5000.0));
 	//cosynnc.SpecifyInputQuantizer(Vector((float)1000.0), Vector((float)0.0), Vector((float)5000.0));
 
 	// Specify the synthesis parameters
@@ -182,7 +182,7 @@ void SynthesizeReachabilityControllerRocket() {
 	cosynnc.Initialize();
 
 	// Load a previously trained network
-	cosynnc.LoadNeuralNetwork("controllers/timestamps", "ThuMar12132227net.m");
+	cosynnc.LoadNeuralNetwork("controllers/timestamps", "TueMar17155933net.m");
 
 	// Run the synthesize procedure
 	cosynnc.Synthesize();
@@ -228,10 +228,10 @@ void LoadAndCompressController(string controllerName) {
 
 int main() {
 	//SynthesizeInvarianceControllerDCDC();
-	//SynthesizeReachabilityControllerDCDC();
+	SynthesizeReachabilityControllerDCDC();
 	
 	//SynthesizeInvarianceControllerRocket();
-	SynthesizeReachabilityControllerRocket();
+	//SynthesizeReachabilityControllerRocket();
 
 	system("pause");
 	return 0;

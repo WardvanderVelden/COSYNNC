@@ -3,6 +3,7 @@
 #include "Controller.h"
 #include "Quantizer.h"
 #include "Transition.h"
+#include "Plane.h"
 
 namespace COSYNNC {
 	class Verifier {
@@ -44,20 +45,32 @@ namespace COSYNNC {
 		// Over approximates all the vertices based on the input and returns an array of the new vertices
 		Vector* OverApproximateEvolution(Vector state, Vector input);
 
+		// Returns the planes that naturally arise between the vertices
+		vector<Plane> GetPlanesBetweenVertices(Vector* vertices, Vector internalPoint);
+
+		// Flood fills between planes, adding the indices of the cells to the transitions of the origin cell
+		void FloodfillBetweenPlanes(unsigned long index, Vector center, vector<Plane>& planes);
+
+		// Generates the appropriate floodfill indices based on the current inex and the processed indices
+		void AddFloodfillOrder(Vector center, Vector direction, vector<unsigned long>& indices, vector<unsigned long>& processedIndices);
+
+		// Checks if a point is contained between planes
+		bool IsPointBetweenPlanes(Vector point, vector<Plane>& planes);
+
 		// Returns the edges between a set of vertices if the vertices are properly sorted
 		Edge* GetEdgesBetweenVertices(Vector* vertices);
 
-		// Walks over a single edge and adds all the cells it crosses to the transitions for flood filling
+		// LEGACY: Walks over a single edge and adds all the cells it crosses to the transitions for flood filling
 		void AddEdgeToTransitions(Edge* edge, unsigned long index);
+
+		// LEGACY: Finds the leaving edge through which a vector leaves a cell
+		long FindLeavingEdge(Vector& point, Vector direction, unsigned long cellIndex, long lastCellIndex);
 
 		// Returns the last calculated percentage of the winning domain compared to the state space
 		float GetWinningDomainPercentage();
 
 		// Returns whether or not an index is in the winning domain
 		bool IsIndexInWinningSet(unsigned long index);
-
-		// Sets whether or not to use the over approximation for verifier
-		void SetUseOverApproximation(bool value);
 	private:
 		Plant* _plant;
 		Controller* _controller;
@@ -86,8 +99,6 @@ namespace COSYNNC {
 
 		unsigned int _amountOfVerticesPerCell;
 		unsigned int _amountOfEdgesPerCell;
-
-		bool _useOverApproximation = true;
 
 		bool _verboseMode = false;
 	};

@@ -52,6 +52,7 @@ namespace COSYNNC {
 		if (_spaceCardinality > 10000) std::cout << std::endl;
 	}
 
+
 	// Computes the transition function for a single index
 	void Verifier::ComputeTransitionFunctionForIndex(long index, Vector input) {
 		_transitions[index] = Transition(index);
@@ -69,16 +70,20 @@ namespace COSYNNC {
 
 		// Evolve the vertices of the hyper cell to determine the new hyper cell
 		auto vertices = OverApproximateEvolution(state, input);
-
-		// TODO: Floodfill through all the dimensions in order to get all the transitions
-		// Get the edges between all the vertices
-		auto edges = GetEdgesBetweenVertices(vertices);
-		for (unsigned int i = 0; i < _amountOfEdgesPerCell; i++) {
-			auto edge = edges[_amountOfEdgesPerCell];
-
-			AddEdgeToTransitions(&edge, index);
-		}
 		
+		// Get the point in space that represents the center of the vertices
+		auto center = Vector(_spaceDimension);
+		for (unsigned int i = 0; i < _amountOfVerticesPerCell; i++) {
+			center = center + vertices[i];
+		}
+		center = center * (1.0 / (float)_amountOfVerticesPerCell);
+
+		// Get the planes that arise between the vertices and define the internal area
+		auto planes = GetPlanesBetweenVertices(vertices, center);
+
+		// Flood fill as long as a vertex in a cell is in the internal area
+		FloodfillBetweenPlanes(index, center, planes);
+
 		// TEMPORARY: Over-approximate the evolved hyper cell in order to each transition calculation
 		// Find upper and lower bound that over-approximates the over-approximation
 		/*Vector lowerBoundVertex = newState;
@@ -127,7 +132,6 @@ namespace COSYNNC {
 
 		// Free up memory
 		delete[] vertices;
-		delete[] edges;
 	}
 
 
@@ -400,6 +404,120 @@ namespace COSYNNC {
 	}
 
 
+	// Returns the planes that naturally arise between the vertices
+	// TODO: Make this method robust with respect to input dimensionalities other than 2 dimensional onces
+	vector<Plane> Verifier::GetPlanesBetweenVertices(Vector* vertices, Vector internalPoint) {
+		vector<Plane> planes;
+		
+		// TEMPORARY: Only get planes for 1d and 2d input spaces, needs to be generalized to higher order dimensions
+		switch (_spaceDimension) {
+			case 1: {
+				planes.push_back(Plane({ vertices[0] }, internalPoint));
+				planes.push_back(Plane({ vertices[1] }, internalPoint));
+				break;
+			}
+			case 2: {
+				auto edges = GetEdgesBetweenVertices(vertices);
+
+				for (unsigned int i = 0; i < _amountOfEdgesPerCell; i++) {
+					auto edge = edges[i];
+					planes.push_back(Plane({ edge.GetStart(), edge.GetEnd() }, internalPoint));
+				}
+
+				delete[] edges;
+				break;
+			}
+		}
+
+		return planes;
+	}
+
+
+	// Flood fills between planes, adding the indices of the cells to the transitions of the origin cell
+	void Verifier::FloodfillBetweenPlanes(unsigned long index, Vector center, vector<Plane>& planes) {
+		unsigned long centerIndex = _stateQuantizer->GetIndexFromVector(center);
+
+		// Generate initial floodfill order
+		vector<unsigned long> indices;
+		vector<unsigned long> processedIndices;
+		indices.push_back(centerIndex);
+
+		// Process all the floodfill orders
+		while (indices.size() != 0) {
+			unsigned long currentIndex = *indices.begin();
+
+			// Test if their is a vertex of the current cell that is within the planes
+			auto vertices = _stateQuantizer->GetHyperCellVertices(currentIndex);
+
+			bool isBetweenPlanes = false;
+			for (unsigned int i = 0; i < _amountOfVerticesPerCell; i++) {
+				if (IsPointBetweenPlanes(vertices[i], planes)) {
+					isBetweenPlanes = true;
+					break;
+				}
+			}
+
+			if (isBetweenPlanes) {
+				// Add order to transitions
+				_transitions[index].AddEnd(currentIndex);
+
+				// Generate new orders that branch from current order
+				auto cellCenter = _stateQuantizer->GetVectorFromIndex(currentIndex);
+				for (unsigned int i = 0; i < _spaceDimension; i++) {
+					Vector direction(_spaceDimension);
+
+					// Lower direction
+					direction[i] = -1.0;
+					AddFloodfillOrder(cellCenter, direction, indices, processedIndices);
+									
+					// Upper direction
+					direction[i] = 1.0;
+					AddFloodfillOrder(cellCenter, direction, indices, processedIndices);
+				}
+			}
+
+			// Track which indices have already been processed
+			processedIndices.push_back(currentIndex);
+			indices.erase(indices.begin(), indices.begin() + 1);
+
+			// Clear memory
+			delete[] vertices;
+		}
+
+		// Clear to prevent leaking memory
+		indices.clear();
+		processedIndices.clear();
+	}
+
+
+	// Generates the appropriate floodfill indices based on the current inex and the processed indices
+	void Verifier::AddFloodfillOrder(Vector center, Vector direction, vector<unsigned long>& indices, vector<unsigned long>& processedIndices) {
+		// Get index of neighbor cell that is in that direction
+		auto neighborCell = center + (direction * _spaceEta);
+		auto neighborCellIndex = _stateQuantizer->GetIndexFromVector(neighborCell);
+
+		// If the neighbor cell index is -1 it is out of bounds and we do not need to add it
+		if (neighborCellIndex == -1) return;
+
+		// Check if cell is not already processed
+		for (auto processedIndex : processedIndices) {
+			if (processedIndex == neighborCellIndex) return;
+		}
+
+		indices.push_back(neighborCellIndex);
+	}
+
+
+	// Checks if a point is contained between planes
+	bool Verifier::IsPointBetweenPlanes(Vector point, vector<Plane>& planes) {
+		for (unsigned int i = 0; i < planes.size(); i++) {
+			if (!planes[i].IsPointOnInternalSide(point)) return false;
+		}
+
+		return true;
+	}
+
+
 	// Returns the edges between a set of vertices if the vertices are properly sorted
 	Edge* Verifier::GetEdgesBetweenVertices(Vector* vertices) {
 		Edge* edges = new Edge[_amountOfEdgesPerCell];
@@ -436,31 +554,99 @@ namespace COSYNNC {
 	}
 
 
-	// Walks over a single edge and adds all the cells it crosses to the transitions for flood filling
+	// LEGACY: Walks over a single edge and adds all the cells it crosses to the transitions for flood filling
 	void Verifier::AddEdgeToTransitions(Edge* edge, unsigned long index) {
 		auto direction = edge->GetDirection();
 
-		auto currentPoint = edge->GetStart();
-		auto currentCellIndex = _stateQuantizer->GetIndexFromVector(currentPoint);
-		auto currentCellCenter = _stateQuantizer->GetVectorFromIndex(currentCellIndex);
-		_transitions[index].AddEnd(currentCellIndex);
+		auto point = edge->GetStart();
+		auto cellIndex = _stateQuantizer->GetIndexFromVector(point);
+		auto lastCellIndex = cellIndex;
+
+		_transitions[index].AddEnd(cellIndex);
 
 		auto endCellIndex = _stateQuantizer->GetIndexFromVector(edge->GetEnd());
 
-		while (currentCellIndex != endCellIndex) {
-			// Project current point to edge and see if it lays in the edge
-			for (unsigned int dim = 0; dim < _spaceDimension; dim++) {
-				float edgePosInDim = currentCellCenter[dim] - _spaceEta[dim] * 0.5;
-				float distanceToEdge = abs(edgePosInDim - currentPoint[dim]);
+		
+		while (cellIndex != endCellIndex) {
+			auto newCellIndex = FindLeavingEdge(point, direction, cellIndex, lastCellIndex);
+			_transitions[index].AddEnd(newCellIndex);
 
-				Vector projectedPos = (1 / currentPoint[dim]) * distanceToEdge;
+			lastCellIndex = cellIndex;
+			cellIndex = newCellIndex;
+
+			// TEMPORARY: Need to implement the ability to handle out of domain indices..
+			if (cellIndex == -1) {
+				return;
+			}
+		}
+	}
+
+
+	// LEGACY: Finds the leaving edge through which a vector leaves a cell and returns the index of the cell it enters
+	long Verifier::FindLeavingEdge(Vector& point, Vector direction, unsigned long cellIndex, long lastCellIndex) {
+		auto cellCenter = _stateQuantizer->GetVectorFromIndex(cellIndex);
+
+		// Find where the edges reside in the space per dimension
+		Vector edgePoses(_spaceDimension * 2);
+		vector<long> edgeCellIndices;
+
+		for (unsigned int dim = 0; dim < _spaceDimension; dim++) {
+			// Get the position where the edge resides in the space
+			edgePoses[dim * 2] = cellCenter[dim] - _spaceEta[dim] * 0.5;
+			edgePoses[dim * 2 + 1] = cellCenter[dim] + _spaceEta[dim] * 0.5;
+
+			// Get the indices of the adjacent cells
+			auto lowerCell = cellCenter;
+			lowerCell[dim] = lowerCell[dim] - _spaceEta[dim];
+
+			auto upperCell = cellCenter;
+			upperCell[dim] = upperCell[dim] + _spaceEta[dim];
+
+			edgeCellIndices.push_back(_stateQuantizer->GetIndexFromVector(lowerCell));
+			edgeCellIndices.push_back(_stateQuantizer->GetIndexFromVector(upperCell));
+		}
+
+		for (unsigned int dim = 0; dim < _spaceDimension; dim++) {
+			// Find the distance from the point to the edges
+			float distanceToLowerEdge = abs(point[dim] - edgePoses[dim* 2]);
+			float distanceToUpperEdge = abs(edgePoses[dim * 2 + 1] - point[dim]);
+
+			// Project the point based on the direction to the edges
+			Vector lowerProjectedPos = point + (direction * (1 / direction[dim]) * distanceToLowerEdge);
+			Vector upperProjectedPos = point + (direction * (1 / direction[dim]) * distanceToUpperEdge);
+
+			// Check if the intersection with the edge is leaving the current cell
+			bool exitsThroughEdgeInLower = true;
+			bool exitsThroughEdgeInUpper = true;
+			for (unsigned int i = 0; i < _spaceDimension; i++) {
+				if (i == dim) {
+					if (lowerProjectedPos[i] < cellCenter[i]) exitsThroughEdgeInUpper = false;
+					else exitsThroughEdgeInLower = false;
+				}
+
+				if (lowerProjectedPos[i] < edgePoses[i * 2] || lowerProjectedPos[i] > edgePoses[i * 2 + 1]) exitsThroughEdgeInLower = false;
+				if (upperProjectedPos[i] < edgePoses[i * 2] || upperProjectedPos[i] > edgePoses[i * 2 + 1]) exitsThroughEdgeInUpper = false;
 			}
 
-			// Update current cell
+			if (exitsThroughEdgeInLower) {
+				auto index = edgeCellIndices.at(dim * 2);
 
+				if (index != lastCellIndex) {
+					point = lowerProjectedPos;
+					return index;
+				}
+			}
+			else if (exitsThroughEdgeInUpper) {
+				auto index = edgeCellIndices.at(dim * 2 + 1);
 
-			_transitions[index].AddEnd(currentCellIndex);
+				if (index != lastCellIndex) {
+					point = lowerProjectedPos;
+					return index;
+				}
+			}
 		}
+
+		return -1;
 	}
 
 
@@ -469,11 +655,5 @@ namespace COSYNNC {
 		if (index < 0 || index > _stateQuantizer->GetCardinality()) return false;
 	
 		return _winningSet[index];
-	}
-
-
-	// Sets whether or not to use the over approximation for verifier
-	void Verifier::SetUseOverApproximation(bool value) {
-		_useOverApproximation = value;
 	}
 }

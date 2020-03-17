@@ -180,7 +180,6 @@ namespace COSYNNC {
 
 		_verifier = new Verifier(_plant, &_controller, _stateQuantizer, _inputQuantizer);
 		_verifier->SetVerboseMode(_verboseVerifier);
-		_verifier->SetUseOverApproximation(true);
 
 		_fileManager = FileManager(_neuralNetwork, _verifier, _stateQuantizer, _inputQuantizer, &_specification, &_controller);
 		_bddManager = BddManager(&_controller, _verifier, _stateQuantizer, _inputQuantizer);
@@ -293,6 +292,7 @@ namespace COSYNNC {
 		else if (isInSpecificationSet) AddToTrainingQueue(states, reinforcingLabels);
 		else AddToTrainingQueue(states, deterringLabels);
 	}
+
 
 	// Retrieve the training data for a single trianing step
 	void Procedure::GetDataForTrainingStep(Vector state, vector<Vector>* reinforcingLabels, vector<Vector>* deterringLabels, Vector* input, Vector* networkOutput, Vector* newState, bool* isInSpecificationSet, float* norm) {
