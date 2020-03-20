@@ -39,4 +39,16 @@ namespace COSYNNC {
 	vector<long> Transition::GetEnds() const {
 		return _ends;
 	}
+
+
+	// Checks if the input has changed for the transition, if so it will clear the transition otherwise continue
+	bool Transition::HasInputChanged(Vector input) {
+		if (_input == input) return false;
+		else {
+			_input = input;
+			_ends.clear();
+
+			return true;
+		}
+	}
 }

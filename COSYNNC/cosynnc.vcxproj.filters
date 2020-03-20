@@ -96,7 +96,7 @@
     <ClCompile Include="BddManager.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
-    <ClCompile Include="Plane.cpp">
+    <ClCompile Include="Hyperplane.cpp">
       <Filter>Source Files\Utilities</Filter>
     </ClCompile>
   </ItemGroup>
@@ -149,7 +149,7 @@
     <ClInclude Include="BddManager.h">
       <Filter>Header Files\IO</Filter>
     </ClInclude>
-    <ClInclude Include="Plane.h">
+    <ClInclude Include="Hyperplane.h">
       <Filter>Header Files\Utilities</Filter>
     </ClInclude>
   </ItemGroup>

@@ -24,6 +24,8 @@ namespace COSYNNC {
 		auto stateSpaceCardinality = _stateQuantizer->GetCardinality();
 
 		_transitions = new Transition[stateSpaceCardinality];
+		for (unsigned long index = 0; index < stateSpaceCardinality; index++) _transitions[index] = Transition(index);
+
 		_winningSet = new bool[stateSpaceCardinality] { false };
 	}
 
@@ -36,10 +38,6 @@ namespace COSYNNC {
 
 	// Calculates the transition function that transitions any state in the state space to a set of states in the state space based on the control law
 	void Verifier::ComputeTransitionFunction() {
-		// Free up previous transitions
-		delete[] _transitions;
-		_transitions = new Transition[_spaceCardinality];
-
 		if (_spaceCardinality > 10000) std::cout << "\t\t";
 		for (long index = 0; index < _spaceCardinality; index++) {
 			// Print status to monitor progression
@@ -55,83 +53,35 @@ namespace COSYNNC {
 
 	// Computes the transition function for a single index
 	void Verifier::ComputeTransitionFunctionForIndex(long index, Vector input) {
-		_transitions[index] = Transition(index);
+		if (_transitions[index].HasInputChanged(input)) {
+			auto state = _stateQuantizer->GetVectorFromIndex(index);
+			_plant->SetState(state);
 
-		auto state = _stateQuantizer->GetVectorFromIndex(index);
+			auto newState = _plant->EvaluateOverApproximation(input);
 
-		_plant->SetState(state);
-		auto newState = _plant->EvaluateOverApproximation(input);
-
-		// Check if newState is in bound, if not we know the transition already
-		if (!_stateQuantizer->IsInBounds(newState)) {
-			_transitions[index].AddEnd(-1);
-			return;
-		}
-
-		// Evolve the vertices of the hyper cell to determine the new hyper cell
-		auto vertices = OverApproximateEvolution(state, input);
-		
-		// Get the point in space that represents the center of the vertices
-		auto center = Vector(_spaceDimension);
-		for (unsigned int i = 0; i < _amountOfVerticesPerCell; i++) {
-			center = center + vertices[i];
-		}
-		center = center * (1.0 / (float)_amountOfVerticesPerCell);
-
-		// Get the planes that arise between the vertices and define the internal area
-		auto planes = GetPlanesBetweenVertices(vertices, center);
-
-		// Flood fill as long as a vertex in a cell is in the internal area
-		FloodfillBetweenPlanes(index, center, planes);
-
-		// TEMPORARY: Over-approximate the evolved hyper cell in order to each transition calculation
-		// Find upper and lower bound that over-approximates the over-approximation
-		/*Vector lowerBoundVertex = newState;
-		Vector upperBoundVertex = newState;
-
-		for (unsigned int i = 0; i < _amountOfVerticesPerCell; i++) {
-			auto vertex = vertices[i];
-			for (unsigned int j = 0; j < _spaceDimension; j++) {
-				lowerBoundVertex[j] = min(lowerBoundVertex[j], vertex[j]);
-				upperBoundVertex[j] = max(upperBoundVertex[j], vertex[j]);
-			}
-		}
-		lowerBoundVertex = _stateQuantizer->QuantizeVector(lowerBoundVertex);
-		upperBoundVertex = _stateQuantizer->QuantizeVector(upperBoundVertex);
-
-		// Find the amount of cells per dimension axis
-		Vector cellsPerDimension(_spaceDimension);
-		unsigned long amountOfCells = 1;
-		for (unsigned int i = 0; i < _spaceDimension; i++) {
-			float delta = upperBoundVertex[i] - lowerBoundVertex[i];
-			cellsPerDimension[i] = round(delta / _spaceEta[i]) + 1;
-			amountOfCells *= cellsPerDimension[i];
-		}
-
-		// Add all the cells in the over-approximation of the new hyper cell as transitions
-		Vector currentCell = lowerBoundVertex;
-		for (unsigned int i = 0; i < amountOfCells; i++) {
-			if (i != 0) {
-				for (unsigned int j = 1; j < _spaceDimension; j++) {
-					auto modulus = (i % (unsigned int)cellsPerDimension[j - 1]);
-					if (modulus == 0) {
-						currentCell[j] += _spaceEta[j];
-						for (unsigned int k = 0; k < j; k++) {
-							currentCell[k] = lowerBoundVertex[k];
-						}
-						break;
-					}
-				}
+			// Check if newState is in bounds of the state space, if not then we know the transition already
+			if (!_stateQuantizer->IsInBounds(newState)) {
+				_transitions[index].AddEnd(-1);
+				return;
 			}
 
-			long end = _stateQuantizer->GetIndexFromVector(_stateQuantizer->QuantizeVector(currentCell));
-			_transitions[index].AddEnd(end);
+			// Evolve the vertices of the cell and find the resulting hyperplanes
+			vector<Hyperplane> hyperplanes;
+			auto vertices = OverApproximateEvolution(state, input, hyperplanes);
 
-			currentCell[0] += _spaceEta[0];
-		}*/
+			// Get the point in space that represents the center of the vertices
+			auto center = Vector(_spaceDimension);
+			for (unsigned int i = 0; i < _amountOfVerticesPerCell; i++) {
+				center = center + vertices[i];
+			}
+			center = center * (1.0 / (float)_amountOfVerticesPerCell);
 
-		// Free up memory
-		delete[] vertices;
+			// Flood fill as long as a vertex in a cell is in the internal area
+			FloodfillBetweenHyperplanes(index, center, hyperplanes);
+
+			// Free up memory
+			delete[] vertices;
+		}
 	}
 
 
@@ -384,57 +334,63 @@ namespace COSYNNC {
 
 
 	// Over approximates all the vertices and returns an array of the new vertices
-	Vector* Verifier::OverApproximateEvolution(Vector state, Vector input) {
-		auto vertices = _stateQuantizer->GetHyperCellVertices(state);
+	Vector* Verifier::OverApproximateEvolution(Vector state, Vector input, vector<Hyperplane>& hyperplanes) {
+		// Get the vertices that make up the hypercell
+		auto vertices = _stateQuantizer->GetCellVertices(state);
 
-		Vector* newStateVertices = new Vector[_amountOfVerticesPerCell];
+		// Get the hyperplanes that are naturally arise between the vertices and set the normal
+		hyperplanes = GetHyperplanesBetweenVertices(vertices, state);
 
+		// Over approximate the dynamics of the plant and update vertices
 		for (unsigned int i = 0; i < _amountOfVerticesPerCell; i++) {
 			auto vertex = vertices[i];
 
 			_plant->SetState(vertex);
-			auto newStateVertex = _plant->EvaluateOverApproximation(input);
-
-			newStateVertices[i] = newStateVertex;
+			vertices[i] = _plant->EvaluateOverApproximation(input);
 		}
 
-		delete[] vertices;
-
-		return newStateVertices;
+		// Over approximate the dynamics of the plant to update the normal vectors
+		for (unsigned int i = 0; i < hyperplanes.size(); i++) {
+			hyperplanes[i].OverApproximateNormal(_plant, input);
+		}
+				
+		return vertices;
 	}
 
 
-	// Returns the planes that naturally arise between the vertices
-	// TODO: Make this method robust with respect to input dimensionalities other than 2 dimensional onces
-	vector<Plane> Verifier::GetPlanesBetweenVertices(Vector* vertices, Vector internalPoint) {
-		vector<Plane> planes;
-		
-		// TEMPORARY: Only get planes for 1d and 2d input spaces, needs to be generalized to higher order dimensions
-		switch (_spaceDimension) {
-			case 1: {
-				planes.push_back(Plane({ vertices[0] }, internalPoint));
-				planes.push_back(Plane({ vertices[1] }, internalPoint));
-				break;
-			}
-			case 2: {
-				auto edges = GetEdgesBetweenVertices(vertices);
+	// Returns the hyperplanes that naturally arise between the vertices
+	vector<Hyperplane> Verifier::GetHyperplanesBetweenVertices(Vector* vertices, Vector cellCenter) {
+		vector<Hyperplane> hyperplanes;
+		for (unsigned int dim = 0; dim < _spaceDimension; dim++) {
+			Vector normal(_spaceDimension);
 
-				for (unsigned int i = 0; i < _amountOfEdgesPerCell; i++) {
-					auto edge = edges[i];
-					planes.push_back(Plane({ edge.GetStart(), edge.GetEnd() }, internalPoint));
+			// Process both sides
+			for (float side = -1.0; side <= 1.0; side += 1.0) {
+				if (side == 0.0) continue;
+
+				// Find vertices that are on the hyperplane
+				Hyperplane hyperplane(_spaceDimension);
+				for (unsigned int i = 0; i < _amountOfVerticesPerCell; i++) {
+					auto vertex = vertices[i];
+
+					if ((vertex[dim] * side) > (cellCenter[dim] * side)) hyperplane.AddPointToHyperplane(&(vertices[i]));
 				}
 
-				delete[] edges;
-				break;
+				// Define normal
+				normal[dim] = side * -1.0;
+				hyperplane.SetNormal(normal, cellCenter);
+
+				// Add hyperplane
+				hyperplanes.push_back(hyperplane);
 			}
 		}
 
-		return planes;
+		return hyperplanes;
 	}
 
 
 	// Flood fills between planes, adding the indices of the cells to the transitions of the origin cell
-	void Verifier::FloodfillBetweenPlanes(unsigned long index, Vector center, vector<Plane>& planes) {
+	void Verifier::FloodfillBetweenHyperplanes(unsigned long index, Vector center, vector<Hyperplane>& planes) {
 		unsigned long centerIndex = _stateQuantizer->GetIndexFromVector(center);
 
 		// Generate initial floodfill order
@@ -447,11 +403,11 @@ namespace COSYNNC {
 			unsigned long currentIndex = *indices.begin();
 
 			// Test if their is a vertex of the current cell that is within the planes
-			auto vertices = _stateQuantizer->GetHyperCellVertices(currentIndex);
+			auto vertices = _stateQuantizer->GetCellVertices(currentIndex);
 
 			bool isBetweenPlanes = false;
 			for (unsigned int i = 0; i < _amountOfVerticesPerCell; i++) {
-				if (IsPointBetweenPlanes(vertices[i], planes)) {
+				if (IsPointBetweenHyperplanes(vertices[i], planes)) {
 					isBetweenPlanes = true;
 					break;
 				}
@@ -509,7 +465,7 @@ namespace COSYNNC {
 
 
 	// Checks if a point is contained between planes
-	bool Verifier::IsPointBetweenPlanes(Vector point, vector<Plane>& planes) {
+	bool Verifier::IsPointBetweenHyperplanes(Vector point, vector<Hyperplane>& planes) {
 		for (unsigned int i = 0; i < planes.size(); i++) {
 			if (!planes[i].IsPointOnInternalSide(point)) return false;
 		}
@@ -518,7 +474,7 @@ namespace COSYNNC {
 	}
 
 
-	// Returns the edges between a set of vertices if the vertices are properly sorted
+	// LEGACY: Returns the edges between a set of vertices if the vertices are properly sorted
 	Edge* Verifier::GetEdgesBetweenVertices(Vector* vertices) {
 		Edge* edges = new Edge[_amountOfEdgesPerCell];
 
@@ -551,102 +507,6 @@ namespace COSYNNC {
 		}
 
 		return edges;
-	}
-
-
-	// LEGACY: Walks over a single edge and adds all the cells it crosses to the transitions for flood filling
-	void Verifier::AddEdgeToTransitions(Edge* edge, unsigned long index) {
-		auto direction = edge->GetDirection();
-
-		auto point = edge->GetStart();
-		auto cellIndex = _stateQuantizer->GetIndexFromVector(point);
-		auto lastCellIndex = cellIndex;
-
-		_transitions[index].AddEnd(cellIndex);
-
-		auto endCellIndex = _stateQuantizer->GetIndexFromVector(edge->GetEnd());
-
-		
-		while (cellIndex != endCellIndex) {
-			auto newCellIndex = FindLeavingEdge(point, direction, cellIndex, lastCellIndex);
-			_transitions[index].AddEnd(newCellIndex);
-
-			lastCellIndex = cellIndex;
-			cellIndex = newCellIndex;
-
-			// TEMPORARY: Need to implement the ability to handle out of domain indices..
-			if (cellIndex == -1) {
-				return;
-			}
-		}
-	}
-
-
-	// LEGACY: Finds the leaving edge through which a vector leaves a cell and returns the index of the cell it enters
-	long Verifier::FindLeavingEdge(Vector& point, Vector direction, unsigned long cellIndex, long lastCellIndex) {
-		auto cellCenter = _stateQuantizer->GetVectorFromIndex(cellIndex);
-
-		// Find where the edges reside in the space per dimension
-		Vector edgePoses(_spaceDimension * 2);
-		vector<long> edgeCellIndices;
-
-		for (unsigned int dim = 0; dim < _spaceDimension; dim++) {
-			// Get the position where the edge resides in the space
-			edgePoses[dim * 2] = cellCenter[dim] - _spaceEta[dim] * 0.5;
-			edgePoses[dim * 2 + 1] = cellCenter[dim] + _spaceEta[dim] * 0.5;
-
-			// Get the indices of the adjacent cells
-			auto lowerCell = cellCenter;
-			lowerCell[dim] = lowerCell[dim] - _spaceEta[dim];
-
-			auto upperCell = cellCenter;
-			upperCell[dim] = upperCell[dim] + _spaceEta[dim];
-
-			edgeCellIndices.push_back(_stateQuantizer->GetIndexFromVector(lowerCell));
-			edgeCellIndices.push_back(_stateQuantizer->GetIndexFromVector(upperCell));
-		}
-
-		for (unsigned int dim = 0; dim < _spaceDimension; dim++) {
-			// Find the distance from the point to the edges
-			float distanceToLowerEdge = abs(point[dim] - edgePoses[dim* 2]);
-			float distanceToUpperEdge = abs(edgePoses[dim * 2 + 1] - point[dim]);
-
-			// Project the point based on the direction to the edges
-			Vector lowerProjectedPos = point + (direction * (1 / direction[dim]) * distanceToLowerEdge);
-			Vector upperProjectedPos = point + (direction * (1 / direction[dim]) * distanceToUpperEdge);
-
-			// Check if the intersection with the edge is leaving the current cell
-			bool exitsThroughEdgeInLower = true;
-			bool exitsThroughEdgeInUpper = true;
-			for (unsigned int i = 0; i < _spaceDimension; i++) {
-				if (i == dim) {
-					if (lowerProjectedPos[i] < cellCenter[i]) exitsThroughEdgeInUpper = false;
-					else exitsThroughEdgeInLower = false;
-				}
-
-				if (lowerProjectedPos[i] < edgePoses[i * 2] || lowerProjectedPos[i] > edgePoses[i * 2 + 1]) exitsThroughEdgeInLower = false;
-				if (upperProjectedPos[i] < edgePoses[i * 2] || upperProjectedPos[i] > edgePoses[i * 2 + 1]) exitsThroughEdgeInUpper = false;
-			}
-
-			if (exitsThroughEdgeInLower) {
-				auto index = edgeCellIndices.at(dim * 2);
-
-				if (index != lastCellIndex) {
-					point = lowerProjectedPos;
-					return index;
-				}
-			}
-			else if (exitsThroughEdgeInUpper) {
-				auto index = edgeCellIndices.at(dim * 2 + 1);
-
-				if (index != lastCellIndex) {
-					point = lowerProjectedPos;
-					return index;
-				}
-			}
-		}
-
-		return -1;
 	}
 
 

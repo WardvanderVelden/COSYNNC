@@ -3,7 +3,7 @@
 #include "Controller.h"
 #include "Quantizer.h"
 #include "Transition.h"
-#include "Plane.h"
+#include "Hyperplane.h"
 
 namespace COSYNNC {
 	class Verifier {
@@ -42,29 +42,23 @@ namespace COSYNNC {
 		// Get a random vector from the set of losing states which neighbor winning states
 		Vector GetVectorFromLosingNeighborDomain();
 
-		// Over approximates all the vertices based on the input and returns an array of the new vertices
-		Vector* OverApproximateEvolution(Vector state, Vector input);
+		// Over-approximates the vertices of the original cell and returns the hyperplanes that result from the over-approximation
+		Vector* OverApproximateEvolution(Vector state, Vector input, vector<Hyperplane>& hyperplanes);
 
-		// Returns the planes that naturally arise between the vertices
-		vector<Plane> GetPlanesBetweenVertices(Vector* vertices, Vector internalPoint);
+		// Returns the hyperplanes that naturally arise between the vertices
+		vector<Hyperplane> GetHyperplanesBetweenVertices(Vector* vertices, Vector cellCenter);
 
 		// Flood fills between planes, adding the indices of the cells to the transitions of the origin cell
-		void FloodfillBetweenPlanes(unsigned long index, Vector center, vector<Plane>& planes);
+		void FloodfillBetweenHyperplanes(unsigned long index, Vector center, vector<Hyperplane>& planes);
 
 		// Generates the appropriate floodfill indices based on the current inex and the processed indices
 		void AddFloodfillOrder(Vector center, Vector direction, vector<unsigned long>& indices, vector<unsigned long>& processedIndices);
 
 		// Checks if a point is contained between planes
-		bool IsPointBetweenPlanes(Vector point, vector<Plane>& planes);
+		bool IsPointBetweenHyperplanes(Vector point, vector<Hyperplane>& planes);
 
-		// Returns the edges between a set of vertices if the vertices are properly sorted
+		// LEGACY: Returns the edges between a set of vertices if the vertices are properly sorted
 		Edge* GetEdgesBetweenVertices(Vector* vertices);
-
-		// LEGACY: Walks over a single edge and adds all the cells it crosses to the transitions for flood filling
-		void AddEdgeToTransitions(Edge* edge, unsigned long index);
-
-		// LEGACY: Finds the leaving edge through which a vector leaves a cell
-		long FindLeavingEdge(Vector& point, Vector direction, unsigned long cellIndex, long lastCellIndex);
 
 		// Returns the last calculated percentage of the winning domain compared to the state space
 		float GetWinningDomainPercentage();

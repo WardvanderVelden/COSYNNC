@@ -100,7 +100,7 @@ Vector Quantizer::DenormalizeVector(Vector normal) {
 }
 
 
-// Returns the nearest quantized element in the quantized space with a probability and the alternative
+// LEGACY: Returns the nearest quantized element in the quantized space with a probability and the alternative
 vector<ProbabilisticVector> Quantizer::QuantizeVectorProbabilistically(Vector denormal) {
 	vector<ProbabilisticVector> vectors;
 
@@ -154,6 +154,18 @@ vector<ProbabilisticVector> Quantizer::QuantizeVectorProbabilistically(Vector de
 }
 
 
+// Checks if a vector is in the bounds of the quantized space
+bool Quantizer::IsInBounds(Vector vector) {
+	for (int i = 0; i < vector.GetLength(); i++) {
+		if (vector[i] < _spaceLowerBound[i] || vector[i] > _spaceUpperBound[i]) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+
 // Returns the input that corresponds to the labelled output of the network
 Vector Quantizer::GetVectorFromOneHot(Vector oneHot) {
 	int index = 0;
@@ -192,18 +204,6 @@ long Quantizer::GetIndexFromVector(Vector vector) {
 	}
 
 	return index;
-}
-
-
-// Checks if a vector is in the bounds of the quantized space
-bool Quantizer::IsInBounds(Vector vector) {
-	for (int i = 0; i < vector.GetLength(); i++) {
-		if (vector[i] < _spaceLowerBound[i] || vector[i] > _spaceUpperBound[i]) {
-			return false;
-		}
-	}
-
-	return true;
 }
 
 
@@ -253,7 +253,7 @@ Vector Quantizer::GetSpaceEta() const {
 
 
 // Returns an array of vectors which are the vertices of the hyper cell
-Vector* Quantizer::GetHyperCellVertices(Vector cell) {
+Vector* Quantizer::GetCellVertices(Vector cell) {
 	const unsigned int amountOfVertices = pow(2.0, (double)_spaceDimension);
 
 	auto cellCenter = QuantizeVector(cell);
@@ -281,7 +281,7 @@ Vector* Quantizer::GetHyperCellVertices(Vector cell) {
 
 
 // Returns an array of vectors which are the vertices of the hyper cell
-Vector* Quantizer::GetHyperCellVertices(unsigned long cellIndex) {
+Vector* Quantizer::GetCellVertices(unsigned long cellIndex) {
 	const unsigned int amountOfVertices = pow(2.0, (double)_spaceDimension);
 
 	auto cellCenter = GetVectorFromIndex(cellIndex);

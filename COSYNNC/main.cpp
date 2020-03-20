@@ -48,7 +48,7 @@ void SynthesizeInvarianceControllerDCDC() {
 	cosynnc.Initialize();
 
 	// Load a previously trained network
-	cosynnc.LoadNeuralNetwork("controllers/timestamps", "TueMar3145143net.m");
+	cosynnc.LoadNeuralNetwork("controllers/timestamps", "FriMar20115005net.m");
 
 	// Run the synthesize procedure
 	cosynnc.Synthesize();
@@ -73,15 +73,14 @@ void SynthesizeReachabilityControllerDCDC() {
 	// Specify the synthesis parameters
 	cosynnc.SpecifySynthesisParameters(1000000, 100, 2500, 50000, 50);
 	cosynnc.SpecifyRadialInitialState(0.4, 0.6);
-	//cosynnc.SpecifyNorm({ 1.0, 1.0 });
 	//cosynnc.SpecifyNorm({ 0.0, 1.0 });
 	cosynnc.SpecifyWinningSetReinforcement(true);
 	cosynnc.SpecifyTrainingFocus(TrainingFocus::AlternatingRadialLosingNeighborLosing);
 
 	// Link a neural network to the procedure
-	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 8, 8, 8 }, ActivationActType::kRelu, OutputType::Labelled);
-	multilayerPerceptron->InitializeOptimizer("adam", 0.005, 0.001);
-	//multilayerPerceptron->InitializeOptimizer("sgd", 0.0025, 0.001);
+	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 8, 8 }, ActivationActType::kRelu, OutputType::Labelled);
+	//multilayerPerceptron->InitializeOptimizer("adam", 0.005, 0.001);
+	multilayerPerceptron->InitializeOptimizer("sgd", 0.0025, 0.001);
 	cosynnc.SetNeuralNetwork(multilayerPerceptron);
 
 	// Specify the control specification
@@ -94,11 +93,11 @@ void SynthesizeReachabilityControllerDCDC() {
 	cosynnc.Initialize();
 
 	// Load a previously trained network
-	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "WedMar11142054net.m"); 
+	cosynnc.LoadNeuralNetwork("controllers/timestamps", "WedMar18162433net.m"); 
 
 	// Run the synthesize procedure
 	cosynnc.Synthesize();
-
+	
 	// Free up memory
 	delete dcdc;
 	delete multilayerPerceptron;
