@@ -138,6 +138,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MultilayerPerceptron.cpp" />
     <ClCompile Include="NeuralNetwork.cpp" />
+    <ClCompile Include="Hyperplane.cpp" />
     <ClCompile Include="Plant.cpp" />
     <ClCompile Include="Procedure.cpp" />
     <ClCompile Include="Quantizer.cpp" />
@@ -156,6 +157,7 @@
     <ClInclude Include="FileManager.h" />
     <ClInclude Include="MultilayerPerceptron.h" />
     <ClInclude Include="NeuralNetwork.h" />
+    <ClInclude Include="Hyperplane.h" />
     <ClInclude Include="Plant.h" />
     <ClInclude Include="Procedure.h" />
     <ClInclude Include="Quantizer.h" />

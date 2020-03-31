@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include "Vector.h"
 
 using namespace std;
 
@@ -24,10 +25,15 @@ namespace COSYNNC {
 
 		// Returns the ends
 		vector<long> GetEnds() const;
+
+		// Checks if the input has changed for the transition, if so it will clear the transition otherwise continue
+		bool HasInputChanged(Vector input);
 	private:
 		long _start = -1;
 
 		vector<long> _ends;
 		unsigned int _amountOfEnds = 0;
+
+		Vector _input;
 	};
 }

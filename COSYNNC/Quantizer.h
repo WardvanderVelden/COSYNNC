@@ -37,8 +37,11 @@ namespace COSYNNC {
 		// Denormalize a vector a vector from the normal space to the bounded space
 		Vector DenormalizeVector(Vector normal);
 
-		// Returns the nearest quantized element in the quantized space and returns its probability, also provides a random alternative
+		// LEGACY: Returns the nearest quantized element in the quantized space and returns its probability, also provides a random alternative
 		vector<ProbabilisticVector> QuantizeVectorProbabilistically(Vector denormal);
+
+		// Checks if a vector is in the bounds of the quantized space
+		bool IsInBounds(Vector vector);
 
 		// Returns the vector that corresponds to the labelled output of the network
 		Vector GetVectorFromOneHot(Vector oneHot);
@@ -58,9 +61,6 @@ namespace COSYNNC {
 		// Returns the dimension of the space
 		int GetSpaceDimension() const;
 
-		// Checks if a vector is in the bounds of the quantized space
-		bool IsInBounds(Vector vector);
-
 		// Returns the lower bound of the quantizer
 		Vector GetSpaceLowerBound() const;
 
@@ -71,7 +71,8 @@ namespace COSYNNC {
 		Vector GetSpaceEta() const;
 
 		// Returns an array of vectors which are the vertices of the hyper cell
-		Vector* GetHyperCellVertices(Vector cell);
+		Vector* GetCellVertices(Vector cell);
+		Vector* GetCellVertices(unsigned long cellIndex);
 	private:
 		bool _isBounded = false;
 

@@ -40,6 +40,9 @@ namespace COSYNNC {
 		// Save the controller as a static controller, just like old versions of SCOTS used to do
 		void SaveControllerAsStaticController(string path, string name);
 
+		// Writes the synthesis status to the log file for debug purposes
+		void WriteSynthesisStatusToLog(string path, string name, string plantName, string timestamp);
+
 		// Writes the quantization parameters for the state and input quantizer to a MATLAB file
 		void WriteQuantizationParametersToMATLABFile(ofstream* file);
 

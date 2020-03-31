@@ -3,6 +3,7 @@
 #include "Controller.h"
 #include "Quantizer.h"
 #include "Transition.h"
+#include "Hyperplane.h"
 
 namespace COSYNNC {
 	class Verifier {
@@ -19,6 +20,9 @@ namespace COSYNNC {
 
 		// Computes the winning set for which the controller currently is able to adhere to the control specification
 		void ComputeWinningSet();
+
+		// Performs a single fixed point iteration, returns whether or not the set has changed
+		bool PerformFixedPointIteration();
 
 		// Determines the losing set and the set of losing cells which are next to the winning domain
 		void DetermineLosingSet();
@@ -41,14 +45,23 @@ namespace COSYNNC {
 		// Get a random vector from the set of losing states which neighbor winning states
 		Vector GetVectorFromLosingNeighborDomain();
 
-		// Over approximates all the vertices based on the input and returns an array of the new vertices
-		Vector* OverApproximateEvolution(Vector state, Vector input);
+		// Over-approximates the vertices of the original cell and returns the hyperplanes that result from the over-approximation
+		Vector* OverApproximateEvolution(Vector state, Vector input, vector<Hyperplane>& hyperplanes);
 
-		// Returns the edges between a set of vertices if the vertices are properly sorted
-		Edge* GetEdgesBetweenVertices(Vector* vertices);
+		// Returns the hyperplanes that naturally arise between the vertices
+		vector<Hyperplane> GetHyperplanesBetweenVertices(Vector* vertices, Vector cellCenter);
 
-		// Walks over a single edge and adds all the cells it crosses to the transitions for flood filling
-		void AddEdgeToTransitions(Edge* edge, unsigned long index);
+		// Flood fills between planes, adding the indices of the cells to the transitions of the origin cell
+		void FloodfillBetweenHyperplanes(unsigned long index, Vector center, vector<Hyperplane>& planes);
+
+		// Generates the appropriate floodfill indices based on the current inex and the processed indices
+		void AddFloodfillOrder(Vector center, Vector direction, vector<unsigned long>& indices, vector<unsigned long>& processedIndices);
+
+		// Checks if a point is contained between planes
+		bool IsPointBetweenHyperplanes(Vector point, vector<Hyperplane>& planes);
+
+		// Calculates the vertices to hyperplane distribution
+		void CalculateVerticesOnHyperplaneDistribution();
 
 		// Returns the last calculated percentage of the winning domain compared to the state space
 		float GetWinningDomainPercentage();
@@ -56,8 +69,8 @@ namespace COSYNNC {
 		// Returns whether or not an index is in the winning domain
 		bool IsIndexInWinningSet(unsigned long index);
 
-		// Sets whether or not to use the over approximation for verifier
-		void SetUseOverApproximation(bool value);
+		// TEMPORARY: Validation method in order to verify and bugfix the behaviour of the verifier, returns true when the domain is indeed valid
+		bool ValidateDomain();
 	private:
 		Plant* _plant;
 		Controller* _controller;
@@ -75,8 +88,9 @@ namespace COSYNNC {
 
 		const unsigned int _maxSteps = 50;
 
-		const float _interpolationPrecisionFactor = 0.1;
+		bool _verboseMode = false;
 
+		// Quantization specific parameters
 		unsigned int _spaceDimension;
 		unsigned long _spaceCardinality;
 		Vector _spaceEta;
@@ -87,8 +101,7 @@ namespace COSYNNC {
 		unsigned int _amountOfVerticesPerCell;
 		unsigned int _amountOfEdgesPerCell;
 
-		bool _useOverApproximation = true;
-
-		bool _verboseMode = false;
+		vector<vector<unsigned short>> _verticesOnHyperplaneDistribution;
+		vector<Vector> _normalsOfHyperplane;
 	};
 }

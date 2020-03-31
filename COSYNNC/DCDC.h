@@ -4,7 +4,7 @@
 namespace COSYNNC {
 	class DCDC : public Plant {
 	public:
-		DCDC() : Plant(2, 1, 0.5) { }
+		DCDC() : Plant(2, 1, 0.5, "DCDC", true) { }
 
 		Vector PlantODE(Vector x, float t) override;
 
