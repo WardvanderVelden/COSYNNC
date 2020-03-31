@@ -70,8 +70,8 @@ namespace COSYNNC {
 		// Run the synthesis procedure
 		void Synthesize();
 
-		// Run a training episode
-		void RunEpisode(unsigned int episodeNumber);
+		// Iterate the training episode
+		void IterateEpisode(unsigned int episodeNumber);
 
 		// Retrieve the training data for a single trianing step
 		void GetDataForTrainingStep(Vector state, vector<Vector>* reinforcingLabels, vector<Vector>* deterringLabels, Vector* input, Vector* networkOutput, Vector* newState, bool* isInSpecificationSet, float* norm);
@@ -143,6 +143,10 @@ namespace COSYNNC {
 		vector<float> _normWeights = { 1.0, 1.0 };
 
 		bool _useWinningSetReinforcement = false;
+
+		// Controller log
+		float _bestControllerWinningDomainPercentage = 0.0;
+		string _bestControllerTimestamp = "";
 
 		// Debug and logging parameters
 		bool _verboseTrainer = true;

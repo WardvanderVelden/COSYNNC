@@ -2,7 +2,13 @@
 
 using namespace COSYNNC;
 
-Plant::Plant(int stateSpaceDimension, int inputSpaceDimension, float h) : _stateSpaceDim(stateSpaceDimension), _inputSpaceDim(inputSpaceDimension), _h(h) {
+Plant::Plant(int stateSpaceDimension, int inputSpaceDimension, float h, string name, bool isLinear) : 
+	_stateSpaceDim(stateSpaceDimension), 
+	_inputSpaceDim(inputSpaceDimension),
+	_h(h), 
+	_name(name), 
+	_isLinear(isLinear) {
+
 	_x.SetLength(stateSpaceDimension);
 	_u.SetLength(inputSpaceDimension);
 }

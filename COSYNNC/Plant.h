@@ -9,7 +9,7 @@ namespace COSYNNC {
 	{
 	public:
 		// Initializes the plant based on the state space dimension, the input space dimension and the time step
-		Plant(int stateSpaceDimension = 0, int inputSpaceDimension = 0, float tau = 0.1);
+		Plant(int stateSpaceDimension = 0, int inputSpaceDimension = 0, float tau = 0.1, string name = "Plant", bool isLinear = false);
 
 		// Defines the dynamics of the plant for a single time step tau
 		virtual Vector EvaluateDynamics(Vector input);
@@ -35,6 +35,12 @@ namespace COSYNNC {
 		// Returns the time step size
 		float GetStepSize() const { return _h; }
 
+		// Returns if the plant is linear
+		bool GetIsLinear() const { return _isLinear; }
+
+		// Returns the name of the plant
+		string GetName() const { return _name; }
+
 		// Prints the current state of the system
 		void PrintState() const;
 
@@ -44,6 +50,10 @@ namespace COSYNNC {
 	protected:
 		const int _stateSpaceDim;
 		const int _inputSpaceDim;
+
+		const bool _isLinear;
+
+		const string _name;
 
 		const float _h;
 

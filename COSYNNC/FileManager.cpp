@@ -41,7 +41,6 @@ namespace COSYNNC {
 	}
 
 
-
 	// Loads a neural network
 	void FileManager::LoadNetworkFromMATLAB(string path, string name) {
 		ifstream file(path + "/" + name, std::ios_base::in);
@@ -255,6 +254,16 @@ namespace COSYNNC {
 			}
 		}
 		file << "#END";
+
+		file.close();
+	}
+
+
+	// Writes the synthesis status to the log file for debug purposes
+	void FileManager::WriteSynthesisStatusToLog(string path, string name, string plantName, string timestamp) {
+		ofstream file(path + "/" + name + ".txt", std::ios_base::app);
+
+		file <<  plantName << " " << timestamp << " " << _verifier->GetWinningDomainPercentage() << "\n";
 
 		file.close();
 	}

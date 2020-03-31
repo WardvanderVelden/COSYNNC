@@ -20,6 +20,8 @@ namespace COSYNNC {
 		_amountOfVerticesPerCell = pow(2.0, (double)_spaceDimension);
 		_amountOfEdgesPerCell = _spaceDimension * pow(2.0, (double)_spaceDimension - 1);
 
+		CalculateVerticesOnHyperplaneDistribution();
+
 		// Initialize transitions and winning set
 		auto stateSpaceCardinality = _stateQuantizer->GetCardinality();
 
@@ -38,16 +40,16 @@ namespace COSYNNC {
 
 	// Calculates the transition function that transitions any state in the state space to a set of states in the state space based on the control law
 	void Verifier::ComputeTransitionFunction() {
-		if (_spaceCardinality > 10000) std::cout << "\t\t";
+		std::cout << "\t\t";
 		for (long index = 0; index < _spaceCardinality; index++) {
 			// Print status to monitor progression
-			if (_spaceCardinality > 10000 && index % ((long)floor(_spaceCardinality / 20)) == 0) std::cout << (float)((float)index / (float)_spaceCardinality * 100.0) << "% . ";
+			if (index % ((long)floor(_spaceCardinality / 20)) == 0) std::cout << (float)((float)index / (float)_spaceCardinality * 100.0) << "% . ";
 		
 			auto input = _controller->GetInputFromIndex(index);
 
 			ComputeTransitionFunctionForIndex(index, input);
 		}
-		if (_spaceCardinality > 10000) std::cout << std::endl;
+		std::cout << std::endl;
 	}
 
 
@@ -126,43 +128,10 @@ namespace COSYNNC {
 		bool iterationConverged = false;
 		int iterations = 0;
 		while (!iterationConverged) {
-			bool setHasChanged = false;
 			iterations++;
+			std::cout << "\t i: " << iterations;
 
-			if (_spaceCardinality > 10000) {
-				std::cout << "\t i: " << iterations << std::endl;
-			}
-
-			for (long index = 0; index < _spaceCardinality; index++) {
-				// Determine if the transition always ends in the winning set
-				auto ends = _transitions[index].GetEnds();
-
-				bool alwaysEndsInWinningSet = true;
-				for (auto end : ends) {
-					if (end == -1 || !_winningSet[end]) alwaysEndsInWinningSet = false;
-				}
-
-				// Handle transitions based on specification
-				switch (_specification->GetSpecificationType()) {
-				case ControlSpecificationType::Invariance:
-					if (!_winningSet[index]) break;
-
-					if (!alwaysEndsInWinningSet) {
-						auto changed = SetWinningDomain(index, false);
-						if (!setHasChanged) setHasChanged = changed;
-					}
-					break;
-
-				case ControlSpecificationType::Reachability:
-					if (_winningSet[index]) break;
-
-					if (alwaysEndsInWinningSet) {
-						auto changed = SetWinningDomain(index, true);
-						if (!setHasChanged) setHasChanged = changed;
-					}
-					break;
-				}
-			}
+			auto setHasChanged = PerformFixedPointIteration();
 
 			// DEBUG: Print a map of the set to depict its evolution
 			if (_verboseMode) {
@@ -174,7 +143,31 @@ namespace COSYNNC {
 				std::cout << std::endl;
 			}
 
-			if (!setHasChanged) iterationConverged = true;
+			if (!setHasChanged) {
+				if (ValidateDomain()) {
+					iterationConverged = true;
+				}
+				else {
+					std::cout << " discrepancy detected";
+					//iterationConverged = true;
+				}
+			}
+
+			std::cout << std::endl;
+		}
+
+		// DEBUG: Find winning set and look at transitions there
+		for (unsigned long index = 0; index < _spaceCardinality; index++) {
+			if (IsIndexInWinningSet(index)) {
+				std::cout << std::endl << "\t" << index << " is in winning set, transitions are: " << std::endl;
+
+				auto ends = _transitions[index].GetEnds();
+				for (unsigned int i = 0; i < ends.size(); i++) {
+					std::cout << "\t" << ends[i] << " winning: " << IsIndexInWinningSet(ends[i]) << std::endl;
+				}
+
+				break;
+			}
 		}
 
 		DetermineLosingSet();
@@ -182,6 +175,47 @@ namespace COSYNNC {
 		if(_verboseMode) std::cout << std::endl << "\tFixed point iterations: " << iterations << std::endl;
 
 		_winningDomainPercentage = (float)GetWinningSetSize() / (float)_stateQuantizer->GetCardinality() * 100;
+	}
+
+
+	// Performs a single fixed point iteration
+	bool Verifier::PerformFixedPointIteration() {
+		bool setHasChanged = false;
+
+		for (long index = 0; index < _spaceCardinality; index++) {
+			// Determine if the transition always ends in the winning set
+			auto ends = _transitions[index].GetEnds();
+
+			bool alwaysEndsInWinningSet = true;
+			if (ends.size() == 0) alwaysEndsInWinningSet = false;
+
+			for (auto end : ends) {
+				if (end == -1 || !_winningSet[end]) alwaysEndsInWinningSet = false;
+			}
+
+			// Handle transitions based on specification
+			switch (_specification->GetSpecificationType()) {
+			case ControlSpecificationType::Invariance:
+				if (!_winningSet[index]) break;
+
+				if (!alwaysEndsInWinningSet) {
+					auto changed = SetWinningDomain(index, false);
+					if (!setHasChanged) setHasChanged = changed;
+				}
+				break;
+
+			case ControlSpecificationType::Reachability:
+				if (_winningSet[index]) break;
+
+				if (alwaysEndsInWinningSet) {
+					auto changed = SetWinningDomain(index, true);
+					if (!setHasChanged) setHasChanged = changed;
+				}
+				break;
+			}
+		}
+
+		return setHasChanged;
 	}
 
 
@@ -361,28 +395,23 @@ namespace COSYNNC {
 	// Returns the hyperplanes that naturally arise between the vertices
 	vector<Hyperplane> Verifier::GetHyperplanesBetweenVertices(Vector* vertices, Vector cellCenter) {
 		vector<Hyperplane> hyperplanes;
-		for (unsigned int dim = 0; dim < _spaceDimension; dim++) {
-			Vector normal(_spaceDimension);
 
-			// Process both sides
-			for (float side = -1.0; side <= 1.0; side += 1.0) {
-				if (side == 0.0) continue;
+		for (unsigned int i = 0; i < (_spaceDimension * 2); i++) {
+			Hyperplane hyperplane(_spaceDimension);
 
-				// Find vertices that are on the hyperplane
-				Hyperplane hyperplane(_spaceDimension);
-				for (unsigned int i = 0; i < _amountOfVerticesPerCell; i++) {
-					auto vertex = vertices[i];
+			// Assign appropriate vertices to the appropriate hyperplanes based on the precalculation of the vertex distribution
+			auto verticesOnHyperplane = _verticesOnHyperplaneDistribution[i];
 
-					if ((vertex[dim] * side) > (cellCenter[dim] * side)) hyperplane.AddPointToHyperplane(&(vertices[i]));
-				}
-
-				// Define normal
-				normal[dim] = side * -1.0;
-				hyperplane.SetNormal(normal, cellCenter);
-
-				// Add hyperplane
-				hyperplanes.push_back(hyperplane);
+			for (unsigned int j = 0; j < verticesOnHyperplane.size(); j++) {
+				hyperplane.AddPointToHyperplane(&vertices[verticesOnHyperplane[j]]);
 			}
+
+			// Define the normal based on the precalculation thereof
+			auto normal = _normalsOfHyperplane[i];
+			hyperplane.SetNormal(normal, cellCenter);
+
+			// Add hyperplane
+			hyperplanes.push_back(hyperplane);
 		}
 
 		return hyperplanes;
@@ -413,7 +442,8 @@ namespace COSYNNC {
 				}
 			}
 
-			if (isBetweenPlanes) {
+			// TEMPORARY: Always add the center index to the transition
+			if (isBetweenPlanes || currentIndex == centerIndex) {
 				// Add order to transitions
 				_transitions[index].AddEnd(currentIndex);
 
@@ -474,39 +504,38 @@ namespace COSYNNC {
 	}
 
 
-	// LEGACY: Returns the edges between a set of vertices if the vertices are properly sorted
-	Edge* Verifier::GetEdgesBetweenVertices(Vector* vertices) {
-		Edge* edges = new Edge[_amountOfEdgesPerCell];
+	// Calculates the vertices to hyperplane distribution
+	void Verifier::CalculateVerticesOnHyperplaneDistribution() {
+		auto cellCenter = _stateQuantizer->GetVectorFromIndex(0);
+		auto vertices = _stateQuantizer->GetCellVertices(0);
 
-		unsigned int edgeIndex = 0;
-		unsigned int edgesAccountedFor = 0;
+		for (unsigned int dim = 0; dim < _spaceDimension; dim++) {
+			Vector normal(_spaceDimension);
 
-		for (unsigned int i = 0; i < _spaceDimension; i++) {
-			const unsigned int verticesForDimension = pow(2.0, (double)i + 1);
+			// Process both sides
+			for (float side = -1.0; side <= 1.0; side += 1.0) {
+				if (side == 0.0) continue;
 
-			edgesAccountedFor = edgeIndex;
+				// Find vertices that are on the hyperplane
+				vector<unsigned short> verticesOnHyperplane;
+				for (unsigned int i = 0; i < _amountOfVerticesPerCell; i++) {
+					auto vertex = vertices[i];
 
-			for (unsigned int j = 0; j < verticesForDimension / 2; j++) {
-				auto currentVertex = vertices[j];
-				auto facingVertex = vertices[j + verticesForDimension / 2];
+					if ((vertex[dim] * side) > (cellCenter[dim] * side)) {
+						verticesOnHyperplane.push_back(i);
+					}
+				}
 
-				edges[edgeIndex++] = Edge(currentVertex, facingVertex);
-			}
+				// Define normal
+				normal[dim] = side * -1.0;
 
-			// Add edges of lower dimension
-			for (unsigned int j = 0; j < edgesAccountedFor; j++) {
-				auto transposedEdge = edges[j];
-
-				auto transposeVector = Vector(_spaceDimension);
-				transposeVector[i] += _spaceEta[i];
-
-				transposedEdge.Transpose(transposeVector);
-
-				edges[edgeIndex++] = Edge(transposedEdge);
+				// Add normal to distribution
+				_verticesOnHyperplaneDistribution.push_back(verticesOnHyperplane);
+				_normalsOfHyperplane.push_back(normal);
 			}
 		}
 
-		return edges;
+		delete[] vertices;
 	}
 
 
@@ -515,5 +544,50 @@ namespace COSYNNC {
 		if (index < 0 || index > _stateQuantizer->GetCardinality()) return false;
 	
 		return _winningSet[index];
+	}
+
+
+
+	// TEMPORARY: Validation method in order to verify and bugfix the behaviour of the verifier
+	bool Verifier::ValidateDomain() {
+		bool hasDiscrepancy = false;
+
+		auto specificationType = _specification->GetSpecificationType();
+		
+		for (long index = 0; index < _spaceCardinality; index++) {
+			bool isLosingHole = true; // This will remain true if there is a losing state surrounded by winning states
+			bool isWinningIsland = true; // This will remain true if the is a winning state surrounded by losing states
+
+			for (unsigned int dim = 0; dim < _spaceDimension; dim++) {
+				auto cell = _stateQuantizer->GetVectorFromIndex(index);
+
+				for (int i = -1; i <= 1; i++) {
+					if (i == 0) continue;
+
+					Vector neighbor = cell;
+					neighbor[dim] = cell[dim] + (_spaceEta[dim] * i);
+
+					auto neighborIndex = _stateQuantizer->GetIndexFromVector(neighbor);
+					auto neighborWinning = IsIndexInWinningSet(neighborIndex);
+
+					if (!neighborWinning) isLosingHole = false;
+					if (neighborWinning) isWinningIsland = false;
+				}
+			}
+
+			// Handle winning islands and losing holes
+			if (isLosingHole && specificationType == ControlSpecificationType::Reachability) {
+				if (_plant->GetIsLinear()) _winningSet[index] = true;
+				hasDiscrepancy = true;
+			}
+
+			if (isWinningIsland && specificationType == ControlSpecificationType::Invariance) {
+				if (_plant->GetIsLinear()) _winningSet[index] = false;
+				hasDiscrepancy = true;
+			}
+		}
+
+		if (hasDiscrepancy) return false;
+		return true;
 	}
 }

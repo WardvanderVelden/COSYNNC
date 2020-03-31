@@ -51,9 +51,11 @@ namespace COSYNNC {
 
 	// Specify if the network should reinforce upon reaching the winning set (only applicable to reachability)
 	void Procedure::SpecifyWinningSetReinforcement(bool reinforce) {
-		_useWinningSetReinforcement = reinforce;
+		if (_specification.GetSpecificationType() == ControlSpecificationType::Reachability) {
+			_useWinningSetReinforcement = reinforce;
+		}
 
-		if (reinforce) {
+		if (_useWinningSetReinforcement) {
 			Log("COSYNNC", "Network will reinforce upon reaching the winning set.");
 		}
 		else {
@@ -198,7 +200,7 @@ namespace COSYNNC {
 
 			Log("Trainer", "Starting training");
 			for (int i = 0; i <= _maxEpisodes; i++) {
-				RunEpisode(i);
+				IterateEpisode(i);
 
 				if (i % _verificationEpisode == 0 && i != 0) {
 					Log("Verifier", "Performing fixed-point verification.");
@@ -206,6 +208,8 @@ namespace COSYNNC {
 
 					Log("File Manager", "Saving neural network with a timestamp.");
 					SaveTimestampedNetwork();
+
+					Log("COSYNNC", "Best controller so far is timestamp: " + _bestControllerTimestamp + " with winning domain percentage: " + to_string(_bestControllerWinningDomainPercentage) + "%");
 
 					// TODO: Stop if verification is in specs
 					Log("Trainer", "Continuing training.");
@@ -226,8 +230,8 @@ namespace COSYNNC {
 	}
 
 
-	// Run the training phase
-	void Procedure::RunEpisode(unsigned int episodeNumber) {
+	// Iterate the training phase
+	void Procedure::IterateEpisode(unsigned int episodeNumber) {
 		if (episodeNumber % _verboseEpisode == 0 && _verboseTrainer) std::cout << std::endl;
 
 		vector<Vector> states;
@@ -287,9 +291,9 @@ namespace COSYNNC {
 		}
 
 		// Train the neural network based on the performance of the network
-		if ((norm < initialNorm || isInSpecificationSet) && _useNorm) AddToTrainingQueue(states, reinforcingLabels);
-		else if (isInWinningSet && _useWinningSetReinforcement) AddToTrainingQueue(states, reinforcingLabels);
+		if (norm < initialNorm && _useNorm) AddToTrainingQueue(states, reinforcingLabels);
 		else if (isInSpecificationSet) AddToTrainingQueue(states, reinforcingLabels);
+		else if (isInWinningSet && _useWinningSetReinforcement) AddToTrainingQueue(states, reinforcingLabels);
 		else AddToTrainingQueue(states, deterringLabels);
 	}
 
@@ -455,6 +459,15 @@ namespace COSYNNC {
 		_fileManager.SaveVerifiedDomainAsMATLAB(path, timestampString + "dom");
 		_fileManager.SaveControllerAsStaticController(path, timestampString + "ctl");
 		_fileManager.SaveNetwork(path, timestampString + "raw");
+
+		// Log best network
+		auto currentWinningDomainPercentage = _verifier->GetWinningDomainPercentage();
+		if (currentWinningDomainPercentage > _bestControllerWinningDomainPercentage) {
+			_bestControllerTimestamp = timestampString;
+			_bestControllerWinningDomainPercentage = currentWinningDomainPercentage;
+		}
+
+		_fileManager.WriteSynthesisStatusToLog("controllers", "log", _plant->GetName(), timestampString);
 	}
 
 

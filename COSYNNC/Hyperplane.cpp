@@ -13,29 +13,6 @@ namespace COSYNNC {
 	}
 
 
-	// LEGACY: Constructor which defines the hyperplane through a set of points
-	Hyperplane::Hyperplane(vector<Vector*> points) {
-		_dimension = points.size();
-		_points = points;
-
-		CalculateNormal();
-	}
-
-
-	// LEGACY: Constructor which defines the hyperplane through a set of points and define the internal side
-	Hyperplane::Hyperplane(vector<Vector*> points, Vector internalPoint) {
-		_dimension = points.size();
-		_points = points;
-
-		CalculateNormal();
-		SetInternalSide(internalPoint);
-	}
-
-
-	// Default deconstructor
-	Hyperplane::~Hyperplane() {	}
-
-
 	// Sets the normal and hence defines the normal points of the hyperplane
 	void Hyperplane::SetNormal(Vector normal, Vector cellCenter) {
 		_normal = normal;
@@ -76,7 +53,7 @@ namespace COSYNNC {
 
 			// Evaluate dot product of the projection onto the normal
 			auto dotProduct = _normal.Dot(diff);
-			if (!_internalSignPositive) dotProduct *= -1;
+			//if (!_internalSignPositive) dotProduct *= -1;
 
 			if (dotProduct > 0.0) return true;
 		}
@@ -91,40 +68,5 @@ namespace COSYNNC {
 	// Adds a point to the definition of the hyperplane, it is up to the user to ensure it spans a valid plane
 	void Hyperplane::AddPointToHyperplane(Vector* point) {
 		_points.push_back(point);
-	}
-
-
-	// LEGACY: Defines the internal side of the hyperplane by assigning a point in space which will then become the internal side
-	void Hyperplane::SetInternalSide(Vector point) {
-		if (!IsPointOnInternalSide(point)) _internalSignPositive = false;
-	}
-
-
-	// LEGACY: Calculates the normal to the hyperplane
-	void Hyperplane::CalculateNormal() {
-		switch (_dimension) {
-			case 0: {
-				_normal = Vector(0);
-				break;
-				}
-			case 1: {
-				_normal = *_points[0];
-				break;
-			}
-			case 2: {
-				auto diff = *_points[1] - *_points[0];
-				_normal = Vector({ -diff[1], diff[0] });
-				break;
-			}
-			case 3: {
-				auto vec1 = *_points[1] - *_points[0];
-				auto vec2 = *_points[2] - *_points[1];
-
-				_normal = Vector({vec1[1] * vec2[2] - vec1[2] * vec2[1], vec1[2] * vec2[0] - vec1[0] * vec2[2], vec1[0] * vec2[1] - vec1[1] * vec2[0]}); // Cross product in 3d
-				break;
-			}
-		}
-
-		_normal.Normalize();
 	}
 }

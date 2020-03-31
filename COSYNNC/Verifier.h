@@ -21,6 +21,9 @@ namespace COSYNNC {
 		// Computes the winning set for which the controller currently is able to adhere to the control specification
 		void ComputeWinningSet();
 
+		// Performs a single fixed point iteration, returns whether or not the set has changed
+		bool PerformFixedPointIteration();
+
 		// Determines the losing set and the set of losing cells which are next to the winning domain
 		void DetermineLosingSet();
 
@@ -57,14 +60,17 @@ namespace COSYNNC {
 		// Checks if a point is contained between planes
 		bool IsPointBetweenHyperplanes(Vector point, vector<Hyperplane>& planes);
 
-		// LEGACY: Returns the edges between a set of vertices if the vertices are properly sorted
-		Edge* GetEdgesBetweenVertices(Vector* vertices);
+		// Calculates the vertices to hyperplane distribution
+		void CalculateVerticesOnHyperplaneDistribution();
 
 		// Returns the last calculated percentage of the winning domain compared to the state space
 		float GetWinningDomainPercentage();
 
 		// Returns whether or not an index is in the winning domain
 		bool IsIndexInWinningSet(unsigned long index);
+
+		// TEMPORARY: Validation method in order to verify and bugfix the behaviour of the verifier, returns true when the domain is indeed valid
+		bool ValidateDomain();
 	private:
 		Plant* _plant;
 		Controller* _controller;
@@ -82,8 +88,9 @@ namespace COSYNNC {
 
 		const unsigned int _maxSteps = 50;
 
-		const float _interpolationPrecisionFactor = 0.1;
+		bool _verboseMode = false;
 
+		// Quantization specific parameters
 		unsigned int _spaceDimension;
 		unsigned long _spaceCardinality;
 		Vector _spaceEta;
@@ -94,6 +101,7 @@ namespace COSYNNC {
 		unsigned int _amountOfVerticesPerCell;
 		unsigned int _amountOfEdgesPerCell;
 
-		bool _verboseMode = false;
+		vector<vector<unsigned short>> _verticesOnHyperplaneDistribution;
+		vector<Vector> _normalsOfHyperplane;
 	};
 }

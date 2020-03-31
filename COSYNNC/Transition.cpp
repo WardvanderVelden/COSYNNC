@@ -46,7 +46,9 @@ namespace COSYNNC {
 		if (_input == input) return false;
 		else {
 			_input = input;
+
 			_ends.clear();
+			_amountOfEnds = 0;
 
 			return true;
 		}
