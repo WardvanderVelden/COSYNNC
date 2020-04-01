@@ -23,7 +23,7 @@ namespace COSYNNC {
 			// Print status to monitor progression
 			if (index % ((long)floor(spaceCardinality / 20)) == 0) std::cout << (float)((float)index / (float)spaceCardinality * 100.0) << "% . ";
 		
-			auto input = _abstraction->GetController()->GetInputFromIndex(index);
+			auto input = _abstraction->GetController()->GetControlActionFromIndex(index);
 
 			_abstraction->ComputeTransitionFunctionForIndex(index, input);
 		}
@@ -105,7 +105,7 @@ namespace COSYNNC {
 		}
 
 		// DEBUG: Find winning set and look at transitions there
-		for (unsigned long index = 0; index < _abstraction->GetStateQuantizer()->GetCardinality(); index++) {
+		/*for (unsigned long index = 0; index < _abstraction->GetStateQuantizer()->GetCardinality(); index++) {
 			if (IsIndexInWinningSet(index)) {
 				std::cout << std::endl << "\t" << index << " is in winning set, transitions are: " << std::endl;
 
@@ -116,7 +116,7 @@ namespace COSYNNC {
 
 				break;
 			}
-		}
+		}*/
 
 		DetermineLosingSet();
 
@@ -131,9 +131,12 @@ namespace COSYNNC {
 		bool hasSetChanged = false;
 
 		for (long index = 0; index < _abstraction->GetStateQuantizer()->GetCardinality(); index++) {
-			// Determine if the transition always ends in the winning set
-			auto ends = _abstraction->GetTransitionOfIndex(index)->GetEnds();
+			auto input = _abstraction->GetController()->GetControlActionFromIndex(index);
+			auto inputIndex = _abstraction->GetInputQuantizer()->GetIndexFromVector(input);
 
+			auto ends = _abstraction->GetTransitionOfIndex(index)->GetEnds(inputIndex);
+
+			// Determine if the transition always ends in the winning set
 			bool allEndsInWinningSet = true;
 			if (ends.size() == 0) allEndsInWinningSet = false;
 

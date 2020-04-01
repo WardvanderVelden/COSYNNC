@@ -12,28 +12,23 @@ namespace COSYNNC {
 		Transition();
 
 		// Constructor that initializes the transition start
-		Transition(long start);
+		Transition(long startIndex, unsigned long inputCardinality);
 
-		// Returns true if the end is already contained in this transition
-		bool Contains(long end);
+		// Adds an end without checking whether or not the end is already in the transition function
+		void AddEnd(long endIndex, unsigned long inputIndex);
 
-		// Adds an end
-		void AddEnd(long end);
-
-		// Returns the amount of ends
-		unsigned int GetAmountOfEnds() const;
+		// Returns whether or not an end index is already allocated to that input as a transition
+		bool Contains(long endIndex, unsigned long inputIndex);
 
 		// Returns the ends
-		vector<long> GetEnds() const;
+		vector<long> GetEnds(unsigned long inputIndex) const;
 
-		// Checks if the input has changed for the transition, if so it will clear the transition otherwise continue
-		bool HasInputChanged(Vector input);
+		// Check if the transition that results from that input has already been calculated, if not return false
+		bool HasTransitionBeenCalculated(unsigned long inputIndex);
 	private:
-		long _start = -1;
+		long _startIndex = -1;
+		vector<long>* _ends = nullptr;
 
-		vector<long> _ends;
-		unsigned int _amountOfEnds = 0;
-
-		Vector _input;
+		unsigned long _inputCardinality = 0;
 	};
 }

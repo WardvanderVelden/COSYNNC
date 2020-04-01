@@ -45,7 +45,7 @@ namespace COSYNNC {
 		vector<Hyperplane> GetHyperplanesBetweenVertices(Vector* vertices, Vector cellCenter);
 
 		// Flood fills between planes, adding the indices of the cells to the transitions of the origin cell
-		void FloodfillBetweenHyperplanes(unsigned long index, Vector center, vector<Hyperplane>& planes);
+		void FloodfillBetweenHyperplanes(unsigned long index, Vector center, vector<Hyperplane>& planes, unsigned long inputIndex);
 
 		// Generates the appropriate floodfill indices based on the current inex and the processed indices
 		void AddFloodfillOrder(Vector center, Vector direction, vector<unsigned long>& indices, vector<unsigned long>& processedIndices);

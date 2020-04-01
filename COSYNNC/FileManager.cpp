@@ -216,7 +216,7 @@ namespace COSYNNC {
 
 		for (unsigned long index = 0; index < _spaceCardinality; index++) {
 			if (_verifier->IsIndexInWinningSet(index)) {
-				auto input = _abstraction->GetController()->GetInputFromIndex(index);
+				auto input = _abstraction->GetController()->GetControlActionFromIndex(index);
 				auto inputIndex = _abstraction->GetInputQuantizer()->GetIndexFromVector(input);
 
 				file << index << " " << inputIndex << "\n";

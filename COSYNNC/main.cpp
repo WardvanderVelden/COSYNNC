@@ -225,8 +225,8 @@ void LoadAndCompressController(string controllerName) {
 
 
 int main() {
-	SynthesizeInvarianceControllerDCDC();
-	//SynthesizeReachabilityControllerDCDC();
+	//SynthesizeInvarianceControllerDCDC();
+	SynthesizeReachabilityControllerDCDC();
 	
 	//SynthesizeInvarianceControllerRocket();
 	//SynthesizeReachabilityControllerRocket();

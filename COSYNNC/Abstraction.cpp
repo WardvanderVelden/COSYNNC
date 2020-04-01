@@ -30,7 +30,7 @@ namespace COSYNNC {
 		auto spaceCardinality = _stateQuantizer->GetCardinality();
 		_transitions = new Transition[spaceCardinality];
 		for (unsigned long index = 0; index < spaceCardinality; index++) {
-			_transitions[index] = Transition(index);
+			_transitions[index] = Transition(index, _inputQuantizer->GetCardinality());
 		}
 	}
 
@@ -45,7 +45,8 @@ namespace COSYNNC {
 
 	// Computes the transition function for a single index
 	void Abstraction::ComputeTransitionFunctionForIndex(long index, Vector input) {
-		if (_transitions[index].HasInputChanged(input)) {
+		auto inputIndex = _inputQuantizer->GetIndexFromVector(input);
+		if (!_transitions[index].HasTransitionBeenCalculated(inputIndex)) {
 			auto state = _stateQuantizer->GetVectorFromIndex(index);
 			_plant->SetState(state);
 
@@ -53,7 +54,7 @@ namespace COSYNNC {
 
 			// Check if newState is in bounds of the state space, if not then we know the transition already
 			if (!_stateQuantizer->IsInBounds(newState)) {
-				_transitions[index].AddEnd(-1);
+				_transitions[index].AddEnd(-1, inputIndex);
 				return;
 			}
 
@@ -69,7 +70,7 @@ namespace COSYNNC {
 			center = center * (1.0 / (float)_amountOfVerticesPerCell);
 
 			// Flood fill as long as a vertex in a cell is in the internal area
-			FloodfillBetweenHyperplanes(index, center, hyperplanes);
+			FloodfillBetweenHyperplanes(index, center, hyperplanes, inputIndex);
 
 			// Free up memory
 			delete[] vertices;
@@ -129,7 +130,7 @@ namespace COSYNNC {
 
 
 	// Flood fills between planes, adding the indices of the cells to the transitions of the origin cell
-	void Abstraction::FloodfillBetweenHyperplanes(unsigned long index, Vector center, vector<Hyperplane>& planes) {
+	void Abstraction::FloodfillBetweenHyperplanes(unsigned long index, Vector center, vector<Hyperplane>& planes, unsigned long inputIndex) {
 		unsigned long centerIndex = _stateQuantizer->GetIndexFromVector(center);
 
 		// Generate initial floodfill order
@@ -152,10 +153,9 @@ namespace COSYNNC {
 				}
 			}
 
-			// TEMPORARY: Always add the center index to the transition
 			if (isBetweenPlanes || currentIndex == centerIndex) {
 				// Add order to transitions
-				_transitions[index].AddEnd(currentIndex);
+				_transitions[index].AddEnd(currentIndex, inputIndex);
 
 				// Generate new orders that branch from current order
 				auto cellCenter = _stateQuantizer->GetVectorFromIndex(currentIndex);

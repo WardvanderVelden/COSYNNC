@@ -253,7 +253,7 @@ namespace COSYNNC {
 
 
 	// Get input from the input array based on the index
-	Vector Controller::GetInputFromIndex(long index) const {
+	Vector Controller::GetControlActionFromIndex(long index) const {
 		return _inputArray[index];
 	}
 }

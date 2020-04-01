@@ -6,51 +6,43 @@ namespace COSYNNC {
 
 
 	// Constructor that initializes the transition start
-	Transition::Transition(long start) {
-		_start = start;
+	Transition::Transition(long startIndex, unsigned long inputCardinality) {
+		_startIndex = startIndex;
+		_ends = new vector<long>[inputCardinality];
+
+		for (unsigned long index = 0; index < inputCardinality; index++) {
+			_ends[index] = vector<long>();
+		}
 	}
 
 
-	// Returns true if the end is already contained in this transition
-	bool Transition::Contains(long end) {
-		for (auto index : _ends) {
-			if (index == end) return true;
+	// Adds an end without checking whether or not the end is already in the transition function
+	void Transition::AddEnd(long endIndex, unsigned long inputIndex) {
+		auto ends = _ends[inputIndex];
+		_ends[inputIndex].push_back(endIndex);
+	}
+
+
+	// Returns whether or not an end index is already allocated to that input as a transition
+	bool Transition::Contains(long endIndex, unsigned long inputIndex) {
+		auto endIndices = _ends[inputIndex];
+		for (auto end : endIndices) {
+			if (end == endIndex) return true;
 		}
 		return false;
 	}
 
 
-	// Adds an end
-	void Transition::AddEnd(long end) {
-		if (!Contains(end)) {
-			_ends.push_back(end);
-			_amountOfEnds++;
-		}
-	}
-
-
-	// Returns the amount of ends
-	unsigned int Transition::GetAmountOfEnds() const {
-		return _amountOfEnds;
-	}
-
-
 	// Returns the ends
-	vector<long> Transition::GetEnds() const {
-		return _ends;
+	vector<long> Transition::GetEnds(unsigned long inputIndex) const {
+		return _ends[inputIndex];
 	}
 
 
-	// Checks if the input has changed for the transition, if so it will clear the transition otherwise continue
-	bool Transition::HasInputChanged(Vector input) {
-		if (_input == input) return false;
-		else {
-			_input = input;
+	// Check if the transition that results from that input has already been calculated, if not return false
+	bool Transition::HasTransitionBeenCalculated(unsigned long inputIndex) {
+		if (_ends[inputIndex].size() > 0) return true;
 
-			_ends.clear();
-			_amountOfEnds = 0;
-
-			return true;
-		}
+		return false;
 	}
 }

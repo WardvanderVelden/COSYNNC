@@ -56,7 +56,7 @@ namespace COSYNNC {
 		void CompileInputArray();
 
 		// Get input from the input array based on the index
-		Vector GetInputFromIndex(long index) const;
+		Vector GetControlActionFromIndex(long index) const;
 	private:
 		float _h;
 
