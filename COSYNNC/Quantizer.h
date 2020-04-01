@@ -18,7 +18,6 @@ namespace COSYNNC {
 		// Initialized the quantizer, by default isBounded is set to false so that only a reference point needs to be specified
 		Quantizer(bool isBounded = false);
 
-
 		// Set the quantization parameters for the space
 		void SetQuantizeParameters(Vector spaceEta, Vector spaceReference);
 
@@ -37,11 +36,10 @@ namespace COSYNNC {
 		// Denormalize a vector a vector from the normal space to the bounded space
 		Vector DenormalizeVector(Vector normal);
 
-		// LEGACY: Returns the nearest quantized element in the quantized space and returns its probability, also provides a random alternative
-		vector<ProbabilisticVector> QuantizeVectorProbabilistically(Vector denormal);
-
 		// Checks if a vector is in the bounds of the quantized space
 		bool IsInBounds(Vector vector);
+
+		#pragma region Getters
 
 		// Returns the vector that corresponds to the labelled output of the network
 		Vector GetVectorFromOneHot(Vector oneHot);
@@ -59,31 +57,31 @@ namespace COSYNNC {
 		long GetCardinality() const;
 
 		// Returns the dimension of the space
-		int GetSpaceDimension() const;
+		int GetDimension() const;
 
 		// Returns the lower bound of the quantizer
-		Vector GetSpaceLowerBound() const;
+		Vector GetLowerBound() const;
 
 		// Returns the upper bound of the quantizer
-		Vector GetSpaceUpperBound() const;
+		Vector GetUpperBound() const;
 
 		// Returns the space eta of the quantizer
-		Vector GetSpaceEta() const;
+		Vector GetEta() const;
 
 		// Returns an array of vectors which are the vertices of the hyper cell
 		Vector* GetCellVertices(Vector cell);
 		Vector* GetCellVertices(unsigned long cellIndex);
+
+		#pragma endregion Getters		
 	private:
 		bool _isBounded = false;
 
 		int _spaceDimension = 0;
-		int _inputSpaceDim = 0;
 
 		vector<long> _spaceCardinalityPerAxis;
 		long _spaceCardinality = 0;
 
 		Vector _spaceEta;
-		double _spaceEtaEllipsoidVolume = 0.0;
 
 		Vector _spaceLowerBound;
 		Vector _spaceUpperBound;

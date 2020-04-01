@@ -38,7 +38,7 @@ namespace COSYNNC {
 			_labelDimension = inputQuantizer->GetCardinality(); // Neuron for every potential input
 			break;
 		case OutputType::Range:
-			_labelDimension = inputQuantizer->GetSpaceDimension() * 2; // Two neurons per axis
+			_labelDimension = inputQuantizer->GetDimension() * 2; // Two neurons per axis
 			break;
 		}
 

@@ -99,6 +99,9 @@
     <ClCompile Include="Hyperplane.cpp">
       <Filter>Source Files\Utilities</Filter>
     </ClCompile>
+    <ClCompile Include="Abstraction.cpp">
+      <Filter>Source Files\Control</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="NeuralNetwork.h">
@@ -151,6 +154,9 @@
     </ClInclude>
     <ClInclude Include="Hyperplane.h">
       <Filter>Header Files\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Abstraction.h">
+      <Filter>Header Files\Control</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

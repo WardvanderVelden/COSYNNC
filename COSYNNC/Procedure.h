@@ -4,7 +4,6 @@
 #include "Controller.h"
 #include "Verifier.h"
 #include "FileManager.h"
-#include "BddManager.h"
 
 namespace COSYNNC {
 	enum class TrainingFocus {
@@ -25,8 +24,10 @@ namespace COSYNNC {
 		// Default constructor
 		Procedure();
 
-		// Default deletor
+		// Default destructor
 		~Procedure();
+
+		#pragma region Procedure Specifiers
 
 		// Specify the state quantizer to the specified quantization parameters
 		void SpecifyStateQuantizer(Vector eta, Vector lowerBound, Vector upperBound);
@@ -61,8 +62,7 @@ namespace COSYNNC {
 		// Set the neural network
 		void SetNeuralNetwork(NeuralNetwork* neuralNetwork);
 
-		// Load a neural network
-		void LoadNeuralNetwork(string path, string name);
+		#pragma endregion Procedure Specifiers
 
 		// Initialize the procedure, returns false if not all required parameters are specified
 		bool Initialize();
@@ -70,54 +70,53 @@ namespace COSYNNC {
 		// Run the synthesis procedure
 		void Synthesize();
 
-		// Iterate the training episode
-		void IterateEpisode(unsigned int episodeNumber);
-
-		// Retrieve the training data for a single trianing step
-		void GetDataForTrainingStep(Vector state, vector<Vector>* reinforcingLabels, vector<Vector>* deterringLabels, Vector* input, Vector* networkOutput, Vector* newState, bool* isInSpecificationSet, float* norm);
-
-		// Adds data to the training queue, if the network is full the network will train
-		void AddToTrainingQueue(vector<Vector> states, vector<Vector> labels);
-
 		// Run the verification phase
 		void Verify();
+
+		// Load a neural network
+		void LoadNeuralNetwork(string path, string name);
 
 		// Save the neural network
 		void SaveNetwork(string path = "");
 
 		// Save the neural network as a timestamp
 		void SaveTimestampedNetwork();
-		
-		// Log a message 
-		void Log(string phase = "", string message = "");
+	private:
+		// Iterate the training episode
+		void IterateEpisode(unsigned int episodeNumber);
+
+		// // Formats the training data for a single training step
+		void FormatTrainingData(Vector state, vector<Vector>* reinforcingLabels, vector<Vector>* deterringLabels, Vector* input, Vector* networkOutput, Vector* newState, bool* isInSpecificationSet, float* norm);
+
+		// Adds data to the training queue, if the network is full the network will train
+		void AddToTrainingQueue(vector<Vector> states, vector<Vector> labels);
 
 		// Get an initial state based on the control specification and episode number
 		Vector GetInitialStateForTraining(unsigned int episodeCount);
 
 		// Get a random vector in a radius to the goal based on training time
 		Vector GetVectorRadialFromGoal(float radius);
-	private:
-		Quantizer* _stateQuantizer;
-		unsigned int _stateDimension = 1;
-		unsigned long _stateCardinality = 0;
 
-		Quantizer* _inputQuantizer;
-		unsigned int _inputDimension = 1;
-		unsigned long _inputCardinality = 0;
+		// Log a message 
+		void Log(string phase = "", string message = "");
 
-		Plant* _plant;
 
-		Verifier* _verifier;
+		Abstraction* _abstraction = nullptr;
 
-		NeuralNetwork* _neuralNetwork;
-		OutputType _outputType;
-
+		Plant* _plant = nullptr;
 		Controller _controller;
+
+		Quantizer* _stateQuantizer = nullptr;
+		Quantizer* _inputQuantizer = nullptr;
 
 		ControlSpecification _specification;
 
+		Verifier* _verifier = nullptr;
+
+		NeuralNetwork* _neuralNetwork = nullptr;
+		OutputType _outputType = OutputType::Labelled;
+
 		FileManager _fileManager;
-		BddManager _bddManager;
 
 		// Training queue
 		vector<Vector> _trainingQueueStates;

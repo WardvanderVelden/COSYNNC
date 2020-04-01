@@ -16,20 +16,14 @@ namespace COSYNNC {
 		// Default constructor
 		FileManager();
 
-		// Constructor that initializes the file manager for use
-		FileManager(NeuralNetwork* neuralNetwork, Verifier* verifier, Quantizer* stateQuantizer, Quantizer* inputQuantizer);
-
-		// Constructor that initializes the filemanager for use with control goal included
-		FileManager(NeuralNetwork* neuralNetwork, Verifier* verifier, Quantizer* stateQuantizer, Quantizer* inputQuantizer, ControlSpecification* specification);
-
-		// Constructor that initializes the filemanager for use with control goal and controller included
-		FileManager(NeuralNetwork* neuralNetwork, Verifier* verifier, Quantizer* stateQuantizer, Quantizer* inputQuantizer, ControlSpecification* specification, Controller* controller);
+		// Constructor that initializes the filemanager
+		FileManager(NeuralNetwork* neuralNetwork, Verifier* verifier, Abstraction* abstraction);
 
 		// Loads a neural network
 		void LoadNetworkFromMATLAB(string path, string name);
 
 		// Save network in its binary form to yield the most compressed representation
-		void SaveNetwork(string path, string name);
+		void SaveNetworkAsRaw(string path, string name);
 
 		// Save the structure of a neural network to a MATLAB file
 		void SaveNetworkAsMATLAB(string path, string name);
@@ -41,8 +35,8 @@ namespace COSYNNC {
 		void SaveControllerAsStaticController(string path, string name);
 
 		// Writes the synthesis status to the log file for debug purposes
-		void WriteSynthesisStatusToLog(string path, string name, string plantName, string timestamp);
-
+		void WriteSynthesisStatusToLog(string path, string name, string plantName, string timestamp);	
+	private:
 		// Writes the quantization parameters for the state and input quantizer to a MATLAB file
 		void WriteQuantizationParametersToMATLABFile(ofstream* file);
 
@@ -59,15 +53,11 @@ namespace COSYNNC {
 		void WriteByte(ofstream* file, unsigned char value);
 		void WriteIntAsBytes(ofstream* file, int value);
 		void WriteFloatAsBytes(ofstream* file, float value);
-	private:
+
+
+		// Pointers to relevant objects
 		NeuralNetwork* _neuralNetwork = nullptr;
 		Verifier* _verifier = nullptr;
-
-		Quantizer* _stateQuantizer = nullptr;
-		Quantizer* _inputQuantizer = nullptr;
-
-		ControlSpecification* _specification = nullptr;
-
-		Controller* _controller = nullptr;
+		Abstraction* _abstraction = nullptr;
 	};
 }
