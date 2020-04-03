@@ -33,7 +33,7 @@ namespace COSYNNC {
 
 		// Go through all the states and add the representation to the BDD
 		for (unsigned long index = 0; index < _spaceCardinality; index++) {
-			auto input = _controller->GetInputFromIndex(index);
+			auto input = _controller->GetControlActionFromIndex(index);
 			auto inputIndex = _inputQuantizer->GetIndexFromVector(input);
 
 			auto stateWord = ComputeBinaryRepresentation(index, _stateSpaceWordLength);

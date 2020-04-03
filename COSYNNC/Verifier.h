@@ -1,37 +1,29 @@
 #pragma once
-#include "Plant.h"
-#include "Controller.h"
-#include "Quantizer.h"
-#include "Transition.h"
-#include "Hyperplane.h"
+
+#include "Abstraction.h"
 
 namespace COSYNNC {
 	class Verifier {
 	public:
-		Verifier(Plant* plant, Controller* controller, Quantizer* stateQuantizer, Quantizer* inputQuantizer);
+		// Constructor that setup up the verifier for use
+		Verifier(Abstraction* abstraction);
 
+		// Destructor
 		~Verifier();
 
 		// Computes the transition function that transitions any state in the state space to a set of states in the state space based on the control law
-		void ComputeTransitionFunction();
-
-		// Computes the transition function for a single index
-		void ComputeTransitionFunctionForIndex(long index, Vector input);
+		void ComputeTransitions();
 
 		// Computes the winning set for which the controller currently is able to adhere to the control specification
 		void ComputeWinningSet();
 
-		// Performs a single fixed point iteration, returns whether or not the set has changed
-		bool PerformFixedPointIteration();
+		// Computes the apparant winning set
+		void ComputeApparentWinningSet();
 
-		// Determines the losing set and the set of losing cells which are next to the winning domain
-		void DetermineLosingSet();
+		// Returns whether or not an index is in the winning domain
+		bool IsIndexInWinningSet(unsigned long index);
 
-		//  Prints a verbose walk of the current controller using greedy inputs
-		void PrintVerboseWalk(Vector initialState);
-
-		// Returns the size of the winning set compared to the cardinality of the state space
-		long GetWinningSetSize();
+		#pragma region Getters and Setters
 
 		// Sets a part of the winning domain, returns whether or not that element has changed
 		bool SetWinningDomain(long index, bool value);
@@ -39,69 +31,56 @@ namespace COSYNNC {
 		// Sets the verbose mode
 		void SetVerboseMode(bool verboseMode);
 
+		// Sets the episode horizon for the verifier
+		void SetEpisodeHorizon(unsigned int episodeHorizon);
+
 		// Get a random vector from the space of the losing domain
 		Vector GetVectorFromLosingDomain();
 
 		// Get a random vector from the set of losing states which neighbor winning states
 		Vector GetVectorFromLosingNeighborDomain();
 
-		// Over-approximates the vertices of the original cell and returns the hyperplanes that result from the over-approximation
-		Vector* OverApproximateEvolution(Vector state, Vector input, vector<Hyperplane>& hyperplanes);
-
-		// Returns the hyperplanes that naturally arise between the vertices
-		vector<Hyperplane> GetHyperplanesBetweenVertices(Vector* vertices, Vector cellCenter);
-
-		// Flood fills between planes, adding the indices of the cells to the transitions of the origin cell
-		void FloodfillBetweenHyperplanes(unsigned long index, Vector center, vector<Hyperplane>& planes);
-
-		// Generates the appropriate floodfill indices based on the current inex and the processed indices
-		void AddFloodfillOrder(Vector center, Vector direction, vector<unsigned long>& indices, vector<unsigned long>& processedIndices);
-
-		// Checks if a point is contained between planes
-		bool IsPointBetweenHyperplanes(Vector point, vector<Hyperplane>& planes);
-
-		// Calculates the vertices to hyperplane distribution
-		void CalculateVerticesOnHyperplaneDistribution();
-
 		// Returns the last calculated percentage of the winning domain compared to the state space
-		float GetWinningDomainPercentage();
+		float GetWinningSetPercentage();
 
-		// Returns whether or not an index is in the winning domain
-		bool IsIndexInWinningSet(unsigned long index);
+		// Returns the apparent winning set percentage
+		float GetApparentWinningSetPercentage();
+
+		// Returns the percentage of completeness of the current (partial) abstraction
+		float GetAbstractionCompleteness();
+
+		// Returns the size of the winning set compared to the cardinality of the state space
+		long GetWinningSetSize();
+
+		#pragma endregion Getters and Setters
+	private:
+		// Performs a single fixed point iteration, returns whether or not the set has changed
+		bool PerformSingleFixedPointOperation();
+
+		// Determines the losing set and the set of losing cells which are next to the winning domain
+		void DetermineLosingSet();
 
 		// TEMPORARY: Validation method in order to verify and bugfix the behaviour of the verifier, returns true when the domain is indeed valid
 		bool ValidateDomain();
-	private:
-		Plant* _plant;
-		Controller* _controller;
-		Quantizer* _stateQuantizer;
-		Quantizer* _inputQuantizer;
-		ControlSpecification* _specification;
 
-		Transition* _transitions;
+
+		Abstraction* _abstraction;
+
+		unsigned long _transitionsInFullAbstraction;
+		unsigned long _transitionsInAbstraction;
+		float _abstractionCompleteness = 0.0;
+
+		unsigned int _maxEpisodeHorizon = 50;
+		unsigned long _apparentWinningCells = 0;
+
 		bool* _winningSet;
 
 		vector<long> _losingIndices;
 		vector<long> _losingWinningNeighborIndices;
 
-		float _winningDomainPercentage = 0.0;
-
-		const unsigned int _maxSteps = 50;
+		float _winningSetPercentage = 0.0;
+		float _apparentWinningSetPercentage = 0.0;
 
 		bool _verboseMode = false;
-
-		// Quantization specific parameters
-		unsigned int _spaceDimension;
-		unsigned long _spaceCardinality;
-		Vector _spaceEta;
-
-		unsigned int _inputDimension;
-		unsigned long _inputCardinality;
-
-		unsigned int _amountOfVerticesPerCell;
-		unsigned int _amountOfEdgesPerCell;
-
-		vector<vector<unsigned short>> _verticesOnHyperplaneDistribution;
-		vector<Vector> _normalsOfHyperplane;
 	};
 }

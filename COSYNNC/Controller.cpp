@@ -119,7 +119,7 @@ namespace COSYNNC {
 
 	// Get a probabilistic control action based on the certainty of the network for range neurons
 	Vector Controller::GetProbabilisticControlActionFromRangeNeurons(Vector state, Vector& networkOutput) {
-		const auto inputDimension = _inputQuantizer->GetSpaceDimension();
+		const auto inputDimension = _inputQuantizer->GetDimension();
 
 		auto normalizedQuantizedState = _stateQuantizer->NormalizeVector(_stateQuantizer->QuantizeVector(state));
 
@@ -182,7 +182,7 @@ namespace COSYNNC {
 
 	// Processes network output for range neurosn to get an input greedily
 	Vector Controller::GetGreedyInputFromRangeNeurons(Vector networkOutput) {
-		auto inputDimension = _inputQuantizer->GetSpaceDimension();
+		auto inputDimension = _inputQuantizer->GetDimension();
 
 		Vector normalInput(inputDimension);
 		for (unsigned int i = 0; i < inputDimension; i++) {
@@ -253,7 +253,7 @@ namespace COSYNNC {
 
 
 	// Get input from the input array based on the index
-	Vector Controller::GetInputFromIndex(long index) const {
+	Vector Controller::GetControlActionFromIndex(long index) const {
 		return _inputArray[index];
 	}
 }

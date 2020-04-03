@@ -8,12 +8,14 @@ namespace COSYNNC {
 
 		_plant = nullptr;
 
-		std::cout << "COSYNNC:\tA correct-by-design neural network controller synthesis procedure." << std::endl;
+		std::cout << "COSYNNC:\tA correct-by-design neural network controller synthesis procedure" << std::endl;
 	}
 
 
-	// Default deletor
+	// Default destructor
 	Procedure::~Procedure() {
+		delete _abstraction;
+
 		delete _stateQuantizer;
 		delete _inputQuantizer;
 
@@ -23,17 +25,16 @@ namespace COSYNNC {
 	}
 
 
+	#pragma region Procedure Specifiers
+
 	// Set the state quantizer to the specified quantization parameters
 	void Procedure::SpecifyStateQuantizer(Vector eta, Vector lowerBound, Vector upperBound) {
 		_stateQuantizer = new Quantizer(true);
 		_stateQuantizer->SetQuantizeParameters(eta, lowerBound, upperBound);
 
-		_stateDimension = _stateQuantizer->GetSpaceDimension();
-		_stateCardinality = _stateQuantizer->GetCardinality();
+		_singleStateTrainingFocus = Vector(_stateQuantizer->GetDimension());
 
-		_singleStateTrainingFocus = Vector(_stateDimension);
-
-		Log("COSYNNC", "State quantizer specified.");
+		Log("COSYNNC", "State quantizer specified");
 	}
 
 
@@ -42,10 +43,7 @@ namespace COSYNNC {
 		_inputQuantizer = new Quantizer(true);
 		_inputQuantizer->SetQuantizeParameters(eta, lowerBound, upperBound);
 
-		_inputDimension = _inputQuantizer->GetSpaceDimension();
-		_inputCardinality = _inputQuantizer->GetCardinality();
-
-		Log("COSYNNC", "Input quantizer specified.");
+		Log("COSYNNC", "Input quantizer specified");
 	}
 
 
@@ -56,34 +54,11 @@ namespace COSYNNC {
 		}
 
 		if (_useWinningSetReinforcement) {
-			Log("COSYNNC", "Network will reinforce upon reaching the winning set.");
+			Log("COSYNNC", "Network will reinforce upon reaching the winning set");
 		}
 		else {
-			Log("COSYNNC", "Network will not reinforce upon reaching the winning set.");
+			Log("COSYNNC", "Network will not reinforce upon reaching the winning set");
 		}
-	}
-
-
-	// Set the plant
-	void Procedure::SetPlant(Plant* plant) {
-		_plant = plant;
-
-		Log("COSYNNC", "Plant linked.");
-	}
-
-
-	// Set the neural network
-	void Procedure::SetNeuralNetwork(NeuralNetwork* neuralNetwork) {
-		_neuralNetwork = neuralNetwork;
-		//_neuralNetwork->ConfigurateInputOutput(_plant, _inputQuantizer, _maxEpisodeHorizonTrainer, 1.0);
-		_neuralNetwork->ConfigurateInputOutput(_plant, _inputQuantizer, 10, 1.0);
-
-		_outputType = _neuralNetwork->GetOutputType();
-
-		Log("COSYNNC", "Neural network linked.");
-
-		auto dataSize = _neuralNetwork->GetDataSize();
-		Log("COSYNNC", "Neural network has data size: " + std::to_string(dataSize) + " bytes");
 	}
 
 
@@ -97,7 +72,7 @@ namespace COSYNNC {
 		_maxEpisodeHorizonTrainer = maxEpisodeHorizonTrainer;
 		_maxEpisodeHorizonVerifier = (maxEpisodeHorizonVerifier == 0) ? _maxEpisodeHorizonTrainer * 3 : maxEpisodeHorizonVerifier;
 
-		Log("COSYNNC", "Synthesis parameters specified.");
+		Log("COSYNNC", "Synthesis parameters specified");
 	}
 
 
@@ -108,7 +83,7 @@ namespace COSYNNC {
 
 		_controller.SetControlSpecification(&_specification);
 
-		Log("COSYNNC", "Control specification defined.");
+		Log("COSYNNC", "Control specification defined");
 	}
 
 
@@ -119,7 +94,7 @@ namespace COSYNNC {
 		_radialInitialStateLower = lower;
 		_radialInitialStateUpper = (upper == 0.0) ? (1.0 - lower) : upper;
 
-		Log("COSYNNC", "Radial from goal initial state selection specified.");
+		Log("COSYNNC", "Radial from goal initial state selection specified");
 	}
 
 
@@ -129,7 +104,7 @@ namespace COSYNNC {
 
 		_normWeights = normWeights;
 
-		Log("COSYNNC", "Norm based reinforcement specified.");
+		Log("COSYNNC", "Norm based reinforcement specified");
 	}
 
 
@@ -164,29 +139,61 @@ namespace COSYNNC {
 	}
 
 
-	// Load a neural network
-	void Procedure::LoadNeuralNetwork(string path, string name) {
-		auto extensionStart = name.find('.');
-		auto extension = name.substr(extensionStart + 1, name.size() - extensionStart - 1);
-
-		// Case MATLAB
-		if (extension == "m") _fileManager.LoadNetworkFromMATLAB(path, name);
+	// Specify if the raw neural network should be saved
+	void Procedure::SpecifySaveRawNeuralNetwork(bool save) {
+		_saveRawNeuralNetwork = save;
 	}
+
+
+	// Specify if the apparent winning set should be computed
+	void Procedure::SpecifyComputeApparentWinningSet(bool compute) {
+		_computeApparentWinningSet = compute;
+	}
+
+
+	// Set the plant
+	void Procedure::SetPlant(Plant* plant) {
+		_plant = plant;
+
+		Log("COSYNNC", "Plant linked");
+	}
+
+
+	// Set the neural network
+	void Procedure::SetNeuralNetwork(NeuralNetwork* neuralNetwork) {
+		_neuralNetwork = neuralNetwork;
+		//_neuralNetwork->ConfigurateInputOutput(_plant, _inputQuantizer, _maxEpisodeHorizonTrainer, 1.0);
+		_neuralNetwork->ConfigurateInputOutput(_plant, _inputQuantizer, 10, 1.0);
+
+		_outputType = _neuralNetwork->GetOutputType();
+
+		Log("COSYNNC", "Neural network linked");
+
+		auto dataSize = _neuralNetwork->GetDataSize();
+		Log("COSYNNC", "Neural network has data size: " + std::to_string(dataSize) + " bytes");
+	}
+
+	#pragma endregion Procedure Specifiers	
 
 
 	// Initialize the procedure, returns false if not all required parameters are specified
 	bool Procedure::Initialize() {
+		// Initialize controller
 		_controller = Controller(_plant, _stateQuantizer, _inputQuantizer);
 		_controller.SetNeuralNetwork(_neuralNetwork);
 		_controller.SetControlSpecification(&_specification);
 
-		_verifier = new Verifier(_plant, &_controller, _stateQuantizer, _inputQuantizer);
+		// Initialize the abstraction
+		_abstraction = new Abstraction(_plant, &_controller, _stateQuantizer, _inputQuantizer, &_specification);
+		
+		// Initialize verifier
+		_verifier = new Verifier(_abstraction);
 		_verifier->SetVerboseMode(_verboseVerifier);
 
-		_fileManager = FileManager(_neuralNetwork, _verifier, _stateQuantizer, _inputQuantizer, &_specification, &_controller);
-		_bddManager = BddManager(&_controller, _verifier, _stateQuantizer, _inputQuantizer);
+		_fileManager = FileManager(_neuralNetwork, _verifier, _abstraction);
 
 		// TODO: Test if all required parameters are specified before the synthesis procedure begins
+
 
 		_hasSuccesfullyInitialized = true;
 		return true;
@@ -196,14 +203,13 @@ namespace COSYNNC {
 	// Run the synthesis procedure
 	void Procedure::Synthesize() {
 		if (_hasSuccesfullyInitialized) {
-			Log("COSYNNC", "Procedure was succesfully initialized, synthesize procedure started!");
+			Log("COSYNNC", "Procedure was succesfully initialized, synthesize procedure started");
 
 			Log("Trainer", "Starting training");
 			for (int i = 0; i <= _maxEpisodes; i++) {
 				IterateEpisode(i);
 
 				if (i % _verificationEpisode == 0 && i != 0) {
-					Log("Verifier", "Performing fixed-point verification.");
 					Verify(); 
 
 					Log("File Manager", "Saving neural network with a timestamp.");
@@ -215,11 +221,6 @@ namespace COSYNNC {
 					Log("Trainer", "Continuing training.");
 				}
 			}
-
-			// Save the final neural network
-			Log("File Manager", "Saving neural network.");
-			SaveNetwork("controllers/controller");
-
 			Log("COSYNNC", "Synthesis terminated!");
 		}
 		else {
@@ -258,12 +259,12 @@ namespace COSYNNC {
 			states.push_back(normalizedQuantizedState);
 
 			// Define vectors to allow access in and outside the switch
-			Vector input(_inputDimension);
-			Vector networkOutput(_inputDimension);
-			Vector newState(_stateDimension);
+			Vector input(_abstraction->GetInputQuantizer()->GetDimension());
+			Vector networkOutput(_abstraction->GetInputQuantizer()->GetDimension());
+			Vector newState(_abstraction->GetStateQuantizer()->GetDimension());
 
 			// Get data for a single training step
-			GetDataForTrainingStep(state, &reinforcingLabels, &deterringLabels, &input, &networkOutput, &newState, &isInSpecificationSet, &norm);
+			FormatTrainingData(state, &reinforcingLabels, &deterringLabels, &input, &networkOutput, &newState, &isInSpecificationSet, &norm);
 			isInWinningSet = _verifier->IsIndexInWinningSet(_stateQuantizer->GetIndexFromVector(newState));
 
 			// DEBUG: Print simulation for verification purposes
@@ -298,8 +299,8 @@ namespace COSYNNC {
 	}
 
 
-	// Retrieve the training data for a single trianing step
-	void Procedure::GetDataForTrainingStep(Vector state, vector<Vector>* reinforcingLabels, vector<Vector>* deterringLabels, Vector* input, Vector* networkOutput, Vector* newState, bool* isInSpecificationSet, float* norm) {
+	// Formats the training data for a single training step
+	void Procedure::FormatTrainingData(Vector state, vector<Vector>* reinforcingLabels, vector<Vector>* deterringLabels, Vector* input, Vector* networkOutput, Vector* newState, bool* isInSpecificationSet, float* norm) {
 		switch (_outputType) {
 			case OutputType::Labelled: {
 				Vector oneHot(_inputQuantizer->GetCardinality());
@@ -314,18 +315,18 @@ namespace COSYNNC {
 				if (_useNorm) *norm = (*newState - _specification.GetCenter()).GetWeightedNorm(_normWeights);
 
 				// Create reinforcing and deterring labels
-				Vector reinforcementLabel = Vector((int)_inputCardinality);
-				Vector deterringLabel = Vector((int)_inputCardinality);
+				Vector reinforcementLabel = Vector((int)_abstraction->GetInputQuantizer()->GetCardinality());
+				Vector deterringLabel = Vector((int)_abstraction->GetInputQuantizer()->GetCardinality());
 
 				reinforcementLabel = oneHot;
 
 				float sum = 0.0;
-				for (int i = 0; i < (int)_inputCardinality; i++) {
+				for (int i = 0; i < (int)_abstraction->GetInputQuantizer()->GetCardinality(); i++) {
 					deterringLabel[i] = 1.0 - reinforcementLabel[i];
 					sum += deterringLabel[i];
 				}
 
-				for (int i = 0; i < (int)_inputCardinality; i++) deterringLabel[i] = deterringLabel[i] / sum;
+				for (int i = 0; i < (int)_abstraction->GetInputQuantizer()->GetCardinality(); i++) deterringLabel[i] = deterringLabel[i] / sum;
 
 				// Add labels to the list of labels
 				reinforcingLabels->push_back(reinforcementLabel);
@@ -345,12 +346,12 @@ namespace COSYNNC {
 				if (_useNorm) *norm = (*newState - _specification.GetCenter()).GetWeightedNorm(_normWeights);
 
 				// Find the reinforcing labels and the deterring labels
-				Vector reinforcementLabel = Vector(_inputDimension * 2);
-				Vector deterringLabel = Vector(_inputDimension * 2);
+				Vector reinforcementLabel = Vector(_abstraction->GetInputQuantizer()->GetDimension() * 2);
+				Vector deterringLabel = Vector(_abstraction->GetInputQuantizer()->GetDimension() * 2);
 
 				// Create reinforcing and deterring labels
 				auto normalInput = _inputQuantizer->NormalizeVector(*input);
-				for (unsigned int i = 0; i < _inputDimension; i++) {
+				for (unsigned int i = 0; i < _abstraction->GetInputQuantizer()->GetDimension(); i++) {
 					reinforcementLabel[i * 2] = normalInput[i];
 					reinforcementLabel[i * 2 + 1] = normalInput[i];
 
@@ -365,6 +366,29 @@ namespace COSYNNC {
 				break;
 			}
 		}
+	}
+
+
+	// Run the verification phase
+	void Procedure::Verify() {
+		_controller.CompileInputArray();
+
+		Log("Verifier", "Computing relevant transitions");
+		_verifier->ComputeTransitions();
+		Log("Verifier", "Partial abstraction contains " + to_string(_verifier->GetAbstractionCompleteness()) + "% of full abstraction");
+
+		Log("Verifier", "Computing winning set");
+		_verifier->ComputeWinningSet();
+		Log("Verifier", "Winning set size percentage: " + to_string(_verifier->GetWinningSetPercentage()) + "%");
+
+		if (_computeApparentWinningSet) {
+			Log("Verifier", "Computing apparent winning set");
+			_verifier->ComputeApparentWinningSet();
+			Log("Verifier", "Apparent winning set size percentage: " + to_string(_verifier->GetApparentWinningSetPercentage()) + "%");
+		}
+		
+		// Wait for all the MXNet operations to have finished
+		MXNDArrayWaitAll();
 	}
 
 
@@ -401,29 +425,13 @@ namespace COSYNNC {
 	}
 
 
-	// Run the verification phase
-	void Procedure::Verify() {
-		_controller.CompileInputArray();
+	// Load a neural network
+	void Procedure::LoadNeuralNetwork(string path, string name) {
+		auto extensionStart = name.find('.');
+		auto extension = name.substr(extensionStart + 1, name.size() - extensionStart - 1);
 
-		_verifier->ComputeTransitionFunction();
-		_verifier->ComputeWinningSet();
-
-		// Empirical random walks
-		if (_verboseVerifier) {
-			Log("Verifier", "Empirical verification walks");
-			for (unsigned int j = 0; j < 5; j++) {
-				std::cout << std::endl;
-				auto initialState = _stateQuantizer->GetRandomVector();
-				_verifier->PrintVerboseWalk(initialState);
-			}
-			std::cout << std::endl;
-		}
-
-		// Log winning set
-		Log("Verifier", "Winning set size percentage: " + to_string(_verifier->GetWinningDomainPercentage()) + "%");
-
-		// Wait for all the MXNet operations to have finished
-		MXNDArrayWaitAll();
+		// Case MATLAB
+		if (extension == "m") _fileManager.LoadNetworkFromMATLAB(path, name);
 	}
 
 
@@ -432,7 +440,7 @@ namespace COSYNNC {
 		_fileManager.SaveNetworkAsMATLAB(path, "net");
 		_fileManager.SaveVerifiedDomainAsMATLAB(path, "dom");
 		_fileManager.SaveControllerAsStaticController(path, "ctl");
-		_fileManager.SaveNetwork(path, "raw");
+		_fileManager.SaveNetworkAsRaw(path, "raw");
 	}
 
 
@@ -458,25 +466,16 @@ namespace COSYNNC {
 		_fileManager.SaveNetworkAsMATLAB(path, timestampString + "net");
 		_fileManager.SaveVerifiedDomainAsMATLAB(path, timestampString + "dom");
 		_fileManager.SaveControllerAsStaticController(path, timestampString + "ctl");
-		_fileManager.SaveNetwork(path, timestampString + "raw");
+		if(_saveRawNeuralNetwork) _fileManager.SaveNetworkAsRaw(path, timestampString + "raw");
 
 		// Log best network
-		auto currentWinningDomainPercentage = _verifier->GetWinningDomainPercentage();
+		auto currentWinningDomainPercentage = _verifier->GetWinningSetPercentage();
 		if (currentWinningDomainPercentage > _bestControllerWinningDomainPercentage) {
 			_bestControllerTimestamp = timestampString;
 			_bestControllerWinningDomainPercentage = currentWinningDomainPercentage;
 		}
 
 		_fileManager.WriteSynthesisStatusToLog("controllers", "log", _plant->GetName(), timestampString);
-	}
-
-
-	// Log a message 
-	void Procedure::Log(string phase, string message) {
-		if (phase != _lastLoggedPhase) std::cout << std::endl;
-		std::cout << phase << ": \t" << message << std::endl;
-
-		_lastLoggedPhase = phase;
 	}
 
 
@@ -553,13 +552,13 @@ namespace COSYNNC {
 
 	// Get a random vector in a radius to the goal based on training time
 	Vector Procedure::GetVectorRadialFromGoal(float radius) {
-		Vector vector(_stateQuantizer->GetSpaceDimension());
+		Vector vector(_stateQuantizer->GetDimension());
 
 		auto goal = _specification.GetCenter();
-		auto lowerBound = _stateQuantizer->GetSpaceLowerBound();
-		auto upperBound = _stateQuantizer->GetSpaceUpperBound();
+		auto lowerBound = _stateQuantizer->GetLowerBound();
+		auto upperBound = _stateQuantizer->GetUpperBound();
 
-		for (int i = 0; i < _stateQuantizer->GetSpaceDimension(); i++) {
+		for (int i = 0; i < _stateQuantizer->GetDimension(); i++) {
 			float deltaLower = goal[i] - lowerBound[i];
 			float deltaUpper = upperBound[i] - goal[i];
 
@@ -579,5 +578,14 @@ namespace COSYNNC {
 		}
 
 		return vector;
+	}
+
+
+	// Log a message 
+	void Procedure::Log(string phase, string message) {
+		if (phase != _lastLoggedPhase) std::cout << std::endl;
+		std::cout << phase << ": \t" << message << std::endl;
+
+		_lastLoggedPhase = phase;
 	}
 }
