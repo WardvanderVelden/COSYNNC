@@ -34,7 +34,7 @@ namespace COSYNNC {
 		#pragma endregion Getters
 
 		// Computes the transition function for a single index
-		void ComputeTransitionFunctionForIndex(long index, Vector input);
+		bool ComputeTransitionFunctionForIndex(long index, Vector input);
 	private:
 		#pragma region Transition Function
 

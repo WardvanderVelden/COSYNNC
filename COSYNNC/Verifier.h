@@ -17,6 +17,9 @@ namespace COSYNNC {
 		// Computes the winning set for which the controller currently is able to adhere to the control specification
 		void ComputeWinningSet();
 
+		// Computes the apparant winning set
+		void ComputeApparentWinningSet();
+
 		// Returns whether or not an index is in the winning domain
 		bool IsIndexInWinningSet(unsigned long index);
 
@@ -28,6 +31,9 @@ namespace COSYNNC {
 		// Sets the verbose mode
 		void SetVerboseMode(bool verboseMode);
 
+		// Sets the episode horizon for the verifier
+		void SetEpisodeHorizon(unsigned int episodeHorizon);
+
 		// Get a random vector from the space of the losing domain
 		Vector GetVectorFromLosingDomain();
 
@@ -35,7 +41,13 @@ namespace COSYNNC {
 		Vector GetVectorFromLosingNeighborDomain();
 
 		// Returns the last calculated percentage of the winning domain compared to the state space
-		float GetWinningDomainPercentage();
+		float GetWinningSetPercentage();
+
+		// Returns the apparent winning set percentage
+		float GetApparentWinningSetPercentage();
+
+		// Returns the percentage of completeness of the current (partial) abstraction
+		float GetAbstractionCompleteness();
 
 		// Returns the size of the winning set compared to the cardinality of the state space
 		long GetWinningSetSize();
@@ -54,12 +66,20 @@ namespace COSYNNC {
 
 		Abstraction* _abstraction;
 
+		unsigned long _transitionsInFullAbstraction;
+		unsigned long _transitionsInAbstraction;
+		float _abstractionCompleteness = 0.0;
+
+		unsigned int _maxEpisodeHorizon = 50;
+		unsigned long _apparentWinningCells = 0;
+
 		bool* _winningSet;
 
 		vector<long> _losingIndices;
 		vector<long> _losingWinningNeighborIndices;
 
-		float _winningDomainPercentage = 0.0;
+		float _winningSetPercentage = 0.0;
+		float _apparentWinningSetPercentage = 0.0;
 
 		bool _verboseMode = false;
 	};

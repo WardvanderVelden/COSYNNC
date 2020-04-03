@@ -43,8 +43,8 @@ namespace COSYNNC {
 
 	#pragma region Transition Functions
 
-	// Computes the transition function for a single index
-	void Abstraction::ComputeTransitionFunctionForIndex(long index, Vector input) {
+	// Computes the transition function for a single index, returns true if any calculations were made
+	bool Abstraction::ComputeTransitionFunctionForIndex(long index, Vector input) {
 		auto inputIndex = _inputQuantizer->GetIndexFromVector(input);
 		if (!_transitions[index].HasTransitionBeenCalculated(inputIndex)) {
 			auto state = _stateQuantizer->GetVectorFromIndex(index);
@@ -55,7 +55,7 @@ namespace COSYNNC {
 			// Check if newState is in bounds of the state space, if not then we know the transition already
 			if (!_stateQuantizer->IsInBounds(newState)) {
 				_transitions[index].AddEnd(-1, inputIndex);
-				return;
+				return true;
 			}
 
 			// Evolve the vertices of the cell and find the resulting hyperplanes
@@ -74,7 +74,10 @@ namespace COSYNNC {
 
 			// Free up memory
 			delete[] vertices;
+
+			return true;
 		}
+		return false;
 	}
 
 

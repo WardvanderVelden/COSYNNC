@@ -114,7 +114,7 @@ namespace COSYNNC {
 		ofstream file(path + "/" + name + ".m", std::ios_base::out);
 
 		// Save the winning domain percentage
-		file << "winningDomainPercentage = " << _verifier->GetWinningDomainPercentage() << ";\n\n";
+		file << "winningDomainPercentage = " << _verifier->GetWinningSetPercentage() << ";\n\n";
 
 		// Save output type of the network
 		file << "outputType = '";
@@ -174,7 +174,7 @@ namespace COSYNNC {
 		ofstream file(path + "/" + name + ".m", std::ios_base::out);
 
 		// Save the winning domain to the domain file
-		file << "winningDomainPercentage = " << _verifier->GetWinningDomainPercentage() << ";\n";
+		file << "winningDomainPercentage = " << _verifier->GetWinningSetPercentage() << ";\n";
 		file << "networkDataSize = " << _neuralNetwork->GetDataSize() << ";\n";
 
 		// Save the quantization parameters to the domain file
@@ -232,7 +232,7 @@ namespace COSYNNC {
 	void FileManager::WriteSynthesisStatusToLog(string path, string name, string plantName, string timestamp) {
 		ofstream file(path + "/" + name + ".txt", std::ios_base::app);
 
-		file <<  plantName << " " << timestamp << " " << _verifier->GetWinningDomainPercentage() << "\n";
+		file <<  plantName << " " << timestamp << " " << _verifier->GetWinningSetPercentage() << "\n";
 
 		file.close();
 	}

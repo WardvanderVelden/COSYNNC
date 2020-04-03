@@ -4,6 +4,9 @@ namespace COSYNNC {
 	// Constructor that setup up the verifier for use
 	Verifier::Verifier(Abstraction* abstraction) {
 		_abstraction = abstraction;
+		
+		_transitionsInFullAbstraction = _abstraction->GetStateQuantizer()->GetCardinality() * _abstraction->GetInputQuantizer()->GetCardinality();
+		_transitionsInAbstraction = 0;
 
 		_winningSet = new bool[_abstraction->GetStateQuantizer()->GetCardinality()]{ false };
 	}
@@ -19,13 +22,14 @@ namespace COSYNNC {
 		const auto spaceCardinality = _abstraction->GetStateQuantizer()->GetCardinality();
 
 		std::cout << "\t\t";
-		for (long index = 0; index < spaceCardinality; index++) {
+		for (unsigned long index = 0; index < spaceCardinality; index++) {
 			// Print status to monitor progression
 			if (index % ((long)floor(spaceCardinality / 20)) == 0) std::cout << (float)((float)index / (float)spaceCardinality * 100.0) << "% . ";
 		
 			auto input = _abstraction->GetController()->GetControlActionFromIndex(index);
-
-			_abstraction->ComputeTransitionFunctionForIndex(index, input);
+			if (_abstraction->ComputeTransitionFunctionForIndex(index, input)) {
+				_transitionsInAbstraction++;
+			}
 		}
 		std::cout << std::endl;
 	}
@@ -76,7 +80,7 @@ namespace COSYNNC {
 		unsigned int discrepancies = 0;
 		while (!hasIterationConverged) {
 			iterations++;
-			std::cout << "\t i: " << iterations;
+			std::cout << "\t\ti: " << iterations;
 
 			auto hasSetChanged = PerformSingleFixedPointOperation();
 
@@ -97,7 +101,7 @@ namespace COSYNNC {
 				else {
 					std::cout << " discrepancy detected";
 					discrepancies++;
-					if (discrepancies >= 15) hasIterationConverged = true;
+					if (discrepancies >= 5) hasIterationConverged = true;
 				}
 			}
 
@@ -122,7 +126,55 @@ namespace COSYNNC {
 
 		if(_verboseMode) std::cout << std::endl << "\tFixed point iterations: " << iterations << std::endl;
 
-		_winningDomainPercentage = (float)GetWinningSetSize() / (float)_abstraction->GetStateQuantizer()->GetCardinality() * 100;
+		_winningSetPercentage = (float)GetWinningSetSize() / (float)_abstraction->GetStateQuantizer()->GetCardinality() * 100;
+	}
+
+
+	// Computes the apparant winning set
+	void Verifier::ComputeApparentWinningSet() {
+		std::cout << "\t\t";
+
+		const auto spaceCardinality = _abstraction->GetStateQuantizer()->GetCardinality();
+		const auto controlSpecificationType = _abstraction->GetControlSpecification()->GetSpecificationType();
+		_apparentWinningCells = 0;
+		
+		for (unsigned long index = 0; index < spaceCardinality; index++) {
+			if (index % ((long)floor(spaceCardinality / 20)) == 0) std::cout << (float)((float)index / (float)spaceCardinality * 100.0) << "% . ";
+
+			Vector state = _abstraction->GetStateQuantizer()->GetVectorFromIndex(index);
+			bool stopEpisode = false;
+			for (unsigned int i = 0; i < _maxEpisodeHorizon; i++) {
+				auto stateIndex = _abstraction->GetStateQuantizer()->GetIndexFromVector(state);
+				if (stateIndex == -1) {
+					stopEpisode = true;
+					break;
+				}
+
+				_abstraction->GetPlant()->SetState(state);
+
+				auto controlAction = _abstraction->GetController()->GetControlActionFromIndex(stateIndex);
+				state = _abstraction->GetPlant()->EvaluateDynamics(controlAction);
+
+				switch(controlSpecificationType) {
+				case ControlSpecificationType::Reachability:
+					if (_abstraction->GetControlSpecification()->IsInSpecificationSet(state)) {
+						_apparentWinningCells++;
+						stopEpisode = true;
+					}
+					break;
+				case ControlSpecificationType::Invariance:
+					if (!_abstraction->GetControlSpecification()->IsInSpecificationSet(state)) stopEpisode = true;
+					break;
+				}
+
+				if (stopEpisode) break;
+			}
+
+			if (!stopEpisode && _abstraction->GetControlSpecification()->IsInSpecificationSet(state) && controlSpecificationType == ControlSpecificationType::Invariance) _apparentWinningCells++;
+		}
+
+		_apparentWinningSetPercentage = ((float)_apparentWinningCells / (float)spaceCardinality) * 100.0;
+		std::cout << std::endl;
 	}
 
 
@@ -284,6 +336,12 @@ namespace COSYNNC {
 	}
 
 
+	// Sets the episode horizon for the verifier
+	void Verifier::SetEpisodeHorizon(unsigned int episodeHorizon) {
+		episodeHorizon = episodeHorizon;
+	}
+
+
 	// Get a random vector from the space of the losing domain
 	Vector Verifier::GetVectorFromLosingDomain() {
 		auto losingIndicesSize = _losingIndices.size();
@@ -325,8 +383,21 @@ namespace COSYNNC {
 
 
 	// Returns the last calculated percentage of the winning domain compared to the state space
-	float Verifier::GetWinningDomainPercentage() {
-		return _winningDomainPercentage;
+	float Verifier::GetWinningSetPercentage() {
+		return _winningSetPercentage;
+	}
+
+
+	// Returns the apparent winning set percentage
+	float Verifier::GetApparentWinningSetPercentage() {
+		return _apparentWinningSetPercentage;
+	}
+
+
+	// Returns the percentage of completeness of the current (partial) abstraction
+	float Verifier::GetAbstractionCompleteness() {
+		_abstractionCompleteness = ((float)_transitionsInAbstraction / (float)_transitionsInFullAbstraction) * 100.0;
+		return _abstractionCompleteness;
 	}
 
 	#pragma endregion Getters and Setters

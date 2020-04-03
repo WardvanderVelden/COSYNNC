@@ -56,6 +56,12 @@ namespace COSYNNC {
 		// Specify if the network should reinforce upon reaching the winning set (only applicable to reachability)
 		void SpecifyWinningSetReinforcement(bool reinforce = false);
 
+		// Specify if the raw neural network should be saved
+		void SpecifySaveRawNeuralNetwork(bool save = false);
+
+		// Specify if the apparent winning set should be computed
+		void SpecifyComputeApparentWinningSet(bool compute = false);
+
 		// Set the plant
 		void SetPlant(Plant* plant);
 
@@ -142,6 +148,9 @@ namespace COSYNNC {
 		vector<float> _normWeights = { 1.0, 1.0 };
 
 		bool _useWinningSetReinforcement = false;
+
+		bool _computeApparentWinningSet = false;
+		bool _saveRawNeuralNetwork = false;
 
 		// Controller log
 		float _bestControllerWinningDomainPercentage = 0.0;

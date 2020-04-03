@@ -8,7 +8,7 @@ namespace COSYNNC {
 
 		_plant = nullptr;
 
-		std::cout << "COSYNNC:\tA correct-by-design neural network controller synthesis procedure." << std::endl;
+		std::cout << "COSYNNC:\tA correct-by-design neural network controller synthesis procedure" << std::endl;
 	}
 
 
@@ -34,7 +34,7 @@ namespace COSYNNC {
 
 		_singleStateTrainingFocus = Vector(_stateQuantizer->GetDimension());
 
-		Log("COSYNNC", "State quantizer specified.");
+		Log("COSYNNC", "State quantizer specified");
 	}
 
 
@@ -43,7 +43,7 @@ namespace COSYNNC {
 		_inputQuantizer = new Quantizer(true);
 		_inputQuantizer->SetQuantizeParameters(eta, lowerBound, upperBound);
 
-		Log("COSYNNC", "Input quantizer specified.");
+		Log("COSYNNC", "Input quantizer specified");
 	}
 
 
@@ -54,10 +54,10 @@ namespace COSYNNC {
 		}
 
 		if (_useWinningSetReinforcement) {
-			Log("COSYNNC", "Network will reinforce upon reaching the winning set.");
+			Log("COSYNNC", "Network will reinforce upon reaching the winning set");
 		}
 		else {
-			Log("COSYNNC", "Network will not reinforce upon reaching the winning set.");
+			Log("COSYNNC", "Network will not reinforce upon reaching the winning set");
 		}
 	}
 
@@ -72,7 +72,7 @@ namespace COSYNNC {
 		_maxEpisodeHorizonTrainer = maxEpisodeHorizonTrainer;
 		_maxEpisodeHorizonVerifier = (maxEpisodeHorizonVerifier == 0) ? _maxEpisodeHorizonTrainer * 3 : maxEpisodeHorizonVerifier;
 
-		Log("COSYNNC", "Synthesis parameters specified.");
+		Log("COSYNNC", "Synthesis parameters specified");
 	}
 
 
@@ -83,7 +83,7 @@ namespace COSYNNC {
 
 		_controller.SetControlSpecification(&_specification);
 
-		Log("COSYNNC", "Control specification defined.");
+		Log("COSYNNC", "Control specification defined");
 	}
 
 
@@ -94,7 +94,7 @@ namespace COSYNNC {
 		_radialInitialStateLower = lower;
 		_radialInitialStateUpper = (upper == 0.0) ? (1.0 - lower) : upper;
 
-		Log("COSYNNC", "Radial from goal initial state selection specified.");
+		Log("COSYNNC", "Radial from goal initial state selection specified");
 	}
 
 
@@ -104,7 +104,7 @@ namespace COSYNNC {
 
 		_normWeights = normWeights;
 
-		Log("COSYNNC", "Norm based reinforcement specified.");
+		Log("COSYNNC", "Norm based reinforcement specified");
 	}
 
 
@@ -139,11 +139,23 @@ namespace COSYNNC {
 	}
 
 
+	// Specify if the raw neural network should be saved
+	void Procedure::SpecifySaveRawNeuralNetwork(bool save) {
+		_saveRawNeuralNetwork = save;
+	}
+
+
+	// Specify if the apparent winning set should be computed
+	void Procedure::SpecifyComputeApparentWinningSet(bool compute) {
+		_computeApparentWinningSet = compute;
+	}
+
+
 	// Set the plant
 	void Procedure::SetPlant(Plant* plant) {
 		_plant = plant;
 
-		Log("COSYNNC", "Plant linked.");
+		Log("COSYNNC", "Plant linked");
 	}
 
 
@@ -155,7 +167,7 @@ namespace COSYNNC {
 
 		_outputType = _neuralNetwork->GetOutputType();
 
-		Log("COSYNNC", "Neural network linked.");
+		Log("COSYNNC", "Neural network linked");
 
 		auto dataSize = _neuralNetwork->GetDataSize();
 		Log("COSYNNC", "Neural network has data size: " + std::to_string(dataSize) + " bytes");
@@ -191,14 +203,13 @@ namespace COSYNNC {
 	// Run the synthesis procedure
 	void Procedure::Synthesize() {
 		if (_hasSuccesfullyInitialized) {
-			Log("COSYNNC", "Procedure was succesfully initialized, synthesize procedure started!");
+			Log("COSYNNC", "Procedure was succesfully initialized, synthesize procedure started");
 
 			Log("Trainer", "Starting training");
 			for (int i = 0; i <= _maxEpisodes; i++) {
 				IterateEpisode(i);
 
 				if (i % _verificationEpisode == 0 && i != 0) {
-					Log("Verifier", "Performing fixed-point verification.");
 					Verify(); 
 
 					Log("File Manager", "Saving neural network with a timestamp.");
@@ -362,12 +373,20 @@ namespace COSYNNC {
 	void Procedure::Verify() {
 		_controller.CompileInputArray();
 
+		Log("Verifier", "Computing relevant transitions");
 		_verifier->ComputeTransitions();
+		Log("Verifier", "Partial abstraction contains " + to_string(_verifier->GetAbstractionCompleteness()) + "% of full abstraction");
+
+		Log("Verifier", "Computing winning set");
 		_verifier->ComputeWinningSet();
+		Log("Verifier", "Winning set size percentage: " + to_string(_verifier->GetWinningSetPercentage()) + "%");
 
-		// Log winning set
-		Log("Verifier", "Winning set size percentage: " + to_string(_verifier->GetWinningDomainPercentage()) + "%");
-
+		if (_computeApparentWinningSet) {
+			Log("Verifier", "Computing apparent winning set");
+			_verifier->ComputeApparentWinningSet();
+			Log("Verifier", "Apparent winning set size percentage: " + to_string(_verifier->GetApparentWinningSetPercentage()) + "%");
+		}
+		
 		// Wait for all the MXNet operations to have finished
 		MXNDArrayWaitAll();
 	}
@@ -447,10 +466,10 @@ namespace COSYNNC {
 		_fileManager.SaveNetworkAsMATLAB(path, timestampString + "net");
 		_fileManager.SaveVerifiedDomainAsMATLAB(path, timestampString + "dom");
 		_fileManager.SaveControllerAsStaticController(path, timestampString + "ctl");
-		_fileManager.SaveNetworkAsRaw(path, timestampString + "raw");
+		if(_saveRawNeuralNetwork) _fileManager.SaveNetworkAsRaw(path, timestampString + "raw");
 
 		// Log best network
-		auto currentWinningDomainPercentage = _verifier->GetWinningDomainPercentage();
+		auto currentWinningDomainPercentage = _verifier->GetWinningSetPercentage();
 		if (currentWinningDomainPercentage > _bestControllerWinningDomainPercentage) {
 			_bestControllerTimestamp = timestampString;
 			_bestControllerWinningDomainPercentage = currentWinningDomainPercentage;
