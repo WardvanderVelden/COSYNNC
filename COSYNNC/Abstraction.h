@@ -29,12 +29,13 @@ namespace COSYNNC {
 		Quantizer* GetInputQuantizer() const { return _inputQuantizer; }
 		ControlSpecification* GetControlSpecification() const { return _controlSpecification; }
 
-		Transition* GetTransitionOfIndex(unsigned long index) const { return &_transitions[index]; }
-
 		#pragma endregion Getters
 
 		// Computes the transition function for a single index
 		bool ComputeTransitionFunctionForIndex(long index, Vector input);
+
+		// Returns a reference to the transition based on the index
+		Transition* GetTransitionOfIndex(unsigned long index);
 	private:
 		#pragma region Transition Function
 
@@ -66,7 +67,12 @@ namespace COSYNNC {
 		ControlSpecification* _controlSpecification = nullptr;
 
 		// Transition variables
-		Transition* _transitions;
+		unsigned int _partitions = 1; // thread::hardware_concurrency();
+		unsigned long _partitionSize = 0;
+		Transition** _transitionPartitions = new Transition*[_partitions];
+		
+		//Transition* _transitions;
+
 
 		unsigned int _amountOfVerticesPerCell = 0;
 		unsigned int _amountOfEdgesPerCell = 0;

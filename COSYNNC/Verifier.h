@@ -1,5 +1,6 @@
 #pragma once
 
+#include <thread>
 #include "Abstraction.h"
 
 namespace COSYNNC {
@@ -13,6 +14,9 @@ namespace COSYNNC {
 
 		// Computes the transition function that transitions any state in the state space to a set of states in the state space based on the control law
 		void ComputeTransitions();
+
+		// Computes a subset of the total amount of required transitions, is used for multithreading
+		void ComputeSubsetOfTransitions(unsigned int threadNumber, unsigned long start, unsigned long end);
 
 		// Computes the winning set for which the controller currently is able to adhere to the control specification
 		void ComputeWinningSet();
@@ -54,6 +58,7 @@ namespace COSYNNC {
 
 		#pragma endregion Getters and Setters
 	private:
+
 		// Performs a single fixed point iteration, returns whether or not the set has changed
 		bool PerformSingleFixedPointOperation();
 

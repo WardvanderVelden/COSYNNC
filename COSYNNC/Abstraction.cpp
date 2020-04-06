@@ -17,7 +17,7 @@ namespace COSYNNC {
 
 		_stateQuantizer = stateQuantizer;
 		_inputQuantizer = inputQuantizer;
-	
+
 		_controlSpecification = controlSpecification;
 
 		// Initialize soft constants for transition calculations
@@ -28,16 +28,42 @@ namespace COSYNNC {
 
 		// Initialize transitions
 		auto spaceCardinality = _stateQuantizer->GetCardinality();
-		_transitions = new Transition[spaceCardinality];
+
+		/*_transitions = new Transition[spaceCardinality];
 		for (unsigned long index = 0; index < spaceCardinality; index++) {
 			_transitions[index] = Transition(index, _inputQuantizer->GetCardinality());
+		}*/
+
+		_partitionSize = floor((float)spaceCardinality / (float)_partitions);
+		for (unsigned int i = 0; i < _partitions; i++) {
+			auto size = _partitionSize;
+			if (i == (_partitions - 1)) {
+				size = spaceCardinality -  (i * _partitionSize);
+			}
+
+			_transitionPartitions[i] = new Transition[size];
+			for (unsigned long j = 0; j < size; j++) {
+				_transitionPartitions[i][j] = Transition(_partitionSize * i + j, _inputQuantizer->GetCardinality());
+			}
 		}
 	}
 
 
 	// Destructor
 	Abstraction::~Abstraction() {
-		delete[] _transitions;
+		//delete[] _transitions;
+
+		for (unsigned int i = 0; i < _partitions; i++) delete[] _transitionPartitions[i];
+		delete[] _transitionPartitions;
+	}
+
+
+	// Returns a reference to the transition based on the index
+	Transition* Abstraction::GetTransitionOfIndex(unsigned long index) {
+		unsigned int partition = floor(index / _partitionSize);
+		unsigned long partitionIndex = index - partition * _partitionSize;
+
+		return &_transitionPartitions[partition][partitionIndex];
 	}
 
 
@@ -46,7 +72,7 @@ namespace COSYNNC {
 	// Computes the transition function for a single index, returns true if any calculations were made
 	bool Abstraction::ComputeTransitionFunctionForIndex(long index, Vector input) {
 		auto inputIndex = _inputQuantizer->GetIndexFromVector(input);
-		if (!_transitions[index].HasTransitionBeenCalculated(inputIndex)) {
+		if (!GetTransitionOfIndex(index)->HasTransitionBeenCalculated(inputIndex)) {
 			auto state = _stateQuantizer->GetVectorFromIndex(index);
 			_plant->SetState(state);
 
@@ -54,7 +80,7 @@ namespace COSYNNC {
 
 			// Check if newState is in bounds of the state space, if not then we know the transition already
 			if (!_stateQuantizer->IsInBounds(newState)) {
-				_transitions[index].AddEnd(-1, inputIndex);
+				GetTransitionOfIndex(index)->AddEnd(-1, inputIndex);
 				return true;
 			}
 
@@ -158,7 +184,7 @@ namespace COSYNNC {
 
 			if (isBetweenPlanes || currentIndex == centerIndex) {
 				// Add order to transitions
-				_transitions[index].AddEnd(currentIndex, inputIndex);
+				GetTransitionOfIndex(index)->AddEnd(currentIndex, inputIndex);
 
 				// Generate new orders that branch from current order
 				auto cellCenter = _stateQuantizer->GetVectorFromIndex(currentIndex);
