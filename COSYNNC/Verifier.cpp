@@ -22,7 +22,30 @@ namespace COSYNNC {
 		const auto spaceCardinality = _abstraction->GetStateQuantizer()->GetCardinality();
 
 		std::cout << "\t\t";
-		for (unsigned long index = 0; index < spaceCardinality; index++) {
+
+		// Get the amount of cores that the hardware contains
+		auto concurrentThreadsSupported = 1; // thread::hardware_concurrency();
+		unsigned long partitionSize = floor((float)spaceCardinality / (float)concurrentThreadsSupported);
+
+		// Setup the threads and start computing transitions
+		vector<thread> threadGroup;
+		for (unsigned int i = 0; i < concurrentThreadsSupported; i++) {
+			unsigned long start = i * partitionSize;
+			unsigned long end = (i != (i-1)) ? (i + 1) * partitionSize : spaceCardinality;
+
+			threadGroup.push_back(thread([this, start, end, i] { this->ComputeSubsetOfTransitions(i, start, end); }));
+		}
+
+		// Join threads (waiting for threads to complete)
+		for (unsigned int i = 0; i < concurrentThreadsSupported; i++) {
+			threadGroup.at(i).join();
+		}
+
+		//threadGroup[1].join();
+
+
+
+		/*for (unsigned long index = 0; index < spaceCardinality; index++) {
 			// Print status to monitor progression
 			if (index % ((long)floor(spaceCardinality / 20)) == 0) std::cout << (float)((float)index / (float)spaceCardinality * 100.0) << "% . ";
 		
@@ -30,8 +53,28 @@ namespace COSYNNC {
 			if (_abstraction->ComputeTransitionFunctionForIndex(index, input)) {
 				_transitionsInAbstraction++;
 			}
-		}
+		}*/
 		std::cout << std::endl;
+	}
+
+
+	// Computes a subset of the total amount of required transitions, is used for multithreading
+	void Verifier::ComputeSubsetOfTransitions(unsigned int thread, unsigned long start, unsigned long end) {
+		const auto spaceCardinality = _abstraction->GetStateQuantizer()->GetCardinality();
+
+		for (unsigned long index = start; index < end; index++) {
+			if (index % ((long)floor(spaceCardinality / 20)) == 0) {
+				//std::cout << "."; // Print dot monitor progress
+				std::cout << index << std::endl;
+			}
+
+			auto input = _abstraction->GetController()->GetControlActionFromIndex(index);
+			if (_abstraction->ComputeTransitionFunctionForIndex(index, input)) {
+				_transitionsInAbstraction++;
+			}
+
+			//std::cout << index << std::endl;
+		}
 	}
 
 
