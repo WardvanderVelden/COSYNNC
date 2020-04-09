@@ -73,7 +73,6 @@ namespace COSYNNC {
 		
 		//Transition* _transitions;
 
-
 		unsigned int _amountOfVerticesPerCell = 0;
 		unsigned int _amountOfEdgesPerCell = 0;
 

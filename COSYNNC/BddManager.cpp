@@ -8,15 +8,14 @@ namespace COSYNNC {
 
 
 	// Constructor that has pointers to the controller, verifier and quantizers
-	BddManager::BddManager(Controller* controller, Verifier* verifier, Quantizer* stateQuantizer, Quantizer* inputQuantizer) {
-		_controller = controller;
-		_verifier = verifier;
+	BddManager::BddManager(Abstraction* abstraction) {
+		_abstraction = abstraction;
 
-		_stateQuantizer = stateQuantizer;
-		_inputQuantizer = inputQuantizer;
+		_stateSpaceWordLength = GetWordLength(_abstraction->GetStateQuantizer()->GetCardinality());
+		_inputSpaceWordLength = GetWordLength(_abstraction->GetInputQuantizer()->GetCardinality());
 
-		_stateSpaceWordLength = GetWordLength(_stateQuantizer->GetCardinality());
-		_inputSpaceWordLength = GetWordLength(_inputQuantizer->GetCardinality());
+		// Test the ability of the system to link with the Bdd library
+		//TestBdds();
 	}
 
 
@@ -25,21 +24,19 @@ namespace COSYNNC {
 		ofstream file(path + "/" + name + ".bdd", std::ios_base::out);
 
 		// Go through all the states and encode the state input pairs in a bdd
-		const auto _spaceCardinality = _stateQuantizer->GetCardinality();
-		const auto _inputCardinality = _inputQuantizer->GetCardinality();
+		const auto _spaceCardinality = _abstraction->GetStateQuantizer()->GetCardinality();
+		const auto _inputCardinality = _abstraction->GetInputQuantizer()->GetCardinality();
 
 		// Create BDD and vars
 		//Cudd cudd;	
 
 		// Go through all the states and add the representation to the BDD
 		for (unsigned long index = 0; index < _spaceCardinality; index++) {
-			auto input = _controller->GetControlActionFromIndex(index);
-			auto inputIndex = _inputQuantizer->GetIndexFromVector(input);
+			auto input = _abstraction->GetController()->GetControlActionFromIndex(index);
+			auto inputIndex = _abstraction->GetInputQuantizer()->GetIndexFromVector(input);
 
 			auto stateWord = ComputeBinaryRepresentation(index, _stateSpaceWordLength);
 			auto inputWord = ComputeBinaryRepresentation(inputIndex, _inputSpaceWordLength);
-
-
 		}
 
 		file.close();
@@ -65,13 +62,7 @@ namespace COSYNNC {
 
 	// Returns the word length that is required to encode a specific cardinality
 	unsigned int BddManager::GetWordLength(unsigned long cardinality) {
-		unsigned int wordLength = 1;
-
-		while (pow(2.0, (double)wordLength) < cardinality) {
-			wordLength++;
-		}
-
-		return wordLength;
+		return ceil(log(cardinality) / log(2));
 	}
 
 

@@ -191,9 +191,11 @@ namespace COSYNNC {
 		_verifier->SetVerboseMode(_verboseVerifier);
 
 		_fileManager = FileManager(_neuralNetwork, _verifier, _abstraction);
+		_bddManager = BddManager(_abstraction);
 
 		// TODO: Test if all required parameters are specified before the synthesis procedure begins
 
+		// Bdd manager tests
 
 		_hasSuccesfullyInitialized = true;
 		return true;
