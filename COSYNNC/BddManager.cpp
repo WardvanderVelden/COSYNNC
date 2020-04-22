@@ -68,6 +68,8 @@ namespace COSYNNC {
 
 	// Test BDDs
 	void BddManager::TestBdds() {
+		//Cudd cudd;
+
 		/*Cudd cudd;
 
 		BDD x = cudd.bddVar(0);

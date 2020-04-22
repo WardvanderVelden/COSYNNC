@@ -228,6 +228,134 @@ namespace COSYNNC {
 	}
 
 
+	// Save the transitions that are currently contained within the abstraction
+	void FileManager::SaveAbstraction(string path, string name) {
+		ofstream file(path + "/" + name + ".abs", std::ios_base::out);
+
+		file << "COSYNNC " << _abstraction->GetPlant()->GetName() << " Abstraction\n";
+
+		WriteQuantizationParametersToAbstractionFile(&file);
+
+		// Write all the transitions
+		file << "\n";
+		file << _abstraction->GetAmountOfTransitions() << "\n";
+		for (unsigned long index = 0; index < _abstraction->GetStateQuantizer()->GetCardinality(); index++) {
+			auto formattedIndex = FormatAxisIndices(_abstraction->GetStateQuantizer()->GetAxisIndicesFromIndex(index));
+
+			auto transition = _abstraction->GetTransitionOfIndex(index);
+			auto processedInputs = transition->GetProcessedInputs();
+
+			for (auto input : processedInputs) {
+				auto formattedInput = FormatAxisIndices(_abstraction->GetInputQuantizer()->GetAxisIndicesFromIndex(input));
+
+				auto ends = transition->GetEnds(input);
+
+				// Has non trivial transition
+				if (ends.size() > 0) {
+					for (auto end : ends) {
+						auto formattedEnd = FormatAxisIndices(_abstraction->GetStateQuantizer()->GetAxisIndicesFromIndex(end));
+
+						file << formattedIndex << formattedInput << formattedEnd << "\n";
+					}
+				}
+			}
+		}
+
+		file.close();
+	}
+
+
+	// Save the transitions used the lower and upper bound so that it can be used in SCOTS
+	void FileManager::SaveAbstractionForSCOTS(string path, string name) {
+		ofstream file(path + "/" + name + ".abss", std::ios_base::out);
+
+		file << "COSYNNC " << _abstraction->GetPlant()->GetName() << " Abstraction\n";
+
+		WriteQuantizationParametersToAbstractionFile(&file);
+
+		// Write all the transitions
+		file << "\n";
+		file << _abstraction->GetAmountOfTransitions() << "\n";
+		for (unsigned long index = 0; index < _abstraction->GetStateQuantizer()->GetCardinality(); index++) {
+			auto formattedIndex = FormatAxisIndices(_abstraction->GetStateQuantizer()->GetAxisIndicesFromIndex(index));
+
+			auto transition = _abstraction->GetTransitionOfIndex(index);
+			auto processedInputs = transition->GetProcessedInputs();
+
+			for (auto input : processedInputs) {
+				auto formattedInput = FormatAxisIndices(_abstraction->GetInputQuantizer()->GetAxisIndicesFromIndex(input));
+
+				auto ends = transition->GetEnds(input);
+
+				// Has non trivial transition
+				if (ends.size() > 0) {
+					auto lowerBoundIndex = _abstraction->GetStateQuantizer()->GetIndexFromVector(transition->GetLowerBound(input));
+					auto upperBoundIndex = _abstraction->GetStateQuantizer()->GetIndexFromVector(transition->GetUpperBound(input));
+
+					auto lowerBoundIndices = _abstraction->GetStateQuantizer()->GetAxisIndicesFromIndex(lowerBoundIndex);
+					auto upperBoundIndices = _abstraction->GetStateQuantizer()->GetAxisIndicesFromIndex(upperBoundIndex);
+
+					file << formattedIndex << formattedInput;
+					for (size_t i = 0; i < _abstraction->GetStateQuantizer()->GetDimension(); i++) {
+						file << to_string(lowerBoundIndices[i]) << " " << to_string(upperBoundIndices[i]) << " ";
+					}
+					file << "\n";
+				}
+			}
+		}
+
+		file.close();
+	}
+
+
+	// Saves the transitions of the plant as known to the abstraction
+	void FileManager::SaveOverApproximatedTransitions(string path, string name) {
+		ofstream file(path + "/" + name + ".trs", std::ios_base::out);
+
+		file << "COSYNNC " << _abstraction->GetPlant()->GetName() << " Abstraction\n";
+
+		WriteQuantizationParametersToAbstractionFile(&file);
+
+		// Write all the transitions
+		file << "\n";
+		file << _abstraction->GetAmountOfTransitions() << "\n";
+		for (unsigned long index = 0; index < _abstraction->GetStateQuantizer()->GetCardinality(); index++) {
+			auto formattedState = FormatAxisIndices(_abstraction->GetStateQuantizer()->GetAxisIndicesFromIndex(index));
+
+			auto transition = _abstraction->GetTransitionOfIndex(index);
+			auto processedInputs = transition->GetProcessedInputs();
+
+			for (auto input : processedInputs) {
+				auto formattedInput = FormatAxisIndices(_abstraction->GetInputQuantizer()->GetAxisIndicesFromIndex(input));
+
+				auto ends = transition->GetEnds(input);
+
+				if (ends.size() > 0) {
+					file << formattedState << formattedInput;
+					auto post = transition->GetPost(input);
+
+					auto lowerDiff = transition->GetLowerBound(input) - post;
+					auto upperDiff = transition->GetUpperBound(input) - post;
+
+					lowerDiff.Abs(); upperDiff.Abs();
+					lowerDiff.Max(upperDiff);
+
+					auto r = lowerDiff;
+
+					// Output x'
+					for (unsigned int i = 0; i < post.GetLength(); i++) file << post[i] << " ";
+
+					// Output r
+					for (unsigned int i = 0; i < r.GetLength(); i++) file << r[i] << " ";
+					file << "\n";
+				}
+			}
+		}
+
+		file.close();
+	}
+
+
 	// Writes the synthesis status to the log file for debug purposes
 	void FileManager::WriteSynthesisStatusToLog(string path, string name, string plantName, string timestamp) {
 		ofstream file(path + "/" + name + ".txt", std::ios_base::app);
@@ -271,6 +399,34 @@ namespace COSYNNC {
 		WriteVectorToStaticController(file, "ETA", _abstraction->GetInputQuantizer()->GetEta());
 		WriteVectorToStaticController(file, "LOWER_LEFT", _abstraction->GetInputQuantizer()->GetLowerBound());
 		WriteVectorToStaticController(file, "UPPER_RIGHT", _abstraction->GetInputQuantizer()->GetUpperBound());
+	}
+
+
+	// Write the quantization parameters to the transition file
+	void FileManager::WriteQuantizationParametersToAbstractionFile(ofstream* file) {
+		// State space parameters
+		auto stateQuantizer = _abstraction->GetStateQuantizer();
+		auto stateDimension = stateQuantizer->GetDimension();
+
+		*file << "\n" << stateDimension << "\n";
+		for (unsigned int i = 0; i < stateDimension; i++) *file << stateQuantizer->GetLowerBound()[i] << " ";
+		*file << "\n";
+		for (unsigned int i = 0; i < stateDimension; i++) *file << stateQuantizer->GetUpperBound()[i] << " ";
+		*file << "\n";
+		for (unsigned int i = 0; i < stateDimension; i++) *file << stateQuantizer->GetEta()[i] << " ";
+		*file << "\n";
+
+		// Input space parameters
+		auto inputQuantizer = _abstraction->GetInputQuantizer();
+		auto inputDimension = inputQuantizer->GetDimension();
+
+		*file << "\n" << inputDimension << "\n";
+		for (unsigned int i = 0; i < inputDimension; i++) *file << inputQuantizer->GetLowerBound()[i] << " ";
+		*file << "\n";
+		for (unsigned int i = 0; i < inputDimension; i++) *file << inputQuantizer->GetUpperBound()[i] << " ";
+		*file << "\n";
+		for (unsigned int i = 0; i < inputDimension; i++) *file << inputQuantizer->GetEta()[i] << " ";
+		*file << "\n";
 	}
 
 
@@ -324,5 +480,17 @@ namespace COSYNNC {
 		for (unsigned int i = 0; i < sizeof(value); i++) {
 			*file << b[i];
 		}
+	}
+
+
+	// Format vector of axis indices into an appropriate string
+	string FileManager::FormatAxisIndices(vector<unsigned long> axisIndices) {
+		string formattedString = "";
+
+		for (unsigned int i = 0; i < axisIndices.size(); i++) {
+			formattedString += to_string(axisIndices[i]) + " ";
+		}
+
+		return formattedString;
 	}
 }

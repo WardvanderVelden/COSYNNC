@@ -6,8 +6,6 @@
 
 //#include "cuddObj.hh"
 //#include "cudd.h"
-//#include "dddmp.h"
-
 
 #include "StringHelper.h"
 #include "NeuralNetwork.h"

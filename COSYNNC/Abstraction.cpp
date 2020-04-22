@@ -72,7 +72,8 @@ namespace COSYNNC {
 	// Computes the transition function for a single index, returns true if any calculations were made
 	bool Abstraction::ComputeTransitionFunctionForIndex(long index, Vector input) {
 		auto inputIndex = _inputQuantizer->GetIndexFromVector(input);
-		if (!GetTransitionOfIndex(index)->HasTransitionBeenCalculated(inputIndex)) {
+		auto transition = GetTransitionOfIndex(index);
+		if (!transition->HasTransitionBeenCalculated(inputIndex)) {
 			auto state = _stateQuantizer->GetVectorFromIndex(index);
 			_plant->SetState(state);
 
@@ -80,13 +81,23 @@ namespace COSYNNC {
 
 			// Check if newState is in bounds of the state space, if not then we know the transition already
 			if (!_stateQuantizer->IsInBounds(newState)) {
-				GetTransitionOfIndex(index)->AddEnd(-1, inputIndex);
+				transition->AddEnd(-1, inputIndex);
+				transition->SetInputProcessed(inputIndex);
 				return true;
 			}
 
 			// Evolve the vertices of the cell and find the resulting hyperplanes
 			vector<Hyperplane> hyperplanes;
 			auto vertices = OverApproximateEvolution(state, input, hyperplanes);
+
+			// Check if any of the vertices is out of bounds, in that case the transition is invalid
+			for (unsigned int i = 0; i < _amountOfVerticesPerCell; i++) {
+				if (!_stateQuantizer->IsInBounds(vertices[i])) {
+					transition->AddEnd(-1, inputIndex);
+					transition->SetInputProcessed(inputIndex);
+					return true;
+				}
+			}
 
 			// Get the point in space that represents the center of the vertices
 			auto center = Vector(_stateQuantizer->GetDimension());
@@ -97,6 +108,12 @@ namespace COSYNNC {
 
 			// Flood fill as long as a vertex in a cell is in the internal area
 			FloodfillBetweenHyperplanes(index, center, hyperplanes, inputIndex);
+
+			// Determine the lower and upper bounds of the transition and add these to the transition so that SCOTS can work with them if that is set
+			if(_doCalculateLowerAndUpperBound) SetTransitionPostAndBounds(transition, vertices, newState, inputIndex);
+
+			// Set the input as processed
+			transition->SetInputProcessed(inputIndex);
 
 			// Free up memory
 			delete[] vertices;
@@ -129,6 +146,24 @@ namespace COSYNNC {
 		}
 
 		return vertices;
+	}
+
+
+	// Find the upper and lower bound of the transition and set it
+	void Abstraction::SetTransitionPostAndBounds(Transition* transition, Vector* vertices, Vector post, unsigned long inputIndex) {
+		Vector lowerBound = post; 
+		Vector upperBound = post;
+
+		for (unsigned int i = 0; i < _amountOfVerticesPerCell; i++) {
+			auto vertex = vertices[i];
+			for (size_t j = 0; j < _stateQuantizer->GetDimension(); j++) {
+				lowerBound[j] = min(lowerBound[j], vertex[j]);
+				lowerBound[j] = min(lowerBound[j], vertex[j]);
+			}
+		}
+
+		transition->SetPost(post, inputIndex);
+		transition->SetLowerAndUpperBound(lowerBound, upperBound, inputIndex);
 	}
 
 
@@ -185,6 +220,7 @@ namespace COSYNNC {
 			if (isBetweenPlanes || currentIndex == centerIndex) {
 				// Add order to transitions
 				GetTransitionOfIndex(index)->AddEnd(currentIndex, inputIndex);
+				_amountOfTransitions++;
 
 				// Generate new orders that branch from current order
 				auto cellCenter = _stateQuantizer->GetVectorFromIndex(currentIndex);

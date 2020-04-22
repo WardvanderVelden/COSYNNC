@@ -16,10 +16,7 @@ namespace COSYNNC {
 	{
 	public:
 		// Initialized the quantizer, by default isBounded is set to false so that only a reference point needs to be specified
-		Quantizer(bool isBounded = false);
-
-		// Set the quantization parameters for the space
-		void SetQuantizeParameters(Vector spaceEta, Vector spaceReference);
+		Quantizer();
 
 		// Set the quantization parameters for the space, if the space is not bounded the lower bound will be used as the reference
 		void SetQuantizeParameters(Vector spaceEta, Vector spaceLowerBound, Vector spaceUpperBound);
@@ -46,6 +43,9 @@ namespace COSYNNC {
 
 		// Returns the vector that corresponds to the index in the space
 		Vector GetVectorFromIndex(long index);
+
+		// Returns the axis indices 
+		vector<unsigned long> GetAxisIndicesFromIndex(unsigned long index);
 
 		// Returns the index that corresponds to that vector
 		long GetIndexFromVector(Vector vector);
@@ -74,8 +74,6 @@ namespace COSYNNC {
 
 		#pragma endregion Getters		
 	private:
-		bool _isBounded = false;
-
 		int _spaceDimension = 0;
 
 		vector<long> _spaceCardinalityPerAxis;
@@ -83,10 +81,8 @@ namespace COSYNNC {
 
 		Vector _spaceEta;
 
-		Vector _spaceLowerBound;
-		Vector _spaceUpperBound;
-
-		Vector _spaceReference;
+		Vector _spaceLowerVertex;
+		Vector _spaceUpperVertex;
 	};
 }
 

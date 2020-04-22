@@ -11,13 +11,13 @@ namespace COSYNNC {
 		_values.resize(length, 0);
 	}
 
-	Vector::Vector(float value) {
+	Vector::Vector(double value) {
 		_length = 1;
 		_values.resize(1);
 		_values[0] = value;
 	}
 
-	Vector::Vector(vector<float> values) {
+	Vector::Vector(vector<double> values) {
 		_values = values;
 		_length = values.size();
 	}
@@ -48,7 +48,7 @@ namespace COSYNNC {
 	}
 	Vector Vector::operator-=(const Vector other) { return *this - other; }
 
-	Vector Vector::operator*(const float scalar) {
+	Vector Vector::operator*(const double scalar) {
 		Vector vec(*this);
 
 		for (int i = 0; i < _length; i++)
@@ -65,7 +65,7 @@ namespace COSYNNC {
 		return vec;
 	}
 
-	Vector Vector::operator/(const float scalar) {
+	Vector Vector::operator/(const double scalar) {
 		return *this * (1 / scalar);
 	}
 	Vector Vector::operator/(const Vector other) {
@@ -77,7 +77,7 @@ namespace COSYNNC {
 		return vec;
 	}
 
-	Vector Vector::operator=(const vector<float> values) {
+	Vector Vector::operator=(const vector<double> values) {
 		_length = values.size();
 		_values = values;
 
@@ -93,7 +93,7 @@ namespace COSYNNC {
 		return true;
 	}
 
-	float& Vector::operator[](const int index) {
+	double& Vector::operator[](const int index) {
 		return _values[index];
 	}
 
@@ -107,11 +107,28 @@ namespace COSYNNC {
 	}
 
 
+	// Takes the absolute value of the entries in the vector
+	void Vector::Abs() {
+		for (unsigned int i = 0; i < _length; i++) {
+			_values[i] = abs(_values[i]);
+		}
+	}
+
+
+	// Takes the maximum value between itself and the other vector presented
+	void Vector::Max(Vector other) {
+		if (_length != other.GetLength()) return;
+		for (unsigned int i = 0; i < _length; i++) {
+			if (_values[i] < other[i]) _values[i] = other[i];
+		}
+	}
+
+
 	// Returns the dot product of the vector with another vector of the same length
-	float Vector::Dot(Vector other) {
+	double Vector::Dot(Vector other) {
 		if (_length != other.GetLength()) return 0.0;
 
-		float value = 0.0;
+		double value = 0.0;
 		for (unsigned int i = 0; i < _length; i++) {
 			value += (_values[i] * other[i]);
 		}
@@ -132,8 +149,8 @@ namespace COSYNNC {
 
 
 	// Returns the norm of the vector
-	float Vector::GetNorm() {
-		float norm = 0.0;
+	double Vector::GetNorm() {
+		double norm = 0.0;
 		for (int i = 0; i < _length; i++) {
 			norm += pow(_values[i], 2);
 		}
@@ -142,8 +159,8 @@ namespace COSYNNC {
 
 
 	// Returns the weighted norm of the vector
-	float Vector::GetWeightedNorm(vector<float> weights) {
-		float norm = 0.0;
+	double Vector::GetWeightedNorm(vector<float> weights) {
+		double norm = 0.0;
 		for (int i = 0; i < _length; i++) {
 			norm += pow(weights[i] * _values[i], 2);
 		}
