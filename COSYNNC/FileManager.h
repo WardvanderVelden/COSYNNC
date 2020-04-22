@@ -34,6 +34,15 @@ namespace COSYNNC {
 		// Save the controller as a static controller, just like old versions of SCOTS used to do
 		void SaveControllerAsStaticController(string path, string name);
 
+		// Save the transitions that are currently contained within the abstraction
+		void SaveAbstraction(string path, string name);
+
+		// Save the transitions used the lower and upper bound so that it can be used in SCOTS
+		void SaveAbstractionForSCOTS(string path, string name);
+
+		// Saves the transitions of the plant as known to the abstraction
+		void SaveOverApproximatedTransitions(string path, string name);
+
 		// Writes the synthesis status to the log file for debug purposes
 		void WriteSynthesisStatusToLog(string path, string name, string plantName, string timestamp);	
 	private:
@@ -42,6 +51,9 @@ namespace COSYNNC {
 
 		// Write the quantization parameters for the state and input quantizer to a static controller file
 		void WriteQuantizationParametersToStaticController(ofstream* file);
+
+		// Write the quantization parameters to the transition file
+		void WriteQuantizationParametersToAbstractionFile(ofstream* file);
 
 		// Writes a vector to a file
 		void WriteVectorToMATLABFile(ofstream* file, string variableName, Vector vector);
@@ -53,6 +65,9 @@ namespace COSYNNC {
 		void WriteByte(ofstream* file, unsigned char value);
 		void WriteIntAsBytes(ofstream* file, int value);
 		void WriteFloatAsBytes(ofstream* file, float value);
+
+		// Format vector of axis indices into an appropriate string
+		string FormatAxisIndices(vector<unsigned long> axisIndices);
 
 
 		// Pointers to relevant objects

@@ -24,10 +24,10 @@ void SynthesizeInvarianceControllerDCDC() {
 
 	// Specify the state and input quantizers
 	cosynnc.SpecifyStateQuantizer(Vector({ 0.005, 0.005 }), Vector({ 0.65, 4.95 }), Vector({ 1.65, 5.95 }));
-	cosynnc.SpecifyInputQuantizer(Vector((float)0.5), Vector((float)0.0), Vector((float)1.0));
+	cosynnc.SpecifyInputQuantizer(Vector((float)1.0), Vector((float)0.0), Vector((float)1.0));
 
 	// Specify the synthesis parameters
-	cosynnc.SpecifySynthesisParameters(2500000, 50, 5000, 50000, 50);
+	cosynnc.SpecifySynthesisParameters(2500000, 50, 5000, 25000, 50);
 	cosynnc.SpecifyRadialInitialState(0.25, 0.75);
 	cosynnc.SpecifyNorm({ 1.0, 1.0 });
 	cosynnc.SpecifyTrainingFocus(TrainingFocus::AlternatingRadialLosingNeighborLosing);
@@ -68,10 +68,10 @@ void SynthesizeReachabilityControllerDCDC() {
 	// Specify the state and input quantizers
 	cosynnc.SpecifyStateQuantizer(Vector({ 0.005, 0.005 }), Vector({ 0.65, 4.95 }), Vector({ 1.65, 5.95 })); // This is the setting as used by Rungger
 	//cosynnc.SpecifyStateQuantizer(Vector({ 0.0075, 0.0075 }), Vector({ 0.65, 4.95 }), Vector({ 1.65, 5.95 }));
-	cosynnc.SpecifyInputQuantizer(Vector((float)0.5), Vector((float)0.0), Vector((float)1.0));
+	cosynnc.SpecifyInputQuantizer(Vector((float)1.0), Vector((float)0.0), Vector((float)1.0));
 
 	// Specify the synthesis parameters
-	cosynnc.SpecifySynthesisParameters(1000000, 100, 5000, 50000, 50);
+	cosynnc.SpecifySynthesisParameters(1000000, 100, 5000, 10000, 50);
 	cosynnc.SpecifyRadialInitialState(0.4, 0.6);
 	cosynnc.SpecifyNorm({ 0.0, 1.0 });
 	cosynnc.SpecifyWinningSetReinforcement(true);
@@ -188,39 +188,6 @@ void SynthesizeReachabilityControllerRocket() {
 	// Free up memory
 	delete rocket;
 	delete multilayerPerceptron;
-}
-
-
-void LoadAndCompressController(string controllerName) {
-	Procedure cosynnc;
-
-	Plant* rocket = new Rocket();
-	cosynnc.SetPlant(rocket);
-
-	// Specify the state and input quantizers
-	cosynnc.SpecifyStateQuantizer(Vector({ 0.1, 0.1 }), Vector({ -5, -10 }), Vector({ 5, 10 }));
-	cosynnc.SpecifyInputQuantizer(Vector((float)250.0), Vector((float)0.0), Vector((float)5000.0));
-
-	// Specify the synthesis parameters
-	//cosynnc.SpecifySynthesisParameters(5000000, 50, 2500, 50000, 50);
-	//cosynnc.SpecifyRadialInitialState(0.15, 0.85);
-	//cosynnc.SpecifyNorm({ 1.0, 1.0 });
-	//cosynnc.SpecifyTrainingFocus(TrainingFocus::AlternatingRadialLosingNeighborLosing);
-
-	// Link a neural network to the procedure
-	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 8, 8 }, ActivationActType::kRelu, OutputType::Labelled);
-	multilayerPerceptron->InitializeOptimizer("adam", 0.005, 0.001);
-	cosynnc.SetNeuralNetwork(multilayerPerceptron);
-
-	// Specify the control specification
-	//cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ -1.0, -1.0 }), Vector({ 1.0, 1.0 }));
-
-	// Specify how verbose the procedure should be
-	//cosynnc.SpecifyVerbosity(true, false);
-
-	// Load a previously trained network
-	cosynnc.Initialize();
-	cosynnc.LoadNeuralNetwork("controllers/timestamps", "ThuMar5104018net.m");
 }
 
 

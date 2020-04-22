@@ -29,7 +29,7 @@ namespace COSYNNC {
 
 	// Set the state quantizer to the specified quantization parameters
 	void Procedure::SpecifyStateQuantizer(Vector eta, Vector lowerBound, Vector upperBound) {
-		_stateQuantizer = new Quantizer(true);
+		_stateQuantizer = new Quantizer();
 		_stateQuantizer->SetQuantizeParameters(eta, lowerBound, upperBound);
 
 		_singleStateTrainingFocus = Vector(_stateQuantizer->GetDimension());
@@ -40,7 +40,7 @@ namespace COSYNNC {
 
 	// Set the input quantizer to the specified quantization parameters
 	void Procedure::SpecifyInputQuantizer(Vector eta, Vector lowerBound, Vector upperBound) {
-		_inputQuantizer = new Quantizer(true);
+		_inputQuantizer = new Quantizer();
 		_inputQuantizer->SetQuantizeParameters(eta, lowerBound, upperBound);
 
 		Log("COSYNNC", "Input quantizer specified");
@@ -191,9 +191,11 @@ namespace COSYNNC {
 		_verifier->SetVerboseMode(_verboseVerifier);
 
 		_fileManager = FileManager(_neuralNetwork, _verifier, _abstraction);
+		_bddManager = BddManager(_abstraction);
 
 		// TODO: Test if all required parameters are specified before the synthesis procedure begins
 
+		// Bdd manager tests
 
 		_hasSuccesfullyInitialized = true;
 		return true;
@@ -244,7 +246,7 @@ namespace COSYNNC {
 		_plant->SetState(initialState);
 
 		// Define the norm for determining the networks performance
-		float initialNorm = 0.0;
+		double initialNorm = 0.0;
 		if(_useNorm) initialNorm = (initialState - _specification.GetCenter()).GetWeightedNorm(_normWeights);
 		float norm = initialNorm;
 
@@ -440,6 +442,7 @@ namespace COSYNNC {
 		_fileManager.SaveNetworkAsMATLAB(path, "net");
 		_fileManager.SaveVerifiedDomainAsMATLAB(path, "dom");
 		_fileManager.SaveControllerAsStaticController(path, "ctl");
+		_fileManager.SaveAbstractionForSCOTS(path, "abss");
 		_fileManager.SaveNetworkAsRaw(path, "raw");
 	}
 
@@ -464,8 +467,10 @@ namespace COSYNNC {
 
 		// Save network to a matlab file under the timestamp
 		_fileManager.SaveNetworkAsMATLAB(path, timestampString + "net");
-		_fileManager.SaveVerifiedDomainAsMATLAB(path, timestampString + "dom");
+ 		_fileManager.SaveVerifiedDomainAsMATLAB(path, timestampString + "dom");
 		_fileManager.SaveControllerAsStaticController(path, timestampString + "ctl");
+		//_fileManager.SaveAbstractionForSCOTS(path, timestampString + "abss");
+		_fileManager.SaveOverApproximatedTransitions(path, timestampString + "trs");
 		if(_saveRawNeuralNetwork) _fileManager.SaveNetworkAsRaw(path, timestampString + "raw");
 
 		// Log best network

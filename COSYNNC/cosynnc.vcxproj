@@ -91,11 +91,13 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\Work\Thesis\cosynnc\Cosynnc.Engine;D:\Work\Thesis\mxnet\cpp-package\include;D:\Work\Thesis\mxnet\include;D:\Work\Thesis\mxnet\3rdparty\dmlc-core\include;D:\Work\Thesis\mxnet\3rdparty\tvm\nnvm\include;C:\msys64\mingw64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Work\Thesis\cosynnc\Cosynnc.Engine;D:\Work\Thesis\third\mxnet\cpp-package\include;D:\Work\Thesis\third\mxnet\include;D:\Work\Thesis\third\mxnet\3rdparty\dmlc-core\include;D:\Work\Thesis\third\mxnet\3rdparty\tvm\nnvm\include;D:\Tools\Cygwin\usr\local\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalUsingDirectories>
+      </AdditionalUsingDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>D:\Work\Thesis\mxnet\build\Release\libmxnet.lib;C:\msys64\mingw64\lib\libcudd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>D:\Work\Thesis\third\mxnet\build\Release\libmxnet.lib;D:\Tools\Cygwin\usr\local\lib\libcudd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

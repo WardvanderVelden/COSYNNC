@@ -1,20 +1,7 @@
 #include "Quantizer.h"
 
 namespace COSYNNC {
-	Quantizer::Quantizer(bool isBounded) {
-		_isBounded = isBounded;
-	}
-
-
-	// Set the quantization parameters for the space
-	void Quantizer::SetQuantizeParameters(Vector spaceEta, Vector spaceReference) {
-		_spaceDimension = spaceEta.GetLength();
-		_spaceEta = spaceEta;
-
-		_spaceReference = spaceReference;
-
-		_isBounded = false;
-	}
+	Quantizer::Quantizer() { }
 
 
 	// Set the quantization parameters for the space, if the space is not bounded the lower bound will be used as the reference
@@ -22,39 +9,35 @@ namespace COSYNNC {
 		_spaceDimension = spaceEta.GetLength();
 		_spaceEta = spaceEta;
 
-		if (_isBounded) {
-			_spaceLowerBound = spaceLowerBound;
-			_spaceUpperBound = spaceUpperBound;
+		_spaceLowerVertex = Vector(_spaceDimension);
+		_spaceUpperVertex = Vector(_spaceDimension);
 
-			_spaceCardinalityPerAxis = vector<long>(_spaceDimension, 0);
+		_spaceCardinalityPerAxis = vector<long>(_spaceDimension, 0);
 
-			for (int i = 0; i < _spaceDimension; i++) {
-				if (i == 0) _spaceCardinality = round((_spaceUpperBound[i] - _spaceLowerBound[i]) / _spaceEta[i]);
-				else _spaceCardinality *= round((_spaceUpperBound[i] - _spaceLowerBound[i]) / _spaceEta[i]);
+		for (size_t dim = 0; dim < _spaceDimension; dim++) {
+			auto lowerIndex = ceil(spaceLowerBound[dim] / _spaceEta[dim]);
+			_spaceLowerVertex[dim] = lowerIndex * _spaceEta[dim];
 
-				_spaceCardinalityPerAxis[i] = round((_spaceUpperBound[i] - _spaceLowerBound[i]) / _spaceEta[i]);
-			}
-		}
-		else {
-			_spaceReference = spaceLowerBound;
+			auto upperIndex = floor(spaceUpperBound[dim] / _spaceEta[dim]);
+			_spaceUpperVertex[dim] = upperIndex * _spaceEta[dim];
+			
+			_spaceCardinalityPerAxis[dim] = (unsigned long)abs(upperIndex - lowerIndex) + 1;
+
+			if (dim == 0) _spaceCardinality = _spaceCardinalityPerAxis[dim];
+			else _spaceCardinality *= _spaceCardinalityPerAxis[dim];
 		}
 	}
 
 
 	// Quantize a vector to quantization parameters
 	Vector Quantizer::QuantizeVector(Vector vector) {
-		Vector quantized(vector.GetLength());
+		Vector quantized(_spaceDimension);
 
-		for (int i = 0; i < vector.GetLength(); i++) {
-			if (_isBounded) {
-				if (vector[i] < _spaceLowerBound[i]) vector[i] = _spaceLowerBound[i] + _spaceEta[i] * 0.5;
-				if (vector[i] > _spaceUpperBound[i]) vector[i] = _spaceUpperBound[i] - _spaceEta[i] * 0.5;
+		for (size_t dim = 0; dim < _spaceDimension; dim++) {
+			if (vector[dim] < _spaceLowerVertex[dim]) vector[dim] = _spaceLowerVertex[dim];
+			if (vector[dim] > _spaceUpperVertex[dim]) vector[dim] = _spaceUpperVertex[dim];
 
-				quantized[i] = floor(((vector[i] - _spaceLowerBound[i]) / _spaceEta[i])) * _spaceEta[i] + _spaceLowerBound[i] + _spaceEta[i] * 0.5;
-			}
-			else {
-				quantized[i] = floor(((vector[i] - _spaceReference[i]) / _spaceEta[i])) * _spaceEta[i] + _spaceReference[i] + _spaceEta[i] * 0.5;
-			}
+			quantized[dim] = round(vector[dim] / _spaceEta[dim]) * _spaceEta[dim];
 		}
 
 		return quantized;
@@ -72,15 +55,13 @@ namespace COSYNNC {
 
 	// Normalize a vector from the bounded space to the normal space
 	Vector Quantizer::NormalizeVector(Vector denormal) {
-		Vector normal = Vector(denormal.GetLength());
+		Vector normal(_spaceDimension);
 
-		for (int i = 0; i < denormal.GetLength(); i++) {
-			// Project back to the bounds
-			if (denormal[i] > (_spaceUpperBound[i] - _spaceEta[i] * 0.5)) denormal[i] = _spaceUpperBound[i] - _spaceEta[i] * 0.5;
-			if (denormal[i] < (_spaceLowerBound[i] + _spaceEta[i] * 0.5)) denormal[i] = _spaceLowerBound[i] + _spaceEta[i] * 0.5;
+		for (size_t dim = 0; dim < _spaceDimension; dim++) {
+			if (denormal[dim] < _spaceLowerVertex[dim]) denormal[dim] = _spaceLowerVertex[dim];
+			if (denormal[dim] > _spaceUpperVertex[dim]) denormal[dim] = _spaceUpperVertex[dim];
 
-			// Normalize
-			normal[i] = (denormal[i] - _spaceLowerBound[i]) / (_spaceUpperBound[i] - _spaceLowerBound[i]);
+			normal[dim] = (denormal[dim] - _spaceLowerVertex[dim]) / (_spaceUpperVertex[dim] - _spaceLowerVertex[dim]);
 		}
 
 		return normal;
@@ -89,10 +70,10 @@ namespace COSYNNC {
 
 	// Denormalize a vector a vector from the normal space to the bounded space
 	Vector Quantizer::DenormalizeVector(Vector normal) {
-		Vector denormal = Vector(normal.GetLength());
+		Vector denormal(_spaceDimension);
 
-		for (int i = 0; i < normal.GetLength(); i++) {
-			denormal[i] = normal[i] * (_spaceUpperBound[i] - _spaceLowerBound[i]) + _spaceLowerBound[i];
+		for (size_t dim = 0; dim < _spaceDimension; dim++) {
+			denormal[dim] = normal[dim] * (_spaceUpperVertex[dim] - _spaceLowerVertex[dim]) + _spaceLowerVertex[dim];
 		}
 
 		return denormal;
@@ -101,8 +82,8 @@ namespace COSYNNC {
 
 	// Checks if a vector is in the bounds of the quantized space
 	bool Quantizer::IsInBounds(Vector vector) {
-		for (int i = 0; i < vector.GetLength(); i++) {
-			if (vector[i] < _spaceLowerBound[i] || vector[i] > _spaceUpperBound[i]) {
+		for (int dim = 0; dim < _spaceDimension; dim++) {
+			if (vector[dim] < _spaceLowerVertex[dim] || vector[dim] > _spaceUpperVertex[dim]) {
 				return false;
 			}
 		}
@@ -116,7 +97,7 @@ namespace COSYNNC {
 	// Returns the input that corresponds to the labelled output of the network
 	Vector Quantizer::GetVectorFromOneHot(Vector oneHot) {
 		int index = 0;
-		for (int i = 0; i < oneHot.GetLength(); i++) {
+		for (size_t i = 0; i < oneHot.GetLength(); i++) {
 			if (oneHot[i] == 1.0) index = i;
 		}
 
@@ -127,11 +108,11 @@ namespace COSYNNC {
 	// Returns the vector that corresponds to the index in the space
 	Vector Quantizer::GetVectorFromIndex(long index) {
 		Vector vec(_spaceDimension);
-		for (int i = (_spaceDimension - 1); i >= 0; i--) {
-			long indexOnAxis = (i > 0) ? floor(index / _spaceCardinalityPerAxis[i - 1]) : index;
+		for (int dim = (_spaceDimension - 1); dim >= 0; dim--) {
+			long indexOnAxis = (dim > 0) ? floor(index / _spaceCardinalityPerAxis[dim - 1]) : index;
 
-			if (i > 0) index -= indexOnAxis * _spaceCardinalityPerAxis[i - 1];
-			vec[i] = indexOnAxis * _spaceEta[i] + _spaceLowerBound[i] + _spaceEta[i] * 0.5;
+			if (dim > 0) index -= indexOnAxis * _spaceCardinalityPerAxis[dim - 1];
+			vec[dim] = indexOnAxis * _spaceEta[dim] + _spaceLowerVertex[dim]; // +_spaceEta[dim] * 0.5;
 		}
 
 		return vec;
@@ -144,13 +125,29 @@ namespace COSYNNC {
 
 		if (!IsInBounds(vector)) return -1;
 
-		for (int i = 0; i < _spaceDimension; i++) {
-			long indexPerAxis = (i != 0) ? _spaceCardinalityPerAxis[i - 1] : 1;
+		for (size_t dim = 0; dim < _spaceDimension; dim++) {
+			long indexPerAxis = (dim != 0) ? _spaceCardinalityPerAxis[dim - 1] : 1;
 
-			index += floor((vector[i] - _spaceLowerBound[i]) / _spaceEta[i]) * indexPerAxis;
+			index += round((vector[dim] - _spaceLowerVertex[dim]) / _spaceEta[dim]) * indexPerAxis;
 		}
 
 		return index;
+	}
+
+
+	// Returns the axis indices 
+	vector<unsigned long> Quantizer::GetAxisIndicesFromIndex(unsigned long index) {
+		vector<unsigned long> axisIndices = vector<unsigned long>(_spaceDimension, 0);
+
+		for (int i = (_spaceDimension - 1); i >= 0; i--) {
+			long indexOnAxis = (i > 0) ? floor(index / _spaceCardinalityPerAxis[i - 1]) : index;
+			if (indexOnAxis < 0) indexOnAxis = 0;
+
+			if (i > 0) index -= indexOnAxis * _spaceCardinalityPerAxis[i - 1];
+			axisIndices[i] = indexOnAxis;
+		}
+
+		return axisIndices;
 	}
 
 
@@ -158,11 +155,9 @@ namespace COSYNNC {
 	Vector Quantizer::GetRandomVector() {
 		Vector randomVector(_spaceDimension);
 
-		if (_isBounded) {
-			for (int i = 0; i < _spaceDimension; i++) {
-				float randomFloat = (float)rand() / RAND_MAX;
-				randomVector[i] = _spaceLowerBound[i] + (_spaceUpperBound[i] - _spaceLowerBound[i]) * randomFloat;
-			}
+		for (int i = 0; i < _spaceDimension; i++) {
+			float randomFloat = (float)rand() / RAND_MAX;
+			randomVector[i] = _spaceLowerVertex[i] + (_spaceUpperVertex[i] - _spaceLowerVertex[i]) * randomFloat;
 		}
 
 		return QuantizeVector(randomVector);
@@ -183,13 +178,13 @@ namespace COSYNNC {
 
 	// Returns the lower bound of the quantizer
 	Vector Quantizer::GetLowerBound() const {
-		return _spaceLowerBound;
+		return _spaceLowerVertex;
 	}
 
 
 	// Returns the upper bound of the quantizer
 	Vector Quantizer::GetUpperBound() const {
-		return _spaceUpperBound;
+		return _spaceUpperVertex;
 	}
 
 

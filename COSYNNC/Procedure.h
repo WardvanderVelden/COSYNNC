@@ -4,6 +4,7 @@
 #include "Controller.h"
 #include "Verifier.h"
 #include "FileManager.h"
+#include "BddManager.h"
 
 namespace COSYNNC {
 	enum class TrainingFocus {
@@ -123,6 +124,7 @@ namespace COSYNNC {
 		OutputType _outputType = OutputType::Labelled;
 
 		FileManager _fileManager;
+		BddManager _bddManager;
 
 		// Training queue
 		vector<Vector> _trainingQueueStates;
