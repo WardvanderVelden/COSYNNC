@@ -36,7 +36,7 @@ namespace COSYNNC {
 		// Over approximate the normal points
 		for (unsigned int i = 0; i < 2; i++) {
 			plant->SetState(_normalPoints[i]);
-			_normalPoints[i] = plant->EvaluateOverApproximation(input);
+			_normalPoints[i] = plant->EvaluateDynamics(input);
 		}
 
 		// Set and normalize the over approximated normal of the plane

@@ -341,3 +341,7 @@ healthchecksdb
 
 # Neural networks and associated matlab files
 *.nn
+
+# Timestamp folder
+controllers/timestamps/
+/COSYNNC/controllers/timestamps

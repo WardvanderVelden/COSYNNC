@@ -200,6 +200,28 @@ namespace COSYNNC {
 	}
 
 
+	// Saves the raw controller
+	void FileManager::SaveControllerAsMATLAB(string path, string name) {
+		ofstream file(path + "/" + name + ".m", std::ios_base::out);
+
+		auto stateCardinality = _abstraction->GetStateQuantizer()->GetCardinality();
+		auto inputDimension = _abstraction->GetInputQuantizer()->GetDimension();
+		file << "controller = zeros(" << stateCardinality << ", " << inputDimension << ");\n";
+		for (unsigned long index = 0; index < stateCardinality; index++) {
+			auto input = _abstraction->GetController()->GetControlActionFromIndex(index);
+
+			file << "controller(" << (index + 1) << ") = [";
+			for (size_t i = 0; i < inputDimension; i++) {
+				file << input[i];
+				if (i != (inputDimension - 1)) file << " ";
+			}
+			file << "];\n";
+		}
+
+		file.close();
+	}
+
+
 	// Save the controller as a static controller, just like old versions of SCOTS used to do
 	void FileManager::SaveControllerAsStaticController(string path, string name) {
 		ofstream file(path + "/" + name + ".scs", std::ios_base::out);
@@ -360,7 +382,9 @@ namespace COSYNNC {
 	void FileManager::WriteSynthesisStatusToLog(string path, string name, string plantName, string timestamp) {
 		ofstream file(path + "/" + name + ".txt", std::ios_base::app);
 
-		file <<  plantName << " " << timestamp << " " << _verifier->GetWinningSetPercentage() << "\n";
+		file << plantName << " " << timestamp << " " << _verifier->GetWinningSetPercentage();
+		if (_verifier->GetApparentWinningSetPercentage() > 0.0) file << " " << _verifier->GetApparentWinningSetPercentage();
+		file << "\n";
 
 		file.close();
 	}

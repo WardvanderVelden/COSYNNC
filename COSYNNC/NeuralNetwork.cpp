@@ -89,7 +89,8 @@ namespace COSYNNC {
 		auto outputDimension = _layers.back();
 		Vector output(outputDimension);
 		for (int i = 0; i < outputDimension; i++) {
-			output[i] = _executor->outputs[0].At(0, i);
+			//output[i] = _executor->outputs[0].At(0, i);
+			output[i] = min(max(_executor->outputs[0].At(0, i), (mx_float)0.0), (mx_float)1.0);
 		}
 
 		return output;
@@ -124,7 +125,8 @@ namespace COSYNNC {
 		for (unsigned int i = 0; i < batchSize; i++) {
 			outputs[i] = Vector(outputDimension);
 			for (unsigned int j = 0; j < outputDimension; j++) {
-				outputs[i][j] = _executor->outputs[0].At(i, j);
+				//outputs[i][j] = _executor->outputs[0].At(i, j);
+				outputs[i][j] = min(max(_executor->outputs[0].At(i, j), (mx_float)0.0), (mx_float)1.0);
 			}
 		}
 

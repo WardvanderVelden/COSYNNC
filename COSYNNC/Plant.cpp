@@ -2,9 +2,9 @@
 
 using namespace COSYNNC;
 
-Plant::Plant(int stateSpaceDimension, int inputSpaceDimension, float h, string name, bool isLinear) : 
-	_stateSpaceDim(stateSpaceDimension), 
-	_inputSpaceDim(inputSpaceDimension),
+Plant::Plant(unsigned int stateSpaceDimension, unsigned int inputSpaceDimension, double h, string name, bool isLinear) :
+	_stateSpaceDimension(stateSpaceDimension), 
+	_inputSpaceDimension(inputSpaceDimension),
 	_h(h), 
 	_name(name), 
 	_isLinear(isLinear) {
@@ -25,12 +25,12 @@ Vector Plant::EvaluateDynamics(Vector input) {
 
 
 // Defines the over approximation of the dynamics of the plant for a single time step tau
-Vector Plant::EvaluateOverApproximation(Vector input) {
+Vector Plant::EvaluateRadialGrowthBound(Vector r, Vector input) {
 	// Set the input to the specified input
 	_u = input;
 
 	// Return the runge kutta integrated over approximation
-	return SolveRK4(_x, 0.0, 4, true);
+	return SolveRK4(r, 0.0, 4, true);
 }
 
 
@@ -62,15 +62,15 @@ Vector Plant::SolveRK4(Vector x, float t, unsigned int steps, bool overApproxima
 
 	for (unsigned int i = 0; i < steps; i++) {
 		// Get all the k factors
-		Vector k1 = (overApproximation) ? OverApproximationODE(x,t) * ch : PlantODE(x, t) * ch;
+		Vector k1 = (overApproximation) ? RadialGrowthBoundODE(x,t) * ch : DynamicsODE(x, t) * ch;
 
 		auto k1half = k1 / 2;
-		Vector k2 = (overApproximation) ? OverApproximationODE(x + k1half, t + ch / 2) * ch : PlantODE(x + k1half, t + ch / 2) * ch;
+		Vector k2 = (overApproximation) ? RadialGrowthBoundODE(x + k1half, t + ch / 2) * ch : DynamicsODE(x + k1half, t + ch / 2) * ch;
 
 		auto k2half = k2 / 2;
-		Vector k3 = (overApproximation) ? OverApproximationODE(x + k2half, t + ch / 2) * ch : PlantODE(x + k2half, t + ch / 2) * ch;
+		Vector k3 = (overApproximation) ? RadialGrowthBoundODE(x + k2half, t + ch / 2) * ch : DynamicsODE(x + k2half, t + ch / 2) * ch;
 
-		Vector k4 = (overApproximation) ? OverApproximationODE(x + k3, t + ch) * ch : PlantODE(x + k3, t + ch) * ch;
+		Vector k4 = (overApproximation) ? RadialGrowthBoundODE(x + k3, t + ch) * ch : DynamicsODE(x + k3, t + ch) * ch;
 
 		// Average out to find the approximation of the integration
 		auto k22 = k2 * 2;
@@ -90,17 +90,17 @@ Vector Plant::SolveRK4(Vector x, float t, unsigned int steps, bool overApproxima
 
 
 // Ordinary differential equation that describes the plant
-Vector Plant::PlantODE(Vector x, float t) {
+Vector Plant::DynamicsODE(Vector x, float t) {
 	// Default is just ones (no change)
-	Vector ones(_stateSpaceDim);
-	for (unsigned int i = 0; i < _stateSpaceDim; i++) ones[i] = 1.0;
+	Vector ones(_stateSpaceDimension);
+	for (unsigned int i = 0; i < _stateSpaceDimension; i++) ones[i] = 1.0;
 
 	return ones;
 }
 
 
 // Ordinary differential equation that describes the plant over approximation of the plant
-Vector Plant::OverApproximationODE(Vector x, float t) {
+Vector Plant::RadialGrowthBoundODE(Vector x, float t) {
 	// Default over approximation is simply that of the plant ODE.
-	return PlantODE(x, t); 
+	return DynamicsODE(x, t); 
 }

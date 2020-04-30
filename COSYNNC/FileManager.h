@@ -31,6 +31,9 @@ namespace COSYNNC {
 		// Save the verified domain to a MATLAB file
 		void SaveVerifiedDomainAsMATLAB(string path, string name);
 
+		// Saves the raw controller
+		void SaveControllerAsMATLAB(string path, string name);
+
 		// Save the controller as a static controller, just like old versions of SCOTS used to do
 		void SaveControllerAsStaticController(string path, string name);
 

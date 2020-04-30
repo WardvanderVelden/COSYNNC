@@ -102,6 +102,15 @@
     <ClCompile Include="Abstraction.cpp">
       <Filter>Source Files\Control</Filter>
     </ClCompile>
+    <ClCompile Include="StateSpaceRepresentation.cpp">
+      <Filter>Source Files\Plants</Filter>
+    </ClCompile>
+    <ClCompile Include="LinearHybrid.cpp">
+      <Filter>Source Files\Plants</Filter>
+    </ClCompile>
+    <ClCompile Include="Unicycle.cpp">
+      <Filter>Source Files\Plants</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="NeuralNetwork.h">
@@ -157,6 +166,15 @@
     </ClInclude>
     <ClInclude Include="Abstraction.h">
       <Filter>Header Files\Control</Filter>
+    </ClInclude>
+    <ClInclude Include="StateSpaceRepresentation.h">
+      <Filter>Header Files\Plants</Filter>
+    </ClInclude>
+    <ClInclude Include="LinearHybrid.h">
+      <Filter>Header Files\Plants</Filter>
+    </ClInclude>
+    <ClInclude Include="Unicycle.h">
+      <Filter>Header Files\Plants</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

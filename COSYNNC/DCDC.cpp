@@ -1,8 +1,8 @@
 #include "DCDC.h"
 
 namespace COSYNNC {
-	Vector DCDC::PlantODE(Vector x, float t) {
-		Vector dxdt = Vector(_stateSpaceDim);
+	Vector DCDC::DynamicsODE(Vector x, float t) {
+		Vector dxdt = Vector(_stateSpaceDimension);
 
 		if (_u[0] < 0.5) {
 			dxdt[0] = (-_rl / _xl) * x[0];

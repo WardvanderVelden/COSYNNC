@@ -39,6 +39,9 @@ namespace COSYNNC {
 
 		// Returns the amount of transitions that the abstraction contains
 		unsigned long GetAmountOfTransitions() const { return _amountOfTransitions; };
+
+		// Sets whether or not to use the rough transition scheme
+		void SetUseRoughTransitions(bool use = false);
 	private:
 		#pragma region Transition Function
 
@@ -51,8 +54,11 @@ namespace COSYNNC {
 		// Flood fills between planes, adding the indices of the cells to the transitions of the origin cell
 		void FloodfillBetweenHyperplanes(unsigned long index, Vector center, vector<Hyperplane>& planes, unsigned long inputIndex);
 
+		// Fills the hyper rectangle formed by the upper and lower bound of the vertices
+		void FillHyperRectangleBetweenBounds(unsigned long index, Transition* transition, unsigned long inputIndex);
+
 		// Find the upper and lower bound of the transition and set it
-		void SetTransitionPostAndBounds(Transition* transition, Vector* vertices, Vector post, unsigned long inputIndex);
+		void ComputeTransitionBounds(Transition* transition, Vector* vertices, Vector post, unsigned long inputIndex);
 
 		// Generates the appropriate floodfill indices based on the current inex and the processed indices
 		void AddFloodfillOrder(Vector center, Vector direction, vector<unsigned long>& indices, vector<unsigned long>& processedIndices);
@@ -66,7 +72,7 @@ namespace COSYNNC {
 		#pragma endregion Transition Function
 
 		// Abstraction settings
-		bool _doCalculateLowerAndUpperBound = true;
+		bool _useRoughTransitions = true;
 
 		// Abstraction components
 		Plant* _plant = nullptr;
@@ -85,6 +91,7 @@ namespace COSYNNC {
 		unsigned int _amountOfVerticesPerCell = 0;
 		unsigned int _amountOfEdgesPerCell = 0;
 
+		vector<vector<short>> _radialGrowthDistribution;
 		vector<vector<unsigned short>> _verticesOnHyperplaneDistribution;
 		vector<Vector> _normalsOfHyperplane;
 	};

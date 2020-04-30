@@ -44,11 +44,17 @@ namespace COSYNNC {
 		// Returns the vector that corresponds to the index in the space
 		Vector GetVectorFromIndex(long index);
 
-		// Returns the axis indices 
+		// Returns the indices on every axis from a global index
 		vector<unsigned long> GetAxisIndicesFromIndex(unsigned long index);
 
+		// Returns the indices on every axis from a vector
+		vector<unsigned long> GetAxisIndicesFromVector(Vector vector);
+
 		// Returns the index that corresponds to that vector
-		long GetIndexFromVector(Vector vector);
+		unsigned long GetIndexFromVector(Vector vector);
+
+		// Returns the global index form a vector of axis indices
+		unsigned long GetIndexFromAxisIndices(vector<unsigned long> axisIndices);
 
 		// Gets a random vector within the bounded quantization space if isBounded is set
 		Vector GetRandomVector();
@@ -76,8 +82,10 @@ namespace COSYNNC {
 	private:
 		int _spaceDimension = 0;
 
-		vector<long> _spaceCardinalityPerAxis;
+		vector<unsigned long> _spaceCardinalityPerAxis;
 		long _spaceCardinality = 0;
+
+		vector<unsigned long> _indicesPerDimension;
 
 		Vector _spaceEta;
 

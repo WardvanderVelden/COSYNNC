@@ -151,6 +151,14 @@ namespace COSYNNC {
 	}
 
 
+	// Specify what type of transition calculation should be used
+	void Procedure::SpecifyUseRoughTransitions(bool rough) {
+		_useRoughTransitions = rough;
+
+		if(rough) Log("COSYNNC", "Abstraction set to use rough transitions");
+	}
+
+
 	// Set the plant
 	void Procedure::SetPlant(Plant* plant) {
 		_plant = plant;
@@ -185,7 +193,8 @@ namespace COSYNNC {
 
 		// Initialize the abstraction
 		_abstraction = new Abstraction(_plant, &_controller, _stateQuantizer, _inputQuantizer, &_specification);
-		
+		_abstraction->SetUseRoughTransitions(_useRoughTransitions);
+
 		// Initialize verifier
 		_verifier = new Verifier(_abstraction);
 		_verifier->SetVerboseMode(_verboseVerifier);
@@ -273,7 +282,8 @@ namespace COSYNNC {
 			if (episodeNumber % _verboseEpisode == 0 && _verboseTrainer) {
 				auto verboseLabels = (_neuralNetwork->GetLabelDimension() <= 5) ? _neuralNetwork->GetLabelDimension() : 5;
 
-				std::cout << "\ti: " << episodeNumber << "\tj: " << j << "\t\tx0: " << newState[0] << "\tx1: " << newState[1];
+				std::cout << "\ti: " << episodeNumber << "\tj: " << j << "\t";
+				for (size_t i = 0; i < _abstraction->GetStateQuantizer()->GetDimension(); i++) std::cout << "\tx" << i << ": " << newState[i];
 				for (int i = 0; i < verboseLabels; i++) {
 					if (i == 0) std::cout << "\t";
 					std::cout << "\tn" << i << ": " << networkOutput[i];;
@@ -441,7 +451,8 @@ namespace COSYNNC {
 	void Procedure::SaveNetwork(string path) {
 		_fileManager.SaveNetworkAsMATLAB(path, "net");
 		_fileManager.SaveVerifiedDomainAsMATLAB(path, "dom");
-		_fileManager.SaveControllerAsStaticController(path, "ctl");
+		_fileManager.SaveControllerAsMATLAB(path, "ctl");
+		_fileManager.SaveControllerAsStaticController(path, "scs");
 		_fileManager.SaveAbstractionForSCOTS(path, "abss");
 		_fileManager.SaveNetworkAsRaw(path, "raw");
 	}
@@ -468,7 +479,8 @@ namespace COSYNNC {
 		// Save network to a matlab file under the timestamp
 		_fileManager.SaveNetworkAsMATLAB(path, timestampString + "net");
  		_fileManager.SaveVerifiedDomainAsMATLAB(path, timestampString + "dom");
-		_fileManager.SaveControllerAsStaticController(path, timestampString + "ctl");
+		_fileManager.SaveControllerAsMATLAB(path, timestampString + "ctl");
+		_fileManager.SaveControllerAsStaticController(path, timestampString + "scs");
 		//_fileManager.SaveAbstractionForSCOTS(path, timestampString + "abss");
 		_fileManager.SaveOverApproximatedTransitions(path, timestampString + "trs");
 		if(_saveRawNeuralNetwork) _fileManager.SaveNetworkAsRaw(path, timestampString + "raw");
@@ -487,7 +499,7 @@ namespace COSYNNC {
 	// Get an initial state based on the control specification and episode number
 	Vector Procedure::GetInitialStateForTraining(unsigned int episodeCount) {
 		float progressionFactor = (float)episodeCount / (float)_maxEpisodes;
-		auto initialState = Vector({ 0.0, 0.0 });
+		auto initialState = Vector(_abstraction->GetStateQuantizer()->GetDimension());
 
 		switch (_specification.GetSpecificationType()) {
 		case ControlSpecificationType::Invariance:

@@ -12,7 +12,8 @@ namespace COSYNNC {
 		_spaceLowerVertex = Vector(_spaceDimension);
 		_spaceUpperVertex = Vector(_spaceDimension);
 
-		_spaceCardinalityPerAxis = vector<long>(_spaceDimension, 0);
+		_spaceCardinalityPerAxis = vector<unsigned long>(_spaceDimension, 0);
+		_indicesPerDimension = vector<unsigned long>(_spaceDimension, 0);
 
 		for (size_t dim = 0; dim < _spaceDimension; dim++) {
 			auto lowerIndex = ceil(spaceLowerBound[dim] / _spaceEta[dim]);
@@ -23,8 +24,14 @@ namespace COSYNNC {
 			
 			_spaceCardinalityPerAxis[dim] = (unsigned long)abs(upperIndex - lowerIndex) + 1;
 
-			if (dim == 0) _spaceCardinality = _spaceCardinalityPerAxis[dim];
-			else _spaceCardinality *= _spaceCardinalityPerAxis[dim];
+			if (dim == 0) {
+				_spaceCardinality = _spaceCardinalityPerAxis[dim];
+				_indicesPerDimension[dim] = 1;
+			}
+			else {
+				_spaceCardinality *= _spaceCardinalityPerAxis[dim];
+				_indicesPerDimension[dim] = _indicesPerDimension[dim - 1] * _spaceCardinalityPerAxis[dim - 1];
+			}
 		}
 	}
 
@@ -109,10 +116,10 @@ namespace COSYNNC {
 	Vector Quantizer::GetVectorFromIndex(long index) {
 		Vector vec(_spaceDimension);
 		for (int dim = (_spaceDimension - 1); dim >= 0; dim--) {
-			long indexOnAxis = (dim > 0) ? floor(index / _spaceCardinalityPerAxis[dim - 1]) : index;
+			long indexOnAxis = floor(index / _indicesPerDimension[dim]);
+			vec[dim] = indexOnAxis * _spaceEta[dim] + _spaceLowerVertex[dim];
 
-			if (dim > 0) index -= indexOnAxis * _spaceCardinalityPerAxis[dim - 1];
-			vec[dim] = indexOnAxis * _spaceEta[dim] + _spaceLowerVertex[dim]; // +_spaceEta[dim] * 0.5;
+			index -= indexOnAxis * _indicesPerDimension[dim];
 		}
 
 		return vec;
@@ -120,15 +127,13 @@ namespace COSYNNC {
 
 
 	// Returns the index that corresponds to that vector
-	long Quantizer::GetIndexFromVector(Vector vector) {
-		long index = 0;
+	unsigned long Quantizer::GetIndexFromVector(Vector vector) {
+		unsigned long index = 0;
 
 		if (!IsInBounds(vector)) return -1;
 
 		for (size_t dim = 0; dim < _spaceDimension; dim++) {
-			long indexPerAxis = (dim != 0) ? _spaceCardinalityPerAxis[dim - 1] : 1;
-
-			index += round((vector[dim] - _spaceLowerVertex[dim]) / _spaceEta[dim]) * indexPerAxis;
+			index += round((vector[dim] - _spaceLowerVertex[dim]) / _spaceEta[dim]) * _indicesPerDimension[dim];
 		}
 
 		return index;
@@ -139,15 +144,30 @@ namespace COSYNNC {
 	vector<unsigned long> Quantizer::GetAxisIndicesFromIndex(unsigned long index) {
 		vector<unsigned long> axisIndices = vector<unsigned long>(_spaceDimension, 0);
 
-		for (int i = (_spaceDimension - 1); i >= 0; i--) {
-			long indexOnAxis = (i > 0) ? floor(index / _spaceCardinalityPerAxis[i - 1]) : index;
-			if (indexOnAxis < 0) indexOnAxis = 0;
+		for (int dim = (_spaceDimension - 1); dim >= 0; dim--) {
+			long indexOnAxis = floor(index / _indicesPerDimension[dim]);
+			axisIndices[dim] = indexOnAxis;
 
-			if (i > 0) index -= indexOnAxis * _spaceCardinalityPerAxis[i - 1];
-			axisIndices[i] = indexOnAxis;
+			index -= indexOnAxis * _indicesPerDimension[dim];
 		}
 
 		return axisIndices;
+	}
+
+
+	// Returns the indices on every axis from a vector
+	vector<unsigned long> Quantizer::GetAxisIndicesFromVector(Vector vector) {
+		auto index = GetIndexFromVector(vector);
+		return GetAxisIndicesFromIndex(index);
+	}
+
+
+	// Returns the global index form a vector of axis indices
+	unsigned long Quantizer::GetIndexFromAxisIndices(vector<unsigned long> axisIndices) {
+		unsigned long index = 0;
+		for (size_t i = 0; i < _spaceDimension; i++) index += axisIndices[i] * _indicesPerDimension[i];
+
+		return index;
 	}
 
 
