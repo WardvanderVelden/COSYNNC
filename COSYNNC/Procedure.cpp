@@ -152,8 +152,8 @@ namespace COSYNNC {
 
 
 	// Specify what type of transition calculation should be used
-	void Procedure::SpecifyUseRoughTransitions(bool rough) {
-		_useRoughTransitions = rough;
+	void Procedure::SpecifyUseRefinedTransitions(bool rough) {
+		_useRefinedTransitions = rough;
 
 		if(rough) Log("COSYNNC", "Abstraction set to use rough transitions");
 	}
@@ -193,7 +193,7 @@ namespace COSYNNC {
 
 		// Initialize the abstraction
 		_abstraction = new Abstraction(_plant, &_controller, _stateQuantizer, _inputQuantizer, &_specification);
-		_abstraction->SetUseRoughTransitions(_useRoughTransitions);
+		_abstraction->SetUseRefinedTransitions(_useRefinedTransitions);
 
 		// Initialize verifier
 		_verifier = new Verifier(_abstraction);
@@ -453,7 +453,7 @@ namespace COSYNNC {
 		_fileManager.SaveVerifiedDomainAsMATLAB(path, "dom");
 		_fileManager.SaveControllerAsMATLAB(path, "ctl");
 		_fileManager.SaveControllerAsStaticController(path, "scs");
-		_fileManager.SaveAbstractionForSCOTS(path, "abss");
+		_fileManager.SaveTransitions(path, "trs");
 		_fileManager.SaveNetworkAsRaw(path, "raw");
 	}
 
@@ -482,7 +482,7 @@ namespace COSYNNC {
 		_fileManager.SaveControllerAsMATLAB(path, timestampString + "ctl");
 		_fileManager.SaveControllerAsStaticController(path, timestampString + "scs");
 		//_fileManager.SaveAbstractionForSCOTS(path, timestampString + "abss");
-		_fileManager.SaveOverApproximatedTransitions(path, timestampString + "trs");
+		_fileManager.SaveTransitions(path, timestampString + "trs");
 		if(_saveRawNeuralNetwork) _fileManager.SaveNetworkAsRaw(path, timestampString + "raw");
 
 		// Log best network

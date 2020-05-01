@@ -250,8 +250,8 @@ namespace COSYNNC {
 	}
 
 
-	// Save the transitions that are currently contained within the abstraction
-	void FileManager::SaveAbstraction(string path, string name) {
+	// LEGACY: Save the transitions that are currently contained within the abstraction
+	/*void FileManager::SaveAbstraction(string path, string name) {
 		ofstream file(path + "/" + name + ".abs", std::ios_base::out);
 
 		file << "COSYNNC " << _abstraction->GetPlant()->GetName() << " Abstraction\n";
@@ -284,11 +284,11 @@ namespace COSYNNC {
 		}
 
 		file.close();
-	}
+	}*/
 
 
-	// Save the transitions used the lower and upper bound so that it can be used in SCOTS
-	void FileManager::SaveAbstractionForSCOTS(string path, string name) {
+	// LEGACY: Save the transitions used the lower and upper bound so that it can be used in SCOTS
+	/*void FileManager::SaveAbstractionForSCOTS(string path, string name) {
 		ofstream file(path + "/" + name + ".abss", std::ios_base::out);
 
 		file << "COSYNNC " << _abstraction->GetPlant()->GetName() << " Abstraction\n";
@@ -327,20 +327,25 @@ namespace COSYNNC {
 		}
 
 		file.close();
-	}
+	}*/
 
 
 	// Saves the transitions of the plant as known to the abstraction
-	void FileManager::SaveOverApproximatedTransitions(string path, string name) {
+	void FileManager::SaveTransitions(string path, string name) {
 		ofstream file(path + "/" + name + ".trs", std::ios_base::out);
 
 		file << "COSYNNC " << _abstraction->GetPlant()->GetName() << " Abstraction\n";
 
 		WriteQuantizationParametersToAbstractionFile(&file);
 
-		// Write all the transitions
+		auto spaceEtaR = _abstraction->GetStateQuantizer()->GetEta() * 0.5 * 0.995;
+
+		// Write amount of transitions/ends
 		file << "\n";
-		file << _abstraction->GetAmountOfTransitions() << "\n";
+		if (!_abstraction->IsUsingRefinedTransitions()) file << _abstraction->GetAmountOfTransitions() << "\n";
+		else file << _abstraction->GetAmountOfEnds() << "\n";
+
+		// Write all the transitions
 		for (unsigned long index = 0; index < _abstraction->GetStateQuantizer()->GetCardinality(); index++) {
 			auto formattedState = FormatAxisIndices(_abstraction->GetStateQuantizer()->GetAxisIndicesFromIndex(index));
 
@@ -353,23 +358,37 @@ namespace COSYNNC {
 				auto ends = transition->GetEnds(input);
 
 				if (ends.size() > 0) {
-					file << formattedState << formattedInput;
-					auto post = transition->GetPost(input);
+					if (_abstraction->IsUsingRefinedTransitions()) {
+						// Output a cell to cell transition that defines the refined transition
+						for (auto end : ends) {
+							file << formattedState << formattedInput;
 
-					auto lowerDiff = transition->GetLowerBound(input) - post;
-					auto upperDiff = transition->GetUpperBound(input) - post;
+							auto newState = _abstraction->GetStateQuantizer()->GetVectorFromIndex(end);
+							for (size_t dim = 0; dim < newState.GetLength(); dim++) file << newState[dim] << " ";
+							for (size_t dim = 0; dim < newState.GetLength(); dim++) file << spaceEtaR[dim] << " ";
+							file << "\n";
+						}
+					}
+					else {
+						// Output the hyper rectangular lower and upper bound approximation of the transition
+						file << formattedState << formattedInput;
+						auto post = transition->GetPost(input);
 
-					lowerDiff.Abs(); upperDiff.Abs();
-					lowerDiff.Max(upperDiff);
+						auto lowerDiff = transition->GetLowerBound(input) - post;
+						auto upperDiff = transition->GetUpperBound(input) - post;
 
-					auto r = lowerDiff;
+						lowerDiff.Abs(); upperDiff.Abs();
+						lowerDiff.Max(upperDiff);
 
-					// Output x'
-					for (unsigned int i = 0; i < post.GetLength(); i++) file << post[i] << " ";
+						auto r = lowerDiff;
 
-					// Output r
-					for (unsigned int i = 0; i < r.GetLength(); i++) file << r[i] << " ";
-					file << "\n";
+						// Output x'
+						for (unsigned int i = 0; i < post.GetLength(); i++) file << post[i] << " ";
+
+						// Output r
+						for (unsigned int i = 0; i < r.GetLength(); i++) file << r[i] << " ";
+						file << "\n";
+					}
 				}
 			}
 		}

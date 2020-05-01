@@ -68,8 +68,8 @@ namespace COSYNNC {
 
 
 	// Sets whether or not to use the rough transition scheme
-	void Abstraction::SetUseRoughTransitions(bool use) {
-		_useRoughTransitions = use;
+	void Abstraction::SetUseRefinedTransitions(bool use) {
+		_useRefinedTransitions = use;
 	}
 
 
@@ -105,18 +105,11 @@ namespace COSYNNC {
 				}
 			}
 
-			// Get the point in space that represents the center of the vertices
-			/*auto center = Vector(_stateQuantizer->GetDimension());
-			for (unsigned int i = 0; i < _amountOfVerticesPerCell; i++) {
-				center = center + vertices[i];
-			}
-			center = center * (1.0 / (float)_amountOfVerticesPerCell);*/
-
 			// Determine the lower and upper bounds of the transition and add these to the transition so that SCOTS can work with them if that is set
 			ComputeTransitionBounds(transition, vertices, newState, inputIndex);
 
 			// Flood fill as long as a vertex in a cell is in the internal area if we use fine transitions otherwise fill hyper rectangle
-			if (!_useRoughTransitions && _plant->IsLinear()) FloodfillBetweenHyperplanes(index, newState, hyperplanes, inputIndex);
+			if (_useRefinedTransitions && _plant->IsLinear()) FloodfillBetweenHyperplanes(index, newState, hyperplanes, inputIndex);
 			else FillHyperRectangleBetweenBounds(index, transition, inputIndex);
 
 			// Set the input as processed
@@ -136,7 +129,7 @@ namespace COSYNNC {
 		// Get the vertices that make up the hypercell
 		auto vertices = _stateQuantizer->GetCellVertices(state);
 
-		if (!_useRoughTransitions && _plant->IsLinear()) {
+		if (_useRefinedTransitions && _plant->IsLinear()) {
 			// Get the hyperplanes that are naturally arise between the vertices and set the normal
 			hyperplanes = GetHyperplanesBetweenVertices(vertices, state);
 
@@ -153,7 +146,7 @@ namespace COSYNNC {
 				hyperplanes[i].OverApproximateNormal(_plant, input);
 			}
 		}
-		else if (_useRoughTransitions && _plant->IsLinear()) {
+		else if (!_useRefinedTransitions && _plant->IsLinear()) {
 			// Over approximate the dynamics of cell through the dynamics of the vertices
 			for (unsigned int i = 0; i < _amountOfVerticesPerCell; i++) {
 				auto vertex = vertices[i];
@@ -265,7 +258,7 @@ namespace COSYNNC {
 			if (isBetweenPlanes || currentIndex == centerIndex) {
 				// Add order to transitions
 				GetTransitionOfIndex(index)->AddEnd(currentIndex, inputIndex);
-				_amountOfTransitions++;
+				_amountOfEnds++;
 
 				// Generate new orders that branch from current order
 				auto cellCenter = _stateQuantizer->GetVectorFromIndex(currentIndex);
@@ -290,6 +283,8 @@ namespace COSYNNC {
 			delete[] vertices;
 		}
 
+		_amountOfTransitions++;
+
 		// Clear to prevent leaking memory
 		indices.clear();
 		processedIndices.clear();
@@ -306,6 +301,7 @@ namespace COSYNNC {
 			auto index = _stateQuantizer->GetIndexFromAxisIndices(current);
 
 			transition->AddEnd(index, inputIndex);
+			_amountOfEnds++;
 
 			for (size_t i = 0; i < (_stateQuantizer->GetDimension() - 1); i++) {
 				if (current[i] < upperBoundIndices[i]) {

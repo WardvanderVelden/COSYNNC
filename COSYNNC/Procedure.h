@@ -64,7 +64,7 @@ namespace COSYNNC {
 		void SpecifyComputeApparentWinningSet(bool compute = false);
 
 		// Specify what type of transition calculation should be used
-		void SpecifyUseRoughTransitions(bool rough = false);
+		void SpecifyUseRefinedTransitions(bool useRefined = true);
 
 		// Set the plant
 		void SetPlant(Plant* plant);
@@ -157,7 +157,7 @@ namespace COSYNNC {
 		bool _computeApparentWinningSet = false;
 		bool _saveRawNeuralNetwork = false;
 
-		bool _useRoughTransitions = false;
+		bool _useRefinedTransitions = false;
 
 		// Controller log
 		float _bestControllerWinningDomainPercentage = 0.0;

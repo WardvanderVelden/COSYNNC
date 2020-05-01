@@ -40,8 +40,13 @@ namespace COSYNNC {
 		// Returns the amount of transitions that the abstraction contains
 		unsigned long GetAmountOfTransitions() const { return _amountOfTransitions; };
 
+		unsigned long GetAmountOfEnds() const { return _amountOfEnds; }
+
 		// Sets whether or not to use the rough transition scheme
-		void SetUseRoughTransitions(bool use = false);
+		void SetUseRefinedTransitions(bool use = false);
+
+		// Returns whether or not the abstraction is made up of refined transitions
+		bool IsUsingRefinedTransitions() const { return _useRefinedTransitions; };
 	private:
 		#pragma region Transition Function
 
@@ -72,7 +77,7 @@ namespace COSYNNC {
 		#pragma endregion Transition Function
 
 		// Abstraction settings
-		bool _useRoughTransitions = true;
+		bool _useRefinedTransitions = true;
 
 		// Abstraction components
 		Plant* _plant = nullptr;
@@ -87,6 +92,7 @@ namespace COSYNNC {
 		Transition** _transitionPartitions = new Transition*[_partitions];
 
 		unsigned long _amountOfTransitions = 0;
+		unsigned long _amountOfEnds = 0;
 
 		unsigned int _amountOfVerticesPerCell = 0;
 		unsigned int _amountOfEdgesPerCell = 0;

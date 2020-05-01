@@ -46,6 +46,8 @@ void SynthesizeInvarianceControllerDCDC() {
 	// Specify how verbose the procedure should be
 	cosynnc.SpecifyVerbosity(true, false);
 
+	cosynnc.SpecifyUseRefinedTransitions(true);
+
 	// Initialize the synthesize procedure
 	cosynnc.Initialize();
 
@@ -92,14 +94,13 @@ void SynthesizeReachabilityControllerDCDC() {
 	// Specify how verbose the procedure should be
 	cosynnc.SpecifyVerbosity(true, false);
 
-	// TEMPORARY: For testing 
-	//cosynnc.SpecifyTransitionType(true);
+	cosynnc.SpecifyUseRefinedTransitions(true);
 
 	// Initialize the synthesize procedure
 	cosynnc.Initialize();
 
 	// Load a previously trained network
-	cosynnc.LoadNeuralNetwork("controllers/timestamps", "ThuApr30092259net.m"); 
+	cosynnc.LoadNeuralNetwork("controllers/timestamps", "FriMay1133754.m"); 
 
 	// Run the synthesize procedure
 	cosynnc.Synthesize();
@@ -137,6 +138,8 @@ void SynthesizeInvarianceControllerRocket() {
 
 	// Specify how verbose the procedure should be
 	cosynnc.SpecifyVerbosity(true, false);
+
+	cosynnc.SpecifyUseRefinedTransitions(true);
 
 	// Initialize the synthesize procedure
 	cosynnc.Initialize();
@@ -181,6 +184,8 @@ void SynthesizeReachabilityControllerRocket() {
 
 	// Specify how verbose the procedure should be
 	cosynnc.SpecifyVerbosity(true, false);
+
+	cosynnc.SpecifyUseRefinedTransitions(true);
 
 	// Initialize the synthesize procedure
 	cosynnc.Initialize();
@@ -240,7 +245,7 @@ void SynthesizeSS3dReachabilityController() {
 
 	cosynnc.SpecifyVerbosity(true, false);
 
-	cosynnc.SpecifyUseRoughTransitions(true);
+	cosynnc.SpecifyUseRefinedTransitions(false);
 
 	cosynnc.Initialize();
 
@@ -291,6 +296,7 @@ void SynthesizeSS2dReachabilityController() {
 	cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ -1.0, -1.0 }), Vector({ 1.0, 1.0 }));
 
 	cosynnc.SpecifyVerbosity(true, false);
+	cosynnc.SpecifyUseRefinedTransitions(true);
 	cosynnc.SpecifyComputeApparentWinningSet(true);
 
 	cosynnc.Initialize();
@@ -302,6 +308,61 @@ void SynthesizeSS2dReachabilityController() {
 	delete mlp;
 	delete plant;
 }
+
+
+void SynthesizeMIMOReachabilityController() {
+	// Define plant
+	StateSpaceRepresentation* plant = new StateSpaceRepresentation(2, 2, 0.025, "Linear 2");
+	double** A = new double* [2];
+	A[0] = new double[2]{ 3.8045, 0.7585 };
+	A[1] = new double[2]{ 5.6782, 0.5395 };
+
+	double** B = new double* [2];
+	B[0] = new double[2]{ 5.3080, 9.3401 };
+	B[1] = new double[2]{ 7.7917, 1.2991 };
+
+	plant->SetMatrices(A, B);
+
+	// Delete 2d matrix
+	for (size_t i = 0; i < 2; i++) {
+		delete[] A[i];
+		delete[] B[i];
+	}
+	delete[] A;
+	delete[] B;
+
+	// Define network
+	MultilayerPerceptron* mlp = new MultilayerPerceptron({ 8, 8 }, ActivationActType::kRelu, OutputType::Labelled);
+	mlp->InitializeOptimizer("sgd", 0.0075, 0.0);
+
+	Procedure cosynnc;
+	cosynnc.SetPlant(plant);
+
+	cosynnc.SpecifyStateQuantizer(Vector({ 0.1, 0.1 }), Vector({ -5.0, -5.0 }), Vector({ 5.0, 5.0 }));
+	cosynnc.SpecifyInputQuantizer(Vector({ 2.5, 1.0 }), Vector({ -5.0, -2.0 }), Vector({ 5.0, 2.0 }));
+
+	cosynnc.SpecifySynthesisParameters(5000000, 50, 5000, 50000, 50);
+	cosynnc.SpecifyWinningSetReinforcement(true);
+	cosynnc.SpecifyTrainingFocus(TrainingFocus::NeighboringLosingStates);
+
+	cosynnc.SetNeuralNetwork(mlp);
+
+	cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ -1.0, -1.0 }), Vector({ 1.0, 1.0 }));
+
+	cosynnc.SpecifyVerbosity(true, false);
+	cosynnc.SpecifyUseRefinedTransitions(true);
+	cosynnc.SpecifyComputeApparentWinningSet(true);
+
+	cosynnc.Initialize();
+
+	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "WedApr29135526net.m");
+
+	cosynnc.Synthesize();
+
+	delete mlp;
+	delete plant;
+}
+
 
 
 void SynthesizeLHReachabilityController() {
@@ -329,6 +390,7 @@ void SynthesizeLHReachabilityController() {
 	cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ -1.0, -1.0 }), Vector({ 1.0, 1.0 }));
 
 	cosynnc.SpecifyVerbosity(true, false);
+	cosynnc.SpecifyUseRefinedTransitions(true);
 	cosynnc.SpecifyComputeApparentWinningSet(true);
 
 	cosynnc.Initialize();
@@ -365,6 +427,7 @@ void SynthesizeUnicycleReachabilityController() {
 	cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ -1.0, -1.0, 0 }), Vector({ 1.0, 1.0, 2*PI }));
 
 	cosynnc.SpecifyVerbosity(true, false);
+	cosynnc.SpecifyUseRefinedTransitions(true);
 	cosynnc.SpecifyComputeApparentWinningSet(true);
 
 	cosynnc.Initialize();
@@ -388,9 +451,11 @@ int main() {
 	//SynthesizeSS3dReachabilityController();
 	//SynthesizeSS2dReachabilityController();
 
+	SynthesizeMIMOReachabilityController();
+
 	//SynthesizeLHReachabilityController();
 
-	SynthesizeUnicycleReachabilityController();
+	//SynthesizeUnicycleReachabilityController();
 
 	system("pause");
 	return 0;
