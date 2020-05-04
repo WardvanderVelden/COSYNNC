@@ -73,7 +73,6 @@ void SynthesizeReachabilityControllerDCDC() {
 
 	// Specify the state and input quantizers
 	cosynnc.SpecifyStateQuantizer(Vector({ 0.005, 0.005 }), Vector({ 0.65, 4.95 }), Vector({ 1.65, 5.95 })); // This is the setting as used by Rungger
-	//cosynnc.SpecifyStateQuantizer(Vector({ 0.0075, 0.0075 }), Vector({ 0.65, 4.95 }), Vector({ 1.65, 5.95 }));
 	cosynnc.SpecifyInputQuantizer(Vector((float)1.0), Vector((float)0.0), Vector((float)1.0));
 
 	// Specify the synthesis parameters
@@ -89,7 +88,7 @@ void SynthesizeReachabilityControllerDCDC() {
 	cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ 1.1, 5.4 }), Vector({ 1.6, 5.9 })); // Rungger specification
 
 	cosynnc.SpecifyRadialInitialState(0.4, 0.6);
-	cosynnc.SpecifyNorm({ 0.0, 1.0 });
+	//cosynnc.SpecifyNorm({ 0.0, 1.0 });
 	cosynnc.SpecifyWinningSetReinforcement(true);
 	cosynnc.SpecifyTrainingFocus(TrainingFocus::AlternatingRadialLosingNeighborLosing);
 
@@ -170,7 +169,7 @@ void SynthesizeReachabilityControllerRocket() {
 	cosynnc.SpecifyInputQuantizer(Vector((float)1000.0), Vector((float)0.0), Vector((float)5000.0));
 
 	// Specify the synthesis parameters
-	cosynnc.SpecifySynthesisParameters(5000000, 50, 5000, 50000, 50);
+	cosynnc.SpecifySynthesisParameters(5000000, 50, 5000, 10000, 50);
 
 	// Link a neural network to the procedure
 	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 8, 8 }, ActivationActType::kRelu, OutputType::Labelled);
@@ -187,7 +186,7 @@ void SynthesizeReachabilityControllerRocket() {
 	cosynnc.SpecifyTrainingFocus(TrainingFocus::AlternatingRadialLosingNeighborLosing);
 
 	// Specify how verbose the procedure should be
-	cosynnc.SpecifyVerbosity(true, false);
+	//cosynnc.SpecifyVerbosity(true, false);
 
 	cosynnc.SpecifyUseRefinedTransitions(true);
 
@@ -228,7 +227,7 @@ void SynthesizeReachAndStayControllerRocket() {
 	// Specify the control specification
 	cosynnc.SpecifyControlSpecification(ControlSpecificationType::ReachAndStay, Vector({ -2.5, -2.5 }), Vector({ 2.5, 2.5 }));
 
-	cosynnc.SpecifyWinningSetReinforcement(true);
+	//cosynnc.SpecifyWinningSetReinforcement(true);
 	cosynnc.SpecifyTrainingFocus(TrainingFocus::AllStates);
 
 	// Specify how verbose the procedure should be
@@ -338,12 +337,13 @@ void SynthesizeSS2dReachabilityController() {
 	cosynnc.SpecifyInputQuantizer(Vector({ 1.0 }), Vector({ -6.0 }), Vector({ 6.0 }));
 
 	cosynnc.SpecifySynthesisParameters(5000000, 50, 5000, 50000, 50);
-	cosynnc.SpecifyWinningSetReinforcement(true);
-	cosynnc.SpecifyTrainingFocus(TrainingFocus::NeighboringLosingStates);
 
 	cosynnc.SetNeuralNetwork(mlp);
 
 	cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ -1.0, -1.0 }), Vector({ 1.0, 1.0 }));
+
+	cosynnc.SpecifyWinningSetReinforcement(true);
+	cosynnc.SpecifyTrainingFocus(TrainingFocus::NeighboringLosingStates);
 
 	cosynnc.SpecifyVerbosity(true, false);
 	cosynnc.SpecifyUseRefinedTransitions(true);
@@ -499,6 +499,8 @@ int main() {
 	//SynthesizeInvarianceControllerRocket();
 	//SynthesizeReachabilityControllerRocket();
 
+	SynthesizeReachAndStayControllerRocket();
+
 	//SynthesizeSS3dReachabilityController();
 	//SynthesizeSS2dReachabilityController();
 
@@ -506,7 +508,7 @@ int main() {
 
 	//SynthesizeLHReachabilityController();
 
-	SynthesizeUnicycleReachabilityController();
+	//SynthesizeUnicycleReachabilityController();
 
 	system("pause");
 	return 0;

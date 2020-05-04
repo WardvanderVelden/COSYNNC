@@ -165,7 +165,7 @@ namespace COSYNNC {
 
 		// Debug and logging parameters
 		bool _verboseTrainer = true;
-		bool _verboseVerifier = true;
+		bool _verboseVerifier = false;
 		string _lastLoggedPhase = "";
 
 		bool _hasSuccesfullyInitialized = false;

@@ -58,15 +58,20 @@ namespace COSYNNC {
 
 		#pragma endregion Getters and Setters
 	private:
-
 		// Performs a single fixed point iteration, returns whether or not the set has changed
-		bool PerformSingleFixedPointOperation();
+		bool PerformSingleFixedPointOperation(ControlSpecificationType type);
+
+		// Performs a fixed point algorithm on the winning set based on the type
+		size_t PerformFixedPointAlgorithm(ControlSpecificationType type);
 
 		// Determines the losing set and the set of losing cells which are next to the winning domain
 		void DetermineLosingSet();
 
 		// TEMPORARY: Validation method in order to verify and bugfix the behaviour of the verifier, returns true when the domain is indeed valid
 		bool ValidateDomain();
+
+		// Initializes the winning set for verification
+		void InitializeWinningSet();
 
 
 		Abstraction* _abstraction;

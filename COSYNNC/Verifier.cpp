@@ -76,11 +76,11 @@ namespace COSYNNC {
 	}
 
 
-	// Computes the winning set for which the controller currently is able to adhere to the control specification
-	void Verifier::ComputeWinningSet() {
+	// Initializes the winning set for verification
+	void Verifier::InitializeWinningSet() {
 		// Free up previous winning set
 		delete[] _winningSet;
-		_winningSet = new bool[_abstraction->GetStateQuantizer()->GetCardinality()] { false };
+		_winningSet = new bool[_abstraction->GetStateQuantizer()->GetCardinality()]{ false };
 
 		// Define initial winning domain for the fixed point operator
 		auto controlSpecification = _abstraction->GetControlSpecification();
@@ -88,7 +88,9 @@ namespace COSYNNC {
 		for (long index = 0; index < _abstraction->GetStateQuantizer()->GetCardinality(); index++) {
 			auto state = _abstraction->GetStateQuantizer()->GetVectorFromIndex(index);
 
-			switch (_abstraction->GetControlSpecification()->GetSpecificationType()) {
+			_winningSet[index] = controlSpecification->IsInSpecificationSet(state);
+
+			/*switch (_abstraction->GetControlSpecification()->GetSpecificationType()) {
 			case ControlSpecificationType::Invariance:
 				_winningSet[index] = controlSpecification->IsInSpecificationSet(state);
 
@@ -97,13 +99,20 @@ namespace COSYNNC {
 			case ControlSpecificationType::Reachability:
 				if (controlSpecification->IsInSpecificationSet(state)) _winningSet[index] = true;
 				else _winningSet[index] = false;
-			
+
 				break;
-			}
+			}*/
 		}
+	}
+
+
+	// Computes the winning set for which the controller currently is able to adhere to the control specification
+	void Verifier::ComputeWinningSet() {
+		// Initialize the winning set such that only the target set is in the winning set
+		InitializeWinningSet();
 
 		// DEBUG: Print a map of the set to depict its evolution
-		const int indexDivider = round((_abstraction->GetStateQuantizer()->GetUpperBound()[0] - _abstraction->GetStateQuantizer()->GetLowerBound()[0]) / _abstraction->GetStateQuantizer()->GetEta()[0]); // Temporary divider for 2D systems
+		/*const int indexDivider = round((_abstraction->GetStateQuantizer()->GetUpperBound()[0] - _abstraction->GetStateQuantizer()->GetLowerBound()[0]) / _abstraction->GetStateQuantizer()->GetEta()[0]); // Temporary divider for 2D systems
 		if (indexDivider > 250) _verboseMode = false;
 
 		if (_verboseMode) {
@@ -113,33 +122,23 @@ namespace COSYNNC {
 				else std::cout << ".";
 			}
 			std::cout << std::endl;
-		}
+		}*/
 		
 		// Perform fixed algorithm operator on winning set to determine the winning set
-		bool hasIterationConverged = false;
-		unsigned int iterations = 0;
-		unsigned int discrepancies = 0;
-		while (!hasIterationConverged) {
-			iterations++;
-			std::cout << "\t\ti: " << iterations;
+		size_t iterations = 0;
 
-			auto hasSetChanged = PerformSingleFixedPointOperation();
-
-			// DEBUG: Print a map of the set to depict its evolution
-			if (_verboseMode) {
-				for (long index = 0; index < _abstraction->GetStateQuantizer()->GetCardinality(); index++) {
-					if (index % indexDivider == 0) std::cout << std::endl << "\t";
-					if (_winningSet[index]) std::cout << "X";
-					else std::cout << ".";
-				}
-				std::cout << std::endl;
-			}
-
-			if (!hasSetChanged) {
-				hasIterationConverged = true;
-			}
-
-			std::cout << std::endl;
+		auto controlSpecificationType = _abstraction->GetControlSpecification()->GetSpecificationType();
+		switch (controlSpecificationType) {
+			case ControlSpecificationType::Invariance:
+				iterations += PerformFixedPointAlgorithm(ControlSpecificationType::Invariance);
+				break;
+			case ControlSpecificationType::Reachability:
+				iterations += PerformFixedPointAlgorithm(ControlSpecificationType::Reachability);
+				break;
+			case ControlSpecificationType::ReachAndStay:
+				iterations += PerformFixedPointAlgorithm(ControlSpecificationType::Invariance); // First do an invariance fixed point algorithm 
+				iterations += PerformFixedPointAlgorithm(ControlSpecificationType::Reachability); // Then do a reachability fixed point algorithm on the resulting invariance winning set 
+				break;
 		}
 
 		DetermineLosingSet();
@@ -199,7 +198,7 @@ namespace COSYNNC {
 
 
 	// Performs a single fixed point iteration
-	bool Verifier::PerformSingleFixedPointOperation() {
+	bool Verifier::PerformSingleFixedPointOperation(ControlSpecificationType type) {
 		bool hasSetChanged = false;
 
 		for (long index = 0; index < _abstraction->GetStateQuantizer()->GetCardinality(); index++) {
@@ -217,7 +216,7 @@ namespace COSYNNC {
 			}
 
 			// Handle transitions based on specification
-			switch (_abstraction->GetControlSpecification()->GetSpecificationType()) {
+			switch (type) {
 			case ControlSpecificationType::Invariance:
 				if (!_winningSet[index]) break;
 
@@ -239,6 +238,34 @@ namespace COSYNNC {
 		}
 
 		return hasSetChanged;
+	}
+
+
+	// Performs a fixed point algorithm on the winning set based on the type
+	size_t Verifier::PerformFixedPointAlgorithm(ControlSpecificationType type) {
+		bool hasIterationConverged = false;
+		unsigned int iterations = 0;
+		while (!hasIterationConverged) {
+			iterations++;
+			std::cout << "\t\ti: " << iterations;
+
+			auto hasSetChanged = PerformSingleFixedPointOperation(type);
+
+			// DEBUG: Print a map of the set to depict its evolution
+			/*if (_verboseMode) {
+				for (long index = 0; index < _abstraction->GetStateQuantizer()->GetCardinality(); index++) {
+					if (index % indexDivider == 0) std::cout << std::endl << "\t";
+					if (_winningSet[index]) std::cout << "X";
+					else std::cout << ".";
+				}
+				std::cout << std::endl;
+			}*/
+
+			if (!hasSetChanged) hasIterationConverged = true;
+
+			std::cout << std::endl;
+		}
+		return iterations;
 	}
 
 
