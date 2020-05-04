@@ -5,7 +5,8 @@
 namespace COSYNNC {
 	enum class ControlSpecificationType {
 		Invariance,
-		Reachability
+		Reachability,
+		ReachAndStay
 	};
 
 	class ControlSpecification {

@@ -31,17 +31,20 @@ namespace COSYNNC {
 		// Save the verified domain to a MATLAB file
 		void SaveVerifiedDomainAsMATLAB(string path, string name);
 
+		// Saves the raw controller
+		void SaveControllerAsMATLAB(string path, string name);
+
 		// Save the controller as a static controller, just like old versions of SCOTS used to do
 		void SaveControllerAsStaticController(string path, string name);
 
-		// Save the transitions that are currently contained within the abstraction
-		void SaveAbstraction(string path, string name);
+		// LEGACY: Save the transitions that are currently contained within the abstraction
+		//void SaveAbstraction(string path, string name);
 
-		// Save the transitions used the lower and upper bound so that it can be used in SCOTS
-		void SaveAbstractionForSCOTS(string path, string name);
+		// LEGACY: Save the transitions used the lower and upper bound so that it can be used in SCOTS
+		//void SaveAbstractionForSCOTS(string path, string name);
 
 		// Saves the transitions of the plant as known to the abstraction
-		void SaveOverApproximatedTransitions(string path, string name);
+		void SaveTransitions(string path, string name);
 
 		// Writes the synthesis status to the log file for debug purposes
 		void WriteSynthesisStatusToLog(string path, string name, string plantName, string timestamp);	

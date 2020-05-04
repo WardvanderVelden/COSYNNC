@@ -136,32 +136,11 @@ namespace COSYNNC {
 			}
 
 			if (!hasSetChanged) {
-				if (ValidateDomain()) {
-					hasIterationConverged = true;
-				}
-				else {
-					std::cout << " discrepancy detected";
-					discrepancies++;
-					if (discrepancies >= 5) hasIterationConverged = true;
-				}
+				hasIterationConverged = true;
 			}
 
 			std::cout << std::endl;
 		}
-
-		// DEBUG: Find winning set and look at transitions there
-		/*for (unsigned long index = 0; index < _abstraction->GetStateQuantizer()->GetCardinality(); index++) {
-			if (IsIndexInWinningSet(index)) {
-				std::cout << std::endl << "\t" << index << " is in winning set, transitions are: " << std::endl;
-
-				auto ends = _abstraction->GetTransitionOfIndex(index)->GetEnds();
-				for (unsigned int i = 0; i < ends.size(); i++) {
-					std::cout << "\t" << ends[i] << " winning: " << IsIndexInWinningSet(ends[i]) << std::endl;
-				}
-
-				break;
-			}
-		}*/
 
 		DetermineLosingSet();
 
@@ -180,7 +159,7 @@ namespace COSYNNC {
 		_apparentWinningCells = 0;
 		
 		for (unsigned long index = 0; index < spaceCardinality; index++) {
-			if (index % ((long)floor(spaceCardinality / 20)) == 0) std::cout << (float)((float)index / (float)spaceCardinality * 100.0) << "% . ";
+			if (index % ((long)floor(spaceCardinality / 100)) == 0) std::cout << '.';
 
 			Vector state = _abstraction->GetStateQuantizer()->GetVectorFromIndex(index);
 			bool stopEpisode = false;
@@ -341,12 +320,12 @@ namespace COSYNNC {
 
 			// Handle winning islands and losing holes
 			if (isLosingHole && specificationType == ControlSpecificationType::Reachability) {
-				if (_abstraction->GetPlant()->GetIsLinear()) _winningSet[index] = true;
+				if (_abstraction->GetPlant()->IsLinear()) _winningSet[index] = true;
 				hasDiscrepancy = true;
 			}
 
 			if (isWinningIsland && specificationType == ControlSpecificationType::Invariance) {
-				if (_abstraction->GetPlant()->GetIsLinear()) _winningSet[index] = false;
+				if (_abstraction->GetPlant()->IsLinear()) _winningSet[index] = false;
 				hasDiscrepancy = true;
 			}
 		}

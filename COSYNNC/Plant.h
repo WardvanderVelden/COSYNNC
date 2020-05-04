@@ -9,13 +9,13 @@ namespace COSYNNC {
 	{
 	public:
 		// Initializes the plant based on the state space dimension, the input space dimension and the time step
-		Plant(int stateSpaceDimension = 0, int inputSpaceDimension = 0, float tau = 0.1, string name = "Plant", bool isLinear = false);
+		Plant(unsigned int stateSpaceDimension = 0, unsigned int inputSpaceDimension = 0, double tau = 0.1, string name = "Plant", bool isLinear = false);
 
 		// Defines the dynamics of the plant for a single time step tau
 		virtual Vector EvaluateDynamics(Vector input);
 
 		// Defines the over approximation of the dynamics of the plant for a single time step
-		virtual Vector EvaluateOverApproximation(Vector input);
+		virtual Vector EvaluateRadialGrowthBound(Vector r, Vector input);
 
 		// Evolves the plant based on the single step dynamics and the input based on time step
 		void Evolve(Vector input);
@@ -27,16 +27,16 @@ namespace COSYNNC {
 		void SetState(Vector newState);
 
 		// Returns the state space dimension
-		int GetStateSpaceDimension() const { return _stateSpaceDim; }
+		int GetStateSpaceDimension() const { return _stateSpaceDimension; }
 
 		// Returns the input space dimension
-		int GetInputSpaceDimension() const { return _inputSpaceDim; }
+		int GetInputSpaceDimension() const { return _inputSpaceDimension; }
 
 		// Returns the time step size
 		float GetStepSize() const { return _h; }
 
 		// Returns if the plant is linear
-		bool GetIsLinear() const { return _isLinear; }
+		bool IsLinear() const { return _isLinear; }
 
 		// Returns the name of the plant
 		string GetName() const { return _name; }
@@ -48,24 +48,24 @@ namespace COSYNNC {
 		Vector SolveRK4(Vector x, float t, unsigned int steps, bool overApproximation = false);
 
 	protected:
-		const int _stateSpaceDim;
-		const int _inputSpaceDim;
+		const unsigned int _stateSpaceDimension;
+		const unsigned int _inputSpaceDimension;
 
 		const bool _isLinear;
 
 		const string _name;
 
-		const float _h;
+		const double _h;
 
 		Vector _x;
 		Vector _u;
 
 	private:
 		// Ordinary differential equation that describes the plant
-		virtual Vector PlantODE(Vector x, float t);
+		virtual Vector DynamicsODE(Vector x, float t);
 
 		// Ordinary differential equation that describes the plant over approximation of the plant
-		virtual Vector OverApproximationODE(Vector x, float t);
+		virtual Vector RadialGrowthBoundODE(Vector r, float t);
 	};
 }
 
