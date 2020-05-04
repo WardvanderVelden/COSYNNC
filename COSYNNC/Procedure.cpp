@@ -262,6 +262,9 @@ namespace COSYNNC {
 		bool isInSpecificationSet = false;
 		bool isInWinningSet = false;
 
+		bool stopEpisode = false;
+		bool hasReachedSet = false;
+
 		// Simulate the episode using the neural network
 		for (int j = 0; j < _maxEpisodeHorizonTrainer; j++) {
 			auto state = _plant->GetState();
@@ -292,10 +295,13 @@ namespace COSYNNC {
 			}
 
 			// Check episode stopping conditions
-			bool stopEpisode = false;
 			switch (_specification.GetSpecificationType()) {
 				case ControlSpecificationType::Invariance: if (!isInSpecificationSet) stopEpisode = true; break;
 				case ControlSpecificationType::Reachability: if (isInSpecificationSet) stopEpisode = true; break;
+				case ControlSpecificationType::ReachAndStay: 
+					if (isInSpecificationSet) hasReachedSet = true; 
+					if (!isInSpecificationSet && hasReachedSet) stopEpisode = true;
+					break;
 			}
 
 			if (_useWinningSetReinforcement && isInWinningSet) stopEpisode = true;

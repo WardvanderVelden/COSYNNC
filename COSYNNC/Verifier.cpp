@@ -136,33 +136,11 @@ namespace COSYNNC {
 			}
 
 			if (!hasSetChanged) {
-				/*if (ValidateDomain()) {
-					hasIterationConverged = true;
-				}
-				else {
-					std::cout << " discrepancy detected";
-					discrepancies++;
-					if (discrepancies >= 5) hasIterationConverged = true;
-				}*/
 				hasIterationConverged = true;
 			}
 
 			std::cout << std::endl;
 		}
-
-		// DEBUG: Find winning set and look at transitions there
-		/*for (unsigned long index = 0; index < _abstraction->GetStateQuantizer()->GetCardinality(); index++) {
-			if (IsIndexInWinningSet(index)) {
-				std::cout << std::endl << "\t" << index << " is in winning set, transitions are: " << std::endl;
-
-				auto ends = _abstraction->GetTransitionOfIndex(index)->GetEnds();
-				for (unsigned int i = 0; i < ends.size(); i++) {
-					std::cout << "\t" << ends[i] << " winning: " << IsIndexInWinningSet(ends[i]) << std::endl;
-				}
-
-				break;
-			}
-		}*/
 
 		DetermineLosingSet();
 
