@@ -12,12 +12,7 @@ namespace COSYNNC {
 		AllStates,
 		RadialOutwards,
 		LosingStates,
-		NeighboringLosingStates,
-
-		AlternatingRadialSingle,
-		AlternatingRadialLosing,
-		AlternatingRadialNeighboringLosing,
-		AlternatingRadialLosingNeighborLosing,
+		NeighboringLosingStates
 	};
 
 	class Procedure {
@@ -51,7 +46,7 @@ namespace COSYNNC {
 		// Specify the verbosity of the procedure
 		void SpecifyVerbosity(bool verboseTrainer = false, bool verboseVerifier = false);
 
-		// Specify the training focus that should be used during training
+		// Specify the training focus that should be used during training, this will then be added to the list of training focuses
 		void SpecifyTrainingFocus(TrainingFocus trainingFocus, Vector singleStateTrainingFocus = Vector((unsigned int)0));
 
 		// Specify if the network should reinforce upon reaching the winning set (only applicable to reachability)
@@ -146,7 +141,8 @@ namespace COSYNNC {
 		float _radialInitialStateLower = 0.0;
 		float _radialInitialStateUpper = 1.0;
 
-		TrainingFocus _trainingFocus;
+		//TrainingFocus _trainingFocus;
+		vector<TrainingFocus> _trainingFocuses;
 		Vector _singleStateTrainingFocus;
 
 		bool _useNorm = false;

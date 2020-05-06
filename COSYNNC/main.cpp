@@ -42,7 +42,7 @@ void SynthesizeInvarianceControllerDCDC() {
 
 	cosynnc.SpecifyRadialInitialState(0.25, 0.75);
 	cosynnc.SpecifyNorm({ 1.0, 1.0 });
-	cosynnc.SpecifyTrainingFocus(TrainingFocus::AlternatingRadialLosingNeighborLosing);
+	cosynnc.SpecifyTrainingFocus(TrainingFocus::AllStates);
 
 	// Specify how verbose the procedure should be
 	cosynnc.SpecifyVerbosity(true, false);
@@ -86,22 +86,21 @@ void SynthesizeReachabilityControllerDCDC() {
 
 	// Specify the control specification
 	cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ 1.1, 5.4 }), Vector({ 1.6, 5.9 })); // Rungger specification
+	//cosynnc.SpecifyControlSpecification(ControlSpecificationType::ReachAndStay, Vector({ 1.1, 5.4 }), Vector({ 1.6, 5.9 }));
 
 	cosynnc.SpecifyRadialInitialState(0.4, 0.6);
 	//cosynnc.SpecifyNorm({ 0.0, 1.0 });
 	cosynnc.SpecifyWinningSetReinforcement(true);
-	cosynnc.SpecifyTrainingFocus(TrainingFocus::AlternatingRadialLosingNeighborLosing);
-
-	// Specify how verbose the procedure should be
-	cosynnc.SpecifyVerbosity(true, false);
-
+	cosynnc.SpecifyTrainingFocus(TrainingFocus::AllStates);
 	cosynnc.SpecifyUseRefinedTransitions(true);
+
+	cosynnc.SpecifyVerbosity(true, false);
 
 	// Initialize the synthesize procedure
 	cosynnc.Initialize();
 
 	// Load a previously trained network
-	cosynnc.LoadNeuralNetwork("controllers/timestamps", "FriMay1133754.m"); 
+	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "FriMay1133754.m"); 
 
 	// Run the synthesize procedure
 	cosynnc.Synthesize();
@@ -183,7 +182,7 @@ void SynthesizeReachabilityControllerRocket() {
 	cosynnc.SpecifyRadialInitialState(0.15, 0.85);
 	cosynnc.SpecifyNorm({ 1.0, 1.0 });
 	cosynnc.SpecifyWinningSetReinforcement(true);
-	cosynnc.SpecifyTrainingFocus(TrainingFocus::AlternatingRadialLosingNeighborLosing);
+	cosynnc.SpecifyTrainingFocus(TrainingFocus::AllStates);
 
 	// Specify how verbose the procedure should be
 	//cosynnc.SpecifyVerbosity(true, false);
@@ -227,7 +226,7 @@ void SynthesizeReachAndStayControllerRocket() {
 	// Specify the control specification
 	cosynnc.SpecifyControlSpecification(ControlSpecificationType::ReachAndStay, Vector({ -2.5, -2.5 }), Vector({ 2.5, 2.5 }));
 
-	//cosynnc.SpecifyWinningSetReinforcement(true);
+	cosynnc.SpecifyWinningSetReinforcement(false);
 	cosynnc.SpecifyTrainingFocus(TrainingFocus::AllStates);
 
 	// Specify how verbose the procedure should be
@@ -239,7 +238,7 @@ void SynthesizeReachAndStayControllerRocket() {
 	cosynnc.Initialize();
 
 	// Load a previously trained network
-	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "ThuApr30113252net.m");
+	cosynnc.LoadNeuralNetwork("controllers/timestamps", "WedMay6104728net.m");
 
 	// Run the synthesize procedure
 	cosynnc.Synthesize();
@@ -475,15 +474,20 @@ void SynthesizeUnicycleReachabilityController() {
 
 	cosynnc.SpecifyNorm({ 1.0, 1.0, 0.0 });
 	cosynnc.SpecifyWinningSetReinforcement(true);
-	cosynnc.SpecifyTrainingFocus(TrainingFocus::AlternatingRadialLosingNeighborLosing);
 
-	cosynnc.SpecifyVerbosity(true, false);
+	cosynnc.SpecifyTrainingFocus(TrainingFocus::RadialOutwards);
+	cosynnc.SpecifyRadialInitialState(0.5, 1.0);
+
+	cosynnc.SpecifyTrainingFocus(TrainingFocus::NeighboringLosingStates);
+
 	cosynnc.SpecifyUseRefinedTransitions(true);
 	cosynnc.SpecifyComputeApparentWinningSet(true);
 
+	cosynnc.SpecifyVerbosity(true, false);
+
 	cosynnc.Initialize();
 
-	cosynnc.LoadNeuralNetwork("controllers/timestamps", "MonMay4142146net.m");
+	cosynnc.LoadNeuralNetwork("controllers/timestamps", "WedMay6165111net.m");
 
 	cosynnc.Synthesize();
 
@@ -499,7 +503,7 @@ int main() {
 	//SynthesizeInvarianceControllerRocket();
 	//SynthesizeReachabilityControllerRocket();
 
-	SynthesizeReachAndStayControllerRocket();
+	//SynthesizeReachAndStayControllerRocket();
 
 	//SynthesizeSS3dReachabilityController();
 	//SynthesizeSS2dReachabilityController();
@@ -508,7 +512,7 @@ int main() {
 
 	//SynthesizeLHReachabilityController();
 
-	//SynthesizeUnicycleReachabilityController();
+	SynthesizeUnicycleReachabilityController();
 
 	system("pause");
 	return 0;

@@ -49,9 +49,10 @@ namespace COSYNNC {
 
 	// Specify if the network should reinforce upon reaching the winning set (only applicable to reachability)
 	void Procedure::SpecifyWinningSetReinforcement(bool reinforce) {
-		if (_specification.GetSpecificationType() == ControlSpecificationType::Reachability) {
+		// TEMPORARY: Winning set reinforcement should also work for non reachability specifications?
+		//if (_specification.GetSpecificationType() == ControlSpecificationType::Reachability) {
 			_useWinningSetReinforcement = reinforce;
-		}
+		//}
 
 		if (_useWinningSetReinforcement) {
 			Log("COSYNNC", "Network will reinforce upon reaching the winning set");
@@ -122,17 +123,14 @@ namespace COSYNNC {
 
 	// Specify the training focus that should be used during training
 	void Procedure::SpecifyTrainingFocus(TrainingFocus trainingFocus, Vector singleStateTrainingFocus) {
-		_trainingFocus = trainingFocus;
+		_trainingFocuses.push_back(trainingFocus);
 
-		switch (_trainingFocus) {
-		case TrainingFocus::AllStates: Log("COSYNNC", "Training focus set to all states"); break;
-		case TrainingFocus::LosingStates: Log("COSYNNC", "Training focus set to the losing domain"); break;
-		case TrainingFocus::NeighboringLosingStates: Log("COSYNNC", "Training focus set states in the losing domain bordering the winning domain"); break;
-		case TrainingFocus::SingleState: Log("COSYNNC", "Training focus set to a single state"); break;
-		case TrainingFocus::AlternatingRadialSingle: Log("COSYNNC", "Training focus set to alternating between radial outwards states and a single state"); break;
-		case TrainingFocus::AlternatingRadialLosing: Log("COSYNNC", "Training focus set to alternating between radial outwards states and losing states"); break;
-		case TrainingFocus::AlternatingRadialNeighboringLosing: Log("COSYNNC", "Training focus set to alternating between radial outwards states and losing states neighboring winning states"); break;
-		case TrainingFocus::AlternatingRadialLosingNeighborLosing: Log("COSYNNC", "Training focus set to alternating between radial outwards states, losing states and losing states neighboring winning states"); break;
+		switch (trainingFocus) {
+		case TrainingFocus::SingleState: Log("COSYNNC", "Single state training focus added"); break;
+			case TrainingFocus::AllStates: Log("COSYNNC", "All states training focus added"); break;
+			case TrainingFocus::RadialOutwards: Log("COSYNNC", "Radial outwards training focus added"); break;
+			case TrainingFocus::LosingStates: Log("COSYNNC", "Losing domain training focus added"); break;
+			case TrainingFocus::NeighboringLosingStates: Log("COSYNNC", "Losing states neighboring the winning states training focus added"); break;
 		}
 		
 		if (singleStateTrainingFocus.GetLength() != 0) _singleStateTrainingFocus = singleStateTrainingFocus;
@@ -299,7 +297,7 @@ namespace COSYNNC {
 				case ControlSpecificationType::Invariance: if (!isInSpecificationSet) stopEpisode = true; break;
 				case ControlSpecificationType::Reachability: if (isInSpecificationSet) stopEpisode = true; break;
 				case ControlSpecificationType::ReachAndStay: 
-					if (isInSpecificationSet) hasReachedSet = true; 
+					if (isInSpecificationSet && !hasReachedSet) hasReachedSet = true; 
 					if (!isInSpecificationSet && hasReachedSet) stopEpisode = true;
 					break;
 			}
@@ -507,66 +505,34 @@ namespace COSYNNC {
 		float progressionFactor = (float)episodeCount / (float)_maxEpisodes;
 		auto initialState = Vector(_abstraction->GetStateQuantizer()->GetDimension());
 
-		switch (_specification.GetSpecificationType()) {
-		case ControlSpecificationType::Invariance:
-			switch (_trainingFocus) {
+		// Based on the episode count go through the focuses
+		auto amountOfFocuses = _trainingFocuses.size();
+		auto currentFocus = _trainingFocuses[episodeCount % amountOfFocuses];
+
+		auto specification = _specification.GetSpecificationType();
+
+		bool validInitialState = false;
+
+		for(size_t attempts = 0; attempts < 10; attempts) {
+			switch (currentFocus) {
 			case TrainingFocus::SingleState: initialState = _singleStateTrainingFocus; break;
-			case TrainingFocus::AllStates: initialState = _specification.GetVectorFromSpecification(); break;
-			case TrainingFocus::RadialOutwards: initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper); break;
+			case TrainingFocus::AllStates:
+				if (specification == ControlSpecificationType::Invariance) initialState = _specification.GetVectorFromSpecification();
+				else initialState = _stateQuantizer->GetRandomVector();
+				break;
+			case TrainingFocus::RadialOutwards: initialState = GetVectorRadialFromGoal(_radialInitialStateLower + (_radialInitialStateUpper - _radialInitialStateLower) * progressionFactor); break;
 			case TrainingFocus::LosingStates: initialState = _verifier->GetVectorFromLosingDomain(); break;
 			case TrainingFocus::NeighboringLosingStates: initialState = _verifier->GetVectorFromLosingNeighborDomain(); break;
-
-			case TrainingFocus::AlternatingRadialSingle:
-				if (episodeCount % 2 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
-				else initialState = _singleStateTrainingFocus;
-				break;
-			case TrainingFocus::AlternatingRadialLosing:
-				if (episodeCount % 2 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
-				else initialState = _verifier->GetVectorFromLosingDomain();
-				break;
-			case TrainingFocus::AlternatingRadialNeighboringLosing:
-				if (episodeCount % 2 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
-				else initialState = _verifier->GetVectorFromLosingNeighborDomain();
-				break;
-			case TrainingFocus::AlternatingRadialLosingNeighborLosing:
-				if (episodeCount % 3 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
-				else if ((episodeCount + 2) % 3 == 0) initialState = _verifier->GetVectorFromLosingDomain();
-				else initialState = _verifier->GetVectorFromLosingNeighborDomain();
-				break;
 			}
-			break;
-		case ControlSpecificationType::Reachability:
-			initialState = _specification.GetCenter();
 
-			for(unsigned int i = 0; i < 10; i++) {
-				switch (_trainingFocus) {
-				case TrainingFocus::SingleState: initialState = _singleStateTrainingFocus; break;
-				case TrainingFocus::AllStates: initialState = _stateQuantizer->GetRandomVector(); break;
-				case TrainingFocus::RadialOutwards: initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper); break;
-				case TrainingFocus::LosingStates: initialState = _verifier->GetVectorFromLosingDomain(); break;
-				case TrainingFocus::NeighboringLosingStates: initialState = _verifier->GetVectorFromLosingNeighborDomain(); break;
-
-				case TrainingFocus::AlternatingRadialSingle:
-					if (episodeCount % 2 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
-					else initialState = _singleStateTrainingFocus;
-					break;
-				case TrainingFocus::AlternatingRadialLosing:
-					if (episodeCount % 2 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
-					else initialState = _verifier->GetVectorFromLosingDomain();
-					break;
-				case TrainingFocus::AlternatingRadialNeighboringLosing:
-					if (episodeCount % 2 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
-					else initialState = _verifier->GetVectorFromLosingNeighborDomain();
-					break;
-				case TrainingFocus::AlternatingRadialLosingNeighborLosing:
-					if (episodeCount % 3 == 0) initialState = GetVectorRadialFromGoal(_radialInitialStateLower + progressionFactor * _radialInitialStateUpper);
-					else if ((episodeCount + 2) % 3 == 0) initialState = _verifier->GetVectorFromLosingDomain();
-					else initialState = _verifier->GetVectorFromLosingNeighborDomain();
-				}
-
-				if (!_specification.IsInSpecificationSet(initialState)) break;
+			if (specification == ControlSpecificationType::Invariance) {
+				if (_specification.IsInSpecificationSet(initialState)) validInitialState = true;
 			}
-			break;
+			else if (specification == ControlSpecificationType::Reachability) {
+				if (!_specification.IsInSpecificationSet(initialState)) validInitialState = true;
+			} else validInitialState = true;
+
+			if (validInitialState) break;
 		}
 
 		return initialState;
@@ -600,7 +566,7 @@ namespace COSYNNC {
 			}
 		}
 
-		return vector;
+		return _stateQuantizer->QuantizeVector(vector);
 	}
 
 
