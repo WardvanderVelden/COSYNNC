@@ -157,6 +157,15 @@ namespace COSYNNC {
 	}
 
 
+	// Specify whether or not to save the transitions
+	void Procedure::SpecifySaveAbstractionTransitions(bool saveTransitions) {
+		_saveTransitions = saveTransitions;
+
+		if (saveTransitions) Log("COSYNNC", "Abstraction transitions are being saved to increase computation speed");
+		else Log("COSYNNC", "Abstraction transitions are not being saved");
+	}
+
+
 	// Set the plant
 	void Procedure::SetPlant(Plant* plant) {
 		_plant = plant;
@@ -192,6 +201,7 @@ namespace COSYNNC {
 		// Initialize the abstraction
 		_abstraction = new Abstraction(_plant, &_controller, _stateQuantizer, _inputQuantizer, &_specification);
 		_abstraction->SetUseRefinedTransitions(_useRefinedTransitions);
+		_abstraction->SetSaveTransitions(_saveTransitions);
 
 		// Initialize verifier
 		_verifier = new Verifier(_abstraction);

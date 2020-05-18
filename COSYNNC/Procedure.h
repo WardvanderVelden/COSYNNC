@@ -61,6 +61,9 @@ namespace COSYNNC {
 		// Specify what type of transition calculation should be used
 		void SpecifyUseRefinedTransitions(bool useRefined = true);
 
+		// Specify whether or not to save the transitions
+		void SpecifySaveAbstractionTransitions(bool saveTransitions = true);
+
 		// Set the plant
 		void SetPlant(Plant* plant);
 
@@ -154,6 +157,8 @@ namespace COSYNNC {
 		bool _saveRawNeuralNetwork = false;
 
 		bool _useRefinedTransitions = false;
+
+		bool _saveTransitions = true;
 
 		// Controller log
 		float _bestControllerWinningDomainPercentage = 0.0;

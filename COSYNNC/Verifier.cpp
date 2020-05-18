@@ -21,6 +21,9 @@ namespace COSYNNC {
 	void Verifier::ComputeTransitions() {
 		const auto spaceCardinality = _abstraction->GetStateQuantizer()->GetCardinality();
 
+		// Check if we need to reset transitions because we are not retaining them
+		if (!_abstraction->IsSavingTransitions()) _abstraction->EmptyTransitions();
+
 		std::cout << "\t\t";
 
 		// Get the amount of cores that the hardware contains

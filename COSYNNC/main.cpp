@@ -168,7 +168,7 @@ void SynthesizeReachabilityControllerRocket() {
 	cosynnc.SpecifyInputQuantizer(Vector((float)1000.0), Vector((float)0.0), Vector((float)5000.0));
 
 	// Specify the synthesis parameters
-	cosynnc.SpecifySynthesisParameters(1000000, 50, 5000, 50000, 50);
+	cosynnc.SpecifySynthesisParameters(1000000, 50, 5000, 10000, 50);
 
 	// Link a neural network to the procedure
 	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 6, 6 }, ActivationActType::kRelu, OutputType::Labelled);
@@ -193,6 +193,8 @@ void SynthesizeReachabilityControllerRocket() {
 	//cosynnc.SpecifyVerbosity(true, false);
 
 	cosynnc.SpecifyUseRefinedTransitions(true);
+
+	//cosynnc.SpecifySaveAbstractionTransitions(false);
 
 	// Initialize the synthesize procedure
 	cosynnc.Initialize();
@@ -256,7 +258,7 @@ void SynthesizeReachAndStayControllerRocket() {
 
 void SynthesizeSS3dReachabilityController() {
 	// Define plant
-	StateSpaceRepresentation* plant = new StateSpaceRepresentation(3, 1, 0.05, "Random 1");
+	StateSpaceRepresentation* plant = new StateSpaceRepresentation(3, 1, 0.05, "Linear 3");
 	double** A = new double* [3];
 	A[0] = new double[3] { 1.6128, 1.9309, 2.2273 };
 	A[1] = new double[3] { 1.3808, 0.5701, 2.1409};
@@ -279,7 +281,7 @@ void SynthesizeSS3dReachabilityController() {
 
 	// Define network
 	MultilayerPerceptron* mlp = new MultilayerPerceptron({ 8, 8 }, ActivationActType::kRelu, OutputType::Labelled);
-	mlp->InitializeOptimizer("sgd", 0.15, 0.0);
+	mlp->InitializeOptimizer("sgd", 0.0075, 0.0);
 
 	Procedure cosynnc;
 	cosynnc.SetPlant(plant);
@@ -289,12 +291,14 @@ void SynthesizeSS3dReachabilityController() {
 
 	cosynnc.SpecifySynthesisParameters(5000000, 50, 5000, 25000, 50);
 
-	cosynnc.SetNeuralNetwork(mlp);
+	cosynnc.SetNeuralNetwork(mlp, 5);
 
 	cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ -1.0, -1.0, -1.0 }), Vector({ 1.0, 1.0, 1.0 }));
 
 	cosynnc.SpecifyWinningSetReinforcement(true);
 	cosynnc.SpecifyTrainingFocus(TrainingFocus::NeighboringLosingStates);
+
+	cosynnc.SpecifyTrainingFocus(TrainingFocus::AllStates);
 
 	cosynnc.SpecifyVerbosity(true, false);
 
@@ -527,14 +531,14 @@ int main() {
 
 	//SynthesizeReachAndStayControllerRocket();
 
-	//SynthesizeSS3dReachabilityController();
+	SynthesizeSS3dReachabilityController();
 	//SynthesizeSS2dReachabilityController();
 
 	//SynthesizeMIMOReachabilityController();
 
 	//SynthesizeLHReachabilityController();
 
-	SynthesizeUnicycleReachabilityController();
+	//SynthesizeUnicycleReachabilityController();
 
 	system("pause");
 	return 0;
