@@ -89,6 +89,7 @@ namespace COSYNNC {
 		_processedInputs.push_back(inputIndex);
 	}
 
+
 	// Sets the absolute post of a transition
 	void Transition::SetPost(Vector post, unsigned long inputIndex) {
 		_post[inputIndex] = post;

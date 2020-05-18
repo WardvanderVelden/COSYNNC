@@ -27,25 +27,7 @@ namespace COSYNNC {
 		CalculateVerticesOnHyperplaneDistribution();
 
 		// Initialize transitions
-		auto spaceCardinality = _stateQuantizer->GetCardinality();
-
-		/*_transitions = new Transition[spaceCardinality];
-		for (unsigned long index = 0; index < spaceCardinality; index++) {
-			_transitions[index] = Transition(index, _inputQuantizer->GetCardinality());
-		}*/
-
-		_partitionSize = floor((float)spaceCardinality / (float)_partitions);
-		for (unsigned int i = 0; i < _partitions; i++) {
-			auto size = _partitionSize;
-			if (i == (_partitions - 1)) {
-				size = spaceCardinality -  (i * _partitionSize);
-			}
-
-			_transitionPartitions[i] = new Transition[size];
-			for (unsigned long j = 0; j < size; j++) {
-				_transitionPartitions[i][j] = Transition(_partitionSize * i + j, _inputQuantizer->GetCardinality());
-			}
-		}
+		EmptyTransitions();
 	}
 
 
@@ -73,6 +55,37 @@ namespace COSYNNC {
 	}
 
 
+	// Sets whether or not to save the transitionsd
+	void Abstraction::SetSaveTransitions(bool save) {
+		_saveTransitions = save;
+	}
+
+
+	// Empties the abstraction to save data
+	void Abstraction::EmptyTransitions() {
+		auto spaceCardinality = _stateQuantizer->GetCardinality();
+
+		_partitionSize = floor((float)spaceCardinality / (float)_partitions);
+		for (unsigned int i = 0; i < _partitions; i++) {
+			// Determine the size
+			auto size = _partitionSize;
+			if (i == (_partitions - 1)) {
+				size = spaceCardinality - (i * _partitionSize);
+			}
+
+			// Free up memory if the transitions were used before
+			if (!_transitionsAreEmpty) delete[] _transitionPartitions[i];
+
+			_transitionPartitions[i] = new Transition[size];
+			for (unsigned long j = 0; j < size; j++) {
+				_transitionPartitions[i][j] = Transition(_partitionSize * i + j, _inputQuantizer->GetCardinality());
+			}
+		}
+
+		_transitionsAreEmpty = true;
+	}
+
+
 	#pragma region Transition Functions
 
 	// Computes the transition function for a single index, returns true if any calculations were made
@@ -88,7 +101,7 @@ namespace COSYNNC {
 			// Check if newState is in bounds of the state space, if not then we know the transition already
 			if (!_stateQuantizer->IsInBounds(newState)) {
 				transition->AddEnd(-1, inputIndex);
-				transition->SetInputProcessed(inputIndex);
+				if (_saveTransitions) transition->SetInputProcessed(inputIndex);
 				return true;
 			}
 
@@ -100,7 +113,7 @@ namespace COSYNNC {
 			for (unsigned int i = 0; i < _amountOfVerticesPerCell; i++) {
 				if (!_stateQuantizer->IsInBounds(vertices[i])) {
 					transition->AddEnd(-1, inputIndex);
-					transition->SetInputProcessed(inputIndex);
+					if(_saveTransitions) transition->SetInputProcessed(inputIndex);
 					return true;
 				}
 			}
@@ -113,7 +126,9 @@ namespace COSYNNC {
 			else FillHyperRectangleBetweenBounds(index, transition, inputIndex);
 
 			// Set the input as processed
-			transition->SetInputProcessed(inputIndex);
+			if (_saveTransitions) transition->SetInputProcessed(inputIndex);
+
+			if (_transitionsAreEmpty) _transitionsAreEmpty = false;
 
 			// Free up memory
 			delete[] vertices;

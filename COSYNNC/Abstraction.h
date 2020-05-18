@@ -45,8 +45,17 @@ namespace COSYNNC {
 		// Sets whether or not to use the rough transition scheme
 		void SetUseRefinedTransitions(bool use = false);
 
+		// Sets whether or not to save the transitions
+		void SetSaveTransitions(bool save = true);
+
 		// Returns whether or not the abstraction is made up of refined transitions
 		bool IsUsingRefinedTransitions() const { return _useRefinedTransitions; };
+
+		// Returns whether or not the transitions are being saved
+		bool IsSavingTransitions() const { return _saveTransitions; };
+
+		// Empties the abstraction to save data
+		void EmptyTransitions();
 	private:
 		#pragma region Transition Function
 
@@ -78,6 +87,7 @@ namespace COSYNNC {
 
 		// Abstraction settings
 		bool _useRefinedTransitions = true;
+		bool _saveTransitions = true;
 
 		// Abstraction components
 		Plant* _plant = nullptr;
@@ -100,5 +110,7 @@ namespace COSYNNC {
 		vector<vector<short>> _radialGrowthDistribution;
 		vector<vector<unsigned short>> _verticesOnHyperplaneDistribution;
 		vector<Vector> _normalsOfHyperplane;
+
+		bool _transitionsAreEmpty = true;
 	};
 }

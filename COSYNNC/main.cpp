@@ -30,19 +30,19 @@ void SynthesizeInvarianceControllerDCDC() {
 	cosynnc.SpecifyInputQuantizer(Vector((float)1.0), Vector((float)0.0), Vector((float)1.0));
 
 	// Specify the synthesis parameters
-	cosynnc.SpecifySynthesisParameters(2500000, 50, 5000, 25000, 50);
+	cosynnc.SpecifySynthesisParameters(2500000, 20, 5000, 25000, 50);
 
 	// Link a neural network to the procedure
 	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 8, 8}, ActivationActType::kRelu, OutputType::Labelled);
-	multilayerPerceptron->InitializeOptimizer("sgd", 0.01, 0.0); //0.001);
+	multilayerPerceptron->InitializeOptimizer("sgd", 0.0075, 0.0); //0.001);
 	cosynnc.SetNeuralNetwork(multilayerPerceptron);
 
 	// Specify the control specification
 	cosynnc.SpecifyControlSpecification(ControlSpecificationType::Invariance, Vector({ 0.7, 5.0 }), Vector({ 1.6, 5.9 }));
 
-	cosynnc.SpecifyRadialInitialState(0.25, 0.75);
-	cosynnc.SpecifyNorm({ 1.0, 1.0 });
-	cosynnc.SpecifyTrainingFocus(TrainingFocus::AlternatingRadialLosingNeighborLosing);
+	//cosynnc.SpecifyRadialInitialState(0.25, 0.75);
+	//cosynnc.SpecifyNorm({ 1.0, 1.0 });
+	cosynnc.SpecifyTrainingFocus(TrainingFocus::AllStates);
 
 	// Specify how verbose the procedure should be
 	cosynnc.SpecifyVerbosity(true, false);
@@ -73,7 +73,6 @@ void SynthesizeReachabilityControllerDCDC() {
 
 	// Specify the state and input quantizers
 	cosynnc.SpecifyStateQuantizer(Vector({ 0.005, 0.005 }), Vector({ 0.65, 4.95 }), Vector({ 1.65, 5.95 })); // This is the setting as used by Rungger
-	//cosynnc.SpecifyStateQuantizer(Vector({ 0.0075, 0.0075 }), Vector({ 0.65, 4.95 }), Vector({ 1.65, 5.95 }));
 	cosynnc.SpecifyInputQuantizer(Vector((float)1.0), Vector((float)0.0), Vector((float)1.0));
 
 	// Specify the synthesis parameters
@@ -87,22 +86,21 @@ void SynthesizeReachabilityControllerDCDC() {
 
 	// Specify the control specification
 	cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ 1.1, 5.4 }), Vector({ 1.6, 5.9 })); // Rungger specification
+	//cosynnc.SpecifyControlSpecification(ControlSpecificationType::ReachAndStay, Vector({ 1.1, 5.4 }), Vector({ 1.6, 5.9 }));
 
 	cosynnc.SpecifyRadialInitialState(0.4, 0.6);
-	cosynnc.SpecifyNorm({ 0.0, 1.0 });
+	//cosynnc.SpecifyNorm({ 0.0, 1.0 });
 	cosynnc.SpecifyWinningSetReinforcement(true);
-	cosynnc.SpecifyTrainingFocus(TrainingFocus::AlternatingRadialLosingNeighborLosing);
-
-	// Specify how verbose the procedure should be
-	cosynnc.SpecifyVerbosity(true, false);
-
+	cosynnc.SpecifyTrainingFocus(TrainingFocus::AllStates);
 	cosynnc.SpecifyUseRefinedTransitions(true);
+
+	cosynnc.SpecifyVerbosity(true, false);
 
 	// Initialize the synthesize procedure
 	cosynnc.Initialize();
 
 	// Load a previously trained network
-	cosynnc.LoadNeuralNetwork("controllers/timestamps", "FriMay1133754.m"); 
+	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "FriMay1133754.m"); 
 
 	// Run the synthesize procedure
 	cosynnc.Synthesize();
@@ -122,10 +120,10 @@ void SynthesizeInvarianceControllerRocket() {
 
 	// Specify the state and input quantizers
 	cosynnc.SpecifyStateQuantizer(Vector({ 0.1, 0.1 }), Vector({ -5, -10 }), Vector({ 5, 10 }));
-	cosynnc.SpecifyInputQuantizer(Vector((float)500.0), Vector((float)0.0), Vector((float)5000.0));
+	cosynnc.SpecifyInputQuantizer(Vector((float)1000.0), Vector((float)0.0), Vector((float)5000.0));
 
 	// Specify the synthesis parameters
-	cosynnc.SpecifySynthesisParameters(2500000, 25, 5000, 50000, 50);
+	cosynnc.SpecifySynthesisParameters(2500000, 50, 5000, 50000, 50);
 
 	// Link a neural network to the procedure
 	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 8, 8 }, ActivationActType::kRelu, OutputType::Labelled);
@@ -135,7 +133,7 @@ void SynthesizeInvarianceControllerRocket() {
 	// Specify the control specification
 	cosynnc.SpecifyControlSpecification(ControlSpecificationType::Invariance, Vector({ -2.5, -5.0 }), Vector({ 2.5, 5.0 }));
 
-	cosynnc.SpecifyRadialInitialState(0.25, 0.75);
+	cosynnc.SpecifyRadialInitialState(0.25, 0.8);
 	cosynnc.SpecifyNorm({ 1.0, 1.0 });
 	cosynnc.SpecifyTrainingFocus(TrainingFocus::RadialOutwards);
 
@@ -147,7 +145,7 @@ void SynthesizeInvarianceControllerRocket() {
 	// Initialize the synthesize procedure
 	cosynnc.Initialize();
 
-	//cosynnc.LoadNeuralNetwork("controllers/timestamps","TueFeb25144915net.m");
+	cosynnc.LoadNeuralNetwork("controllers/timestamps","ThuMay7115702net.m");
 
 	// Run the synthesize procedure
 	cosynnc.Synthesize();
@@ -170,32 +168,39 @@ void SynthesizeReachabilityControllerRocket() {
 	cosynnc.SpecifyInputQuantizer(Vector((float)1000.0), Vector((float)0.0), Vector((float)5000.0));
 
 	// Specify the synthesis parameters
-	cosynnc.SpecifySynthesisParameters(5000000, 50, 5000, 50000, 50);
+	cosynnc.SpecifySynthesisParameters(1000000, 50, 5000, 10000, 50);
 
 	// Link a neural network to the procedure
-	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 8, 8 }, ActivationActType::kRelu, OutputType::Labelled);
+	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 6, 6 }, ActivationActType::kRelu, OutputType::Labelled);
 	//multilayerPerceptron->InitializeOptimizer("sgd", 0.005, 0.001);
-	multilayerPerceptron->InitializeOptimizer("sgd", 0.01, 0.0);
+	multilayerPerceptron->InitializeOptimizer("sgd", 0.0075, 0.0);
 	cosynnc.SetNeuralNetwork(multilayerPerceptron);
 
 	// Specify the control specification
 	cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ -1.0, -1.0 }), Vector({ 1.0, 1.0 }));
 
 	cosynnc.SpecifyRadialInitialState(0.15, 0.85);
-	cosynnc.SpecifyNorm({ 1.0, 1.0 });
+	cosynnc.SpecifyTrainingFocus(TrainingFocus::RadialOutwards);
+
+	cosynnc.SpecifyTrainingFocus(TrainingFocus::LosingStates);
+
+	cosynnc.SpecifyTrainingFocus(TrainingFocus::AllStates);
+
+	//cosynnc.SpecifyNorm({ 1.0, 1.0 });
 	cosynnc.SpecifyWinningSetReinforcement(true);
-	cosynnc.SpecifyTrainingFocus(TrainingFocus::AlternatingRadialLosingNeighborLosing);
 
 	// Specify how verbose the procedure should be
-	cosynnc.SpecifyVerbosity(true, false);
+	//cosynnc.SpecifyVerbosity(true, false);
 
 	cosynnc.SpecifyUseRefinedTransitions(true);
+
+	//cosynnc.SpecifySaveAbstractionTransitions(false);
 
 	// Initialize the synthesize procedure
 	cosynnc.Initialize();
 
 	// Load a previously trained network
-	cosynnc.LoadNeuralNetwork("controllers/timestamps", "ThuApr30113252net.m");
+	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "ThuApr30113252net.m");
 
 	// Run the synthesize procedure
 	cosynnc.Synthesize();
@@ -228,7 +233,7 @@ void SynthesizeReachAndStayControllerRocket() {
 	// Specify the control specification
 	cosynnc.SpecifyControlSpecification(ControlSpecificationType::ReachAndStay, Vector({ -2.5, -2.5 }), Vector({ 2.5, 2.5 }));
 
-	cosynnc.SpecifyWinningSetReinforcement(true);
+	cosynnc.SpecifyWinningSetReinforcement(false);
 	cosynnc.SpecifyTrainingFocus(TrainingFocus::AllStates);
 
 	// Specify how verbose the procedure should be
@@ -240,7 +245,7 @@ void SynthesizeReachAndStayControllerRocket() {
 	cosynnc.Initialize();
 
 	// Load a previously trained network
-	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "ThuApr30113252net.m");
+	cosynnc.LoadNeuralNetwork("controllers/timestamps", "WedMay6104728net.m");
 
 	// Run the synthesize procedure
 	cosynnc.Synthesize();
@@ -253,7 +258,7 @@ void SynthesizeReachAndStayControllerRocket() {
 
 void SynthesizeSS3dReachabilityController() {
 	// Define plant
-	StateSpaceRepresentation* plant = new StateSpaceRepresentation(3, 1, 0.05, "Random 1");
+	StateSpaceRepresentation* plant = new StateSpaceRepresentation(3, 1, 0.05, "Linear 3");
 	double** A = new double* [3];
 	A[0] = new double[3] { 1.6128, 1.9309, 2.2273 };
 	A[1] = new double[3] { 1.3808, 0.5701, 2.1409};
@@ -276,7 +281,7 @@ void SynthesizeSS3dReachabilityController() {
 
 	// Define network
 	MultilayerPerceptron* mlp = new MultilayerPerceptron({ 8, 8 }, ActivationActType::kRelu, OutputType::Labelled);
-	mlp->InitializeOptimizer("sgd", 0.15, 0.0);
+	mlp->InitializeOptimizer("sgd", 0.0075, 0.0);
 
 	Procedure cosynnc;
 	cosynnc.SetPlant(plant);
@@ -286,12 +291,14 @@ void SynthesizeSS3dReachabilityController() {
 
 	cosynnc.SpecifySynthesisParameters(5000000, 50, 5000, 25000, 50);
 
-	cosynnc.SetNeuralNetwork(mlp);
+	cosynnc.SetNeuralNetwork(mlp, 5);
 
 	cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ -1.0, -1.0, -1.0 }), Vector({ 1.0, 1.0, 1.0 }));
 
 	cosynnc.SpecifyWinningSetReinforcement(true);
 	cosynnc.SpecifyTrainingFocus(TrainingFocus::NeighboringLosingStates);
+
+	cosynnc.SpecifyTrainingFocus(TrainingFocus::AllStates);
 
 	cosynnc.SpecifyVerbosity(true, false);
 
@@ -338,20 +345,26 @@ void SynthesizeSS2dReachabilityController() {
 	cosynnc.SpecifyInputQuantizer(Vector({ 1.0 }), Vector({ -6.0 }), Vector({ 6.0 }));
 
 	cosynnc.SpecifySynthesisParameters(5000000, 50, 5000, 50000, 50);
-	cosynnc.SpecifyWinningSetReinforcement(true);
-	cosynnc.SpecifyTrainingFocus(TrainingFocus::NeighboringLosingStates);
 
 	cosynnc.SetNeuralNetwork(mlp);
 
 	cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ -1.0, -1.0 }), Vector({ 1.0, 1.0 }));
+	//cosynnc.SpecifyControlSpecification(ControlSpecificationType::ReachAndStay, Vector({ -2.5, -2.5 }), Vector({ 2.5, 2.5 }));
 
-	cosynnc.SpecifyVerbosity(true, false);
+	cosynnc.SpecifyWinningSetReinforcement(true);
 	cosynnc.SpecifyUseRefinedTransitions(true);
+
+	cosynnc.SpecifyTrainingFocus(TrainingFocus::NeighboringLosingStates);
+
+	cosynnc.SpecifyTrainingFocus(TrainingFocus::AllStates);
+
 	cosynnc.SpecifyComputeApparentWinningSet(true);
 
+	cosynnc.SpecifyVerbosity(true, false);
+	
 	cosynnc.Initialize();
 
-	cosynnc.LoadNeuralNetwork("controllers/timestamps", "WedApr29135526net.m");
+	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "WedApr29135526net.m");
 
 	cosynnc.Synthesize();
 
@@ -391,13 +404,20 @@ void SynthesizeMIMOReachabilityController() {
 	cosynnc.SpecifyStateQuantizer(Vector({ 0.1, 0.1 }), Vector({ -5.0, -5.0 }), Vector({ 5.0, 5.0 }));
 	cosynnc.SpecifyInputQuantizer(Vector({ 2.5, 1.0 }), Vector({ -5.0, -2.0 }), Vector({ 5.0, 2.0 }));
 
-	cosynnc.SpecifySynthesisParameters(5000000, 50, 5000, 50000, 50);
+	cosynnc.SpecifySynthesisParameters(5000000, 25, 5000, 50000, 50);
 	cosynnc.SpecifyWinningSetReinforcement(true);
+
+	cosynnc.SpecifyRadialInitialState(0.0, 0.9);
+	cosynnc.SpecifyTrainingFocus(TrainingFocus::RadialOutwards);
 	cosynnc.SpecifyTrainingFocus(TrainingFocus::NeighboringLosingStates);
+
+	//cosynnc.SpecifyTrainingFocus(TrainingFocus::AllStates);
 
 	cosynnc.SetNeuralNetwork(mlp);
 
-	cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ -1.0, -1.0 }), Vector({ 1.0, 1.0 }));
+	//cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ -1.05, -1.05 }), Vector({ 1.05, 1.05 }));
+	//cosynnc.SpecifyControlSpecification(ControlSpecificationType::Invariance, Vector({ -2.505, -2.505 }), Vector({ 2.505, 2.505 }));
+	cosynnc.SpecifyControlSpecification(ControlSpecificationType::ReachAndStay, Vector({ -2.505, -2.505 }), Vector({ 2.505, 2.505 }));
 
 	cosynnc.SpecifyVerbosity(true, false);
 	cosynnc.SpecifyUseRefinedTransitions(true);
@@ -405,7 +425,7 @@ void SynthesizeMIMOReachabilityController() {
 
 	cosynnc.Initialize();
 
-	cosynnc.LoadNeuralNetwork("controllers/timestamps", "FriMay1165037.m");
+	cosynnc.LoadNeuralNetwork("controllers/timestamps", "MonMay11151654net.m");
 
 	cosynnc.Synthesize();
 
@@ -428,23 +448,26 @@ void SynthesizeLHReachabilityController() {
 	cosynnc.SpecifyStateQuantizer(Vector({ 0.1, 0.1 }), Vector({ -5.0, -5.0 }), Vector({ 5.0, 5.0 }));
 	cosynnc.SpecifyInputQuantizer(Vector({ 1.0 }), Vector({ 0.0 }), Vector({ 1.0 }));
 
-	cosynnc.SpecifySynthesisParameters(5000000, 100, 5000, 50000, 100);
+	cosynnc.SpecifySynthesisParameters(5000000, 50, 5000, 50000, 100);
 
 	cosynnc.SetNeuralNetwork(mlp);
 
-	cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ -1.0, -1.0 }), Vector({ 1.0, 1.0 }));
+	//cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ -1.0, -1.0 }), Vector({ 1.0, 1.0 }));
+	//cosynnc.SpecifyControlSpecification(ControlSpecificationType::Invariance, Vector({ -2.505, -2.505 }), Vector({ 2.505, 2.505 }));
+	cosynnc.SpecifyControlSpecification(ControlSpecificationType::ReachAndStay, Vector({ -2.505, -2.505 }), Vector({ 2.505, 2.505 }));
 
-	cosynnc.SpecifyWinningSetReinforcement(true);
+	//cosynnc.SpecifyWinningSetReinforcement(true);
 	cosynnc.SpecifyRadialInitialState(0.2, 0.8);
+	cosynnc.SpecifyTrainingFocus(TrainingFocus::RadialOutwards);
 	cosynnc.SpecifyTrainingFocus(TrainingFocus::AllStates);
 
 	cosynnc.SpecifyVerbosity(true, false);
 	cosynnc.SpecifyUseRefinedTransitions(true);
-	cosynnc.SpecifyComputeApparentWinningSet(true);
+	//cosynnc.SpecifyComputeApparentWinningSet(true);
 
 	cosynnc.Initialize();
 
-	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "WedApr29111053net.m");
+	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "ThuMay7165527net.m");
 
 	cosynnc.Synthesize();
 
@@ -458,7 +481,7 @@ void SynthesizeUnicycleReachabilityController() {
 	Unicycle* plant = new Unicycle();
 
 	// Define network
-	MultilayerPerceptron* mlp = new MultilayerPerceptron({ 8, 8 }, ActivationActType::kRelu, OutputType::Labelled);
+	MultilayerPerceptron* mlp = new MultilayerPerceptron({ 16, 16 }, ActivationActType::kRelu, OutputType::Labelled);
 	mlp->InitializeOptimizer("sgd", 0.0075, 0.0);
 
 	Procedure cosynnc;
@@ -467,23 +490,30 @@ void SynthesizeUnicycleReachabilityController() {
 	cosynnc.SpecifyStateQuantizer(Vector({ 0.2, 0.2, PI/6 }), Vector({ -5.0, -5.0, 0 }), Vector({ 5.0, 5.0, 2*PI }));
 	cosynnc.SpecifyInputQuantizer(Vector({ 1.0 }), Vector({ -1.0 }), Vector({ 1.0 }));
 
-	cosynnc.SpecifySynthesisParameters(5000000, 100, 5000, 50000, 100);
+	cosynnc.SpecifySynthesisParameters(5000000, 50, 5000, 50000, 100);
 
-	cosynnc.SetNeuralNetwork(mlp);
+	cosynnc.SetNeuralNetwork(mlp, 8);
 
 	cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ -1.0, -1.0, 0 }), Vector({ 1.0, 1.0, 2*PI }));
 
 	cosynnc.SpecifyNorm({ 1.0, 1.0, 0.0 });
 	cosynnc.SpecifyWinningSetReinforcement(true);
-	cosynnc.SpecifyTrainingFocus(TrainingFocus::AlternatingRadialLosingNeighborLosing);
+
+	cosynnc.SpecifyTrainingFocus(TrainingFocus::RadialOutwards);
+	cosynnc.SpecifyRadialInitialState(0.5, 1.0);
+
+	cosynnc.SpecifyTrainingFocus(TrainingFocus::NeighboringLosingStates);
+
+	cosynnc.SpecifyTrainingFocus(TrainingFocus::AllStates);
+
+	cosynnc.SpecifyUseRefinedTransitions(true);
+	//cosynnc.SpecifyComputeApparentWinningSet(true);
 
 	cosynnc.SpecifyVerbosity(true, false);
-	cosynnc.SpecifyUseRefinedTransitions(true);
-	cosynnc.SpecifyComputeApparentWinningSet(true);
 
 	cosynnc.Initialize();
 
-	cosynnc.LoadNeuralNetwork("controllers/timestamps", "MonMay4142146net.m");
+	cosynnc.LoadNeuralNetwork("controllers/timestamps", "MonMay18112853net.m");
 
 	cosynnc.Synthesize();
 
@@ -499,14 +529,16 @@ int main() {
 	//SynthesizeInvarianceControllerRocket();
 	//SynthesizeReachabilityControllerRocket();
 
-	//SynthesizeSS3dReachabilityController();
+	//SynthesizeReachAndStayControllerRocket();
+
+	SynthesizeSS3dReachabilityController();
 	//SynthesizeSS2dReachabilityController();
 
 	//SynthesizeMIMOReachabilityController();
 
 	//SynthesizeLHReachabilityController();
 
-	SynthesizeUnicycleReachabilityController();
+	//SynthesizeUnicycleReachabilityController();
 
 	system("pause");
 	return 0;

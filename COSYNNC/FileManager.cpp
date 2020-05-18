@@ -210,7 +210,7 @@ namespace COSYNNC {
 		for (unsigned long index = 0; index < stateCardinality; index++) {
 			auto input = _abstraction->GetController()->GetControlActionFromIndex(index);
 
-			file << "controller(" << (index + 1) << ") = [";
+			file << "controller(" << (index + 1) << ", :) = [";
 			for (size_t i = 0; i < inputDimension; i++) {
 				file << input[i];
 				if (i != (inputDimension - 1)) file << " ";
