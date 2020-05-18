@@ -166,10 +166,10 @@ namespace COSYNNC {
 
 
 	// Set the neural network
-	void Procedure::SetNeuralNetwork(NeuralNetwork* neuralNetwork) {
+	void Procedure::SetNeuralNetwork(NeuralNetwork* neuralNetwork, size_t batchSize) {
 		_neuralNetwork = neuralNetwork;
 		//_neuralNetwork->ConfigurateInputOutput(_plant, _inputQuantizer, _maxEpisodeHorizonTrainer, 1.0);
-		_neuralNetwork->ConfigurateInputOutput(_plant, _inputQuantizer, 10, 1.0);
+		_neuralNetwork->ConfigurateInputOutput(_plant, _inputQuantizer, batchSize, 1.0);
 
 		_outputType = _neuralNetwork->GetOutputType();
 
@@ -201,8 +201,6 @@ namespace COSYNNC {
 		_bddManager = BddManager(_abstraction);
 
 		// TODO: Test if all required parameters are specified before the synthesis procedure begins
-
-		// Bdd manager tests
 
 		_hasSuccesfullyInitialized = true;
 		return true;
@@ -285,11 +283,17 @@ namespace COSYNNC {
 
 				std::cout << "\ti: " << episodeNumber << "\tj: " << j << "\t";
 				for (size_t i = 0; i < _abstraction->GetStateQuantizer()->GetDimension(); i++) std::cout << "\tx" << i << ": " << newState[i];
-				for (int i = 0; i < verboseLabels; i++) {
+				for (size_t i = 0; i < verboseLabels; i++) {
 					if (i == 0) std::cout << "\t";
 					std::cout << "\tn" << i << ": " << networkOutput[i];;
 				}
-				std::cout << "\tu: " << input[0] << "\ts: " << isInSpecificationSet << std::endl;
+
+				auto verboseInputs = (_abstraction->GetInputQuantizer()->GetDimension() <= 5) ? _abstraction->GetInputQuantizer()->GetDimension() : 5;
+				for (size_t i = 0; i < verboseInputs; i++) {
+					if (i == 0) std::cout << "\t";
+					std::cout << "\tu" << i << ": " << input[i];;
+				}
+				std::cout << "\ts: " << isInSpecificationSet << std::endl;
 			}
 
 			// Check episode stopping conditions

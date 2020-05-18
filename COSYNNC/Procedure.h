@@ -65,7 +65,7 @@ namespace COSYNNC {
 		void SetPlant(Plant* plant);
 
 		// Set the neural network
-		void SetNeuralNetwork(NeuralNetwork* neuralNetwork);
+		void SetNeuralNetwork(NeuralNetwork* neuralNetwork, size_t batchSize = 10);
 
 		#pragma endregion Procedure Specifiers
 
