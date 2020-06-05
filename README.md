@@ -10,7 +10,7 @@ In order to build MXNet, the dependencies upon which MXNet relies need to be con
 <h3>Ubuntu</h3>
 * Install GCC
 
-* Install CMake 1.13 or higher. This can be done by downloading the latest version of [CMake](https://cmake.org) and extracting the files. After that, open a terminal and navigate to where the files where extracted. Then run:
+* Install CMake 3.13 or higher. This can be done by downloading the latest version of [CMake](https://cmake.org) and extracting the files. After that, open a terminal and navigate to where the files where extracted. Then run:
 	```console
 	sudo apt install libssl-dev
 	./bootstrap
@@ -38,7 +38,7 @@ In order to build MXNet, the dependencies upon which MXNet relies need to be con
 	CUDA OFF
 	CUDNN OFF
 	BLAS OPEN
-	OEPNCV OFF
+	OPENCV OFF
 	OPENMP OFF
 	MKLDNN OFF
 	LAPACK OFF
