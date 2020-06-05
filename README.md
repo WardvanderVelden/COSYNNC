@@ -30,7 +30,7 @@ In order to build MXNet, the dependencies upon which MXNet relies need to be con
 
 * Copy the linux makefile to the config file
 	```console
-	cp config/linx.cmake config.cmake
+	cp ./mxnet/config/linux.cmake ./mxnet/config.cmake
 	```
 
 * Edit the config file such that the following parameters are set:
