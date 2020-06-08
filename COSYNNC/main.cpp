@@ -79,9 +79,9 @@ void SynthesizeReachabilityControllerDCDC() {
 	cosynnc.SpecifySynthesisParameters(1000000, 50, 5000, 50000, 50);
 
 	// Link a neural network to the procedure
-	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 8, 8 }, ActivationActType::kRelu, OutputType::Labelled);
+	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 10, 10 }, ActivationActType::kRelu, OutputType::Labelled);
 	//multilayerPerceptron->InitializeOptimizer("sgd", 0.0025, 0.001);
-	multilayerPerceptron->InitializeOptimizer("sgd", 0.01, 0.0);
+	multilayerPerceptron->InitializeOptimizer("sgd", 0.0075, 0.0);
 	cosynnc.SetNeuralNetwork(multilayerPerceptron);
 
 	// Specify the control specification
@@ -90,8 +90,12 @@ void SynthesizeReachabilityControllerDCDC() {
 
 	cosynnc.SpecifyRadialInitialState(0.4, 0.6);
 	//cosynnc.SpecifyNorm({ 0.0, 1.0 });
-	cosynnc.SpecifyWinningSetReinforcement(true);
+
+	cosynnc.SpecifyTrainingFocus(TrainingFocus::RadialOutwards);
 	cosynnc.SpecifyTrainingFocus(TrainingFocus::AllStates);
+
+	cosynnc.SpecifyWinningSetReinforcement(true);
+
 	cosynnc.SpecifyUseRefinedTransitions(true);
 
 	cosynnc.SpecifyVerbosity(true, false);
@@ -100,7 +104,7 @@ void SynthesizeReachabilityControllerDCDC() {
 	cosynnc.Initialize();
 
 	// Load a previously trained network
-	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "FriMay1133754.m"); 
+	cosynnc.LoadNeuralNetwork("controllers/timestamps", "WedMay20155901net.m"); 
 
 	// Run the synthesize procedure
 	cosynnc.Synthesize();
@@ -165,15 +169,18 @@ void SynthesizeReachabilityControllerRocket() {
 
 	// Specify the state and input quantizers
 	cosynnc.SpecifyStateQuantizer(Vector({ 0.1, 0.1 }), Vector({ -5, -10 }), Vector({ 5, 10 }));
-	cosynnc.SpecifyInputQuantizer(Vector((float)1000.0), Vector((float)0.0), Vector((float)5000.0));
+	//cosynnc.SpecifyInputQuantizer(Vector((float)1000.0), Vector((float)0.0), Vector((float)5000.0));
+	cosynnc.SpecifyInputQuantizer(Vector((float)5000.0), Vector((float)0.0), Vector((float)5000.0));
 
 	// Specify the synthesis parameters
-	cosynnc.SpecifySynthesisParameters(1000000, 50, 5000, 10000, 50);
+	cosynnc.SpecifySynthesisParameters(1000000, 50, 5000, 50000, 50);
 
 	// Link a neural network to the procedure
-	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 6, 6 }, ActivationActType::kRelu, OutputType::Labelled);
+	//MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 6, 6 }, ActivationActType::kRelu, OutputType::Labelled);
+	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 8, 8 }, ActivationActType::kRelu, OutputType::Range);
 	//multilayerPerceptron->InitializeOptimizer("sgd", 0.005, 0.001);
-	multilayerPerceptron->InitializeOptimizer("sgd", 0.0075, 0.0);
+	//multilayerPerceptron->InitializeOptimizer("sgd", 0.0075, 0.0);
+	multilayerPerceptron->InitializeOptimizer("sgd", 0.02, 0.0);
 	cosynnc.SetNeuralNetwork(multilayerPerceptron);
 
 	// Specify the control specification
@@ -289,7 +296,7 @@ void SynthesizeSS3dReachabilityController() {
 	cosynnc.SpecifyStateQuantizer(Vector({ 0.25, 0.25, 0.25}), Vector({ -5.0, -5.0, -5.0 }), Vector({ 5.0, 5.0, 5.0 }));
 	cosynnc.SpecifyInputQuantizer(Vector({ 2.5 }), Vector({ -5.0 }), Vector({ 5.0 }));
 
-	cosynnc.SpecifySynthesisParameters(5000000, 50, 5000, 25000, 50);
+	cosynnc.SpecifySynthesisParameters(5000000, 50, 5000, 50000, 50);
 
 	cosynnc.SetNeuralNetwork(mlp, 5);
 
@@ -402,9 +409,10 @@ void SynthesizeMIMOReachabilityController() {
 	cosynnc.SetPlant(plant);
 
 	cosynnc.SpecifyStateQuantizer(Vector({ 0.1, 0.1 }), Vector({ -5.0, -5.0 }), Vector({ 5.0, 5.0 }));
-	cosynnc.SpecifyInputQuantizer(Vector({ 2.5, 1.0 }), Vector({ -5.0, -2.0 }), Vector({ 5.0, 2.0 }));
+	//cosynnc.SpecifyInputQuantizer(Vector({ 2.5, 1.0 }), Vector({ -5.0, -2.0 }), Vector({ 5.0, 2.0 }));
+	cosynnc.SpecifyInputQuantizer(Vector({ 5.0, 2.0 }), Vector({ -5.0, -2.0 }), Vector({ 5.0, 2.0 }));
 
-	cosynnc.SpecifySynthesisParameters(5000000, 25, 5000, 50000, 50);
+	cosynnc.SpecifySynthesisParameters(2000000, 25, 5000, 50000, 50);
 	cosynnc.SpecifyWinningSetReinforcement(true);
 
 	cosynnc.SpecifyRadialInitialState(0.0, 0.9);
@@ -413,11 +421,11 @@ void SynthesizeMIMOReachabilityController() {
 
 	//cosynnc.SpecifyTrainingFocus(TrainingFocus::AllStates);
 
-	cosynnc.SetNeuralNetwork(mlp);
+	cosynnc.SetNeuralNetwork(mlp, 9);
 
 	//cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ -1.05, -1.05 }), Vector({ 1.05, 1.05 }));
-	//cosynnc.SpecifyControlSpecification(ControlSpecificationType::Invariance, Vector({ -2.505, -2.505 }), Vector({ 2.505, 2.505 }));
-	cosynnc.SpecifyControlSpecification(ControlSpecificationType::ReachAndStay, Vector({ -2.505, -2.505 }), Vector({ 2.505, 2.505 }));
+	cosynnc.SpecifyControlSpecification(ControlSpecificationType::Invariance, Vector({ -2.505, -2.505 }), Vector({ 2.505, 2.505 }));
+	//cosynnc.SpecifyControlSpecification(ControlSpecificationType::ReachAndStay, Vector({ -2.505, -2.505 }), Vector({ 2.505, 2.505 }));
 
 	cosynnc.SpecifyVerbosity(true, false);
 	cosynnc.SpecifyUseRefinedTransitions(true);
@@ -425,7 +433,7 @@ void SynthesizeMIMOReachabilityController() {
 
 	cosynnc.Initialize();
 
-	cosynnc.LoadNeuralNetwork("controllers/timestamps", "MonMay11151654net.m");
+	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "MonMay11151654net.m");
 
 	cosynnc.Synthesize();
 
@@ -481,28 +489,30 @@ void SynthesizeUnicycleReachabilityController() {
 	Unicycle* plant = new Unicycle();
 
 	// Define network
-	MultilayerPerceptron* mlp = new MultilayerPerceptron({ 16, 16 }, ActivationActType::kRelu, OutputType::Labelled);
+	MultilayerPerceptron* mlp = new MultilayerPerceptron({ 12, 12 }, ActivationActType::kRelu, OutputType::Labelled);
 	mlp->InitializeOptimizer("sgd", 0.0075, 0.0);
 
 	Procedure cosynnc;
 	cosynnc.SetPlant(plant);
 
-	cosynnc.SpecifyStateQuantizer(Vector({ 0.2, 0.2, PI/6 }), Vector({ -5.0, -5.0, 0 }), Vector({ 5.0, 5.0, 2*PI }));
+	//cosynnc.SpecifyStateQuantizer(Vector({ 0.2, 0.2, PI/6 }), Vector({ -5.0, -5.0, 0 }), Vector({ 5.0, 5.0, 2*PI }));
+	cosynnc.SpecifyStateQuantizer(Vector({ 0.1, 0.1, 0.1 }), Vector({ -5.0, -5.0, 0 }), Vector({ 5.0, 5.0, 2 * PI }));
 	cosynnc.SpecifyInputQuantizer(Vector({ 1.0 }), Vector({ -1.0 }), Vector({ 1.0 }));
 
 	cosynnc.SpecifySynthesisParameters(5000000, 50, 5000, 50000, 100);
 
-	cosynnc.SetNeuralNetwork(mlp, 8);
+	cosynnc.SetNeuralNetwork(mlp, 5);
 
-	cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ -1.0, -1.0, 0 }), Vector({ 1.0, 1.0, 2*PI }));
+	cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ -2.05, -2.05, 0 }), Vector({ 2.05, 2.05, 2*PI }));
+	//cosynnc.SpecifyControlSpecification(ControlSpecificationType::Invariance, Vector({ -3.005, -3.005, 0 }), Vector({ 3.005, 3.005, 2 * PI }));
 
 	cosynnc.SpecifyNorm({ 1.0, 1.0, 0.0 });
 	cosynnc.SpecifyWinningSetReinforcement(true);
 
-	cosynnc.SpecifyTrainingFocus(TrainingFocus::RadialOutwards);
-	cosynnc.SpecifyRadialInitialState(0.5, 1.0);
+	//cosynnc.SpecifyTrainingFocus(TrainingFocus::RadialOutwards);
+	//cosynnc.SpecifyRadialInitialState(0.5, 1.0);
 
-	cosynnc.SpecifyTrainingFocus(TrainingFocus::NeighboringLosingStates);
+	//cosynnc.SpecifyTrainingFocus(TrainingFocus::NeighboringLosingStates);
 
 	cosynnc.SpecifyTrainingFocus(TrainingFocus::AllStates);
 
@@ -513,7 +523,7 @@ void SynthesizeUnicycleReachabilityController() {
 
 	cosynnc.Initialize();
 
-	cosynnc.LoadNeuralNetwork("controllers/timestamps", "MonMay18112853net.m");
+	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "TueJun2102314net.m");
 
 	cosynnc.Synthesize();
 
@@ -524,14 +534,14 @@ void SynthesizeUnicycleReachabilityController() {
 
 int main() {
 	//SynthesizeInvarianceControllerDCDC();
-	//SynthesizeReachabilityControllerDCDC();
+	SynthesizeReachabilityControllerDCDC();
 	
 	//SynthesizeInvarianceControllerRocket();
 	//SynthesizeReachabilityControllerRocket();
 
 	//SynthesizeReachAndStayControllerRocket();
 
-	SynthesizeSS3dReachabilityController();
+	//SynthesizeSS3dReachabilityController();
 	//SynthesizeSS2dReachabilityController();
 
 	//SynthesizeMIMOReachabilityController();

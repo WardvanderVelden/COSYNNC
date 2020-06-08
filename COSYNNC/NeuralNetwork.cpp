@@ -42,6 +42,48 @@ namespace COSYNNC {
 			break;
 		}
 
+		Initialize(batchSize, initialDistribution);
+
+		/*// Define layers based on label dimension
+		auto layers = vector<int>(_hiddenLayers);
+		layers.push_back(_labelDimension);
+		SetLayers(layers);
+
+		// Defines the dimensions of the input and output of the neural network based on the plant and the batch size
+		_batchSize = batchSize;
+
+		_arguments["input"] = NDArray(Shape(batchSize, _inputDimension), _context);
+		_arguments["label"] = NDArray(Shape(batchSize, _labelDimension), _context);
+
+		// Initialize the neural network graph
+		InitializeGraph();
+
+		// Infers the size of the other matrices and vectors based on the input and output and amount of neurons per layer
+		_network.InferArgsMap(_context, &_arguments, _arguments);
+
+		// Initialize all parameters with a uniform distribution
+		auto initializer = Uniform(initialDistribution);
+		for (auto& argument : _arguments) {
+			initializer(argument.first, &argument.second);
+		}
+
+		// Bind parameters to the neural network model through an executor
+		_executor = _network.SimpleBind(_context, _arguments);
+		_argumentNames = _network.ListArguments();*/
+	}
+
+
+	// Configures a generic neural network
+	void NeuralNetwork::ConfigureInputOutput(unsigned int inputNeurons, unsigned int outputNeurons, unsigned int batchSize, float initialDistribution) {
+		_inputDimension = inputNeurons;
+		_labelDimension = outputNeurons;
+
+		Initialize(batchSize, initialDistribution);
+	}
+
+
+	// Initializes the topology and graph based on the hidden layers and input and label dimension
+	void NeuralNetwork::Initialize(unsigned int batchSize, float initialDistribution) {
 		// Define layers based on label dimension
 		auto layers = vector<int>(_hiddenLayers);
 		layers.push_back(_labelDimension);

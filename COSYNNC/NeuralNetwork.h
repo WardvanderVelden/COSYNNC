@@ -41,6 +41,9 @@ namespace COSYNNC {
 		// Configures the neural network to receive input and output data compatible with the state and input dimensions and batch size
 		virtual void ConfigurateInputOutput(Plant* plant, Quantizer* inputQuantizer, int batchSize = 1, float initialDistribution = 0.1);
 
+		// Configures a generic neural network
+		virtual void ConfigureInputOutput(unsigned int inputNeurons, unsigned int outputNeurons, unsigned int batchSize = 1, float initialDistribution = 0.1);
+
 		// Evaluates the neural network
 		virtual Vector EvaluateNetwork(Vector input);
 
@@ -95,6 +98,9 @@ namespace COSYNNC {
 		// Returns a value in the argument
 		mx_float GetArgumentValue(string name, vector<unsigned int> index);
 	protected:
+		// Initializes the neural network based on the hidden layers and input and label dimension
+		virtual void Initialize(unsigned int batchSize, float initialDistribution);
+
 		vector<int> _layers;
 		vector<int> _hiddenLayers;
 
