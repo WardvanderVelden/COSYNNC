@@ -170,10 +170,10 @@ namespace COSYNNC {
 
 
 	// Save the verified domain to a MATLAB file
-	void FileManager::SaveVerifiedDomainAsMATLAB(string path, string name) {
+	void FileManager::SaveWinningSetAsMATLAB(string path, string name) {
 		ofstream file(path + "/" + name + ".m", std::ios_base::out);
 
-		// Save the winning domain to the domain file
+		// Save the winning set percentage to the set file
 		file << "winningDomainPercentage = " << _verifier->GetWinningSetPercentage() << ";\n";
 		file << "networkDataSize = " << _neuralNetwork->GetDataSize() << ";\n";
 
@@ -187,7 +187,7 @@ namespace COSYNNC {
 			WriteVectorToMATLABFile(&file, "goalUpperVertex", _abstraction->GetControlSpecification()->GetUpperHyperIntervalVertex());
 		}
 
-		// Save the winning domain
+		// Save the winning set
 		unsigned long stateCardinality = _abstraction->GetStateQuantizer()->GetCardinality();
 
 		file << "\nwinningDomain = zeros(" << stateCardinality << ", 1);\n\n";

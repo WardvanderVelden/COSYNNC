@@ -28,8 +28,8 @@ namespace COSYNNC {
 		// Save the structure of a neural network to a MATLAB file
 		void SaveNetworkAsMATLAB(string path, string name);
 
-		// Save the verified domain to a MATLAB file
-		void SaveVerifiedDomainAsMATLAB(string path, string name);
+		// Save the winning set to a MATLAB file
+		void SaveWinningSetAsMATLAB(string path, string name);
 
 		// Saves the raw controller
 		void SaveControllerAsMATLAB(string path, string name);
