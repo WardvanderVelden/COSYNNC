@@ -19,6 +19,12 @@ namespace COSYNNC {
 		// Initialize the controller based on the plant and both the state and input quantizers
 		Controller(Plant* plant, Quantizer* stateQuantizer, Quantizer* inputQuantizer);
 
+		// Initialize the controller based on the quantizers to allow for a controller without knowledge of the plant
+		Controller(Quantizer* stateQuantizer, Quantizer* inputQuantizer);
+
+		// Default destructor
+		~Controller();
+
 		// Set the control specification of the controller
 		void SetControlSpecification(ControlSpecification* specification);
 
@@ -27,6 +33,12 @@ namespace COSYNNC {
 
 		// Returns a pointer to the neural network
 		NeuralNetwork* GetNeuralNetwork() const;
+
+		// Returns a pointer to the state quantizer
+		Quantizer* GetStateQuantizer() const;
+
+		// Returns a pointer to the state quantizer
+		Quantizer* GetInputQuantizer() const;
 
 		// Get a control action based on the state in the stateSpace of the plant using a greedy strategy
 		Vector GetControlAction(Vector state, Vector* networkOutputVector = NULL);
@@ -53,18 +65,24 @@ namespace COSYNNC {
 		ControlSpecification* GetControlSpecification() const;
 
 		// Compile the inputs array that states the input for every index in the state space
-		void CompileInputArray();
+		void ComputeInputs();
+
+		// Initialize the array of precomputed inputs
+		void InitializeInputs();
+
+		// Sets the input for a given state in the state space
+		void SetInput(unsigned long stateIndex, Vector input);
 
 		// Get input from the input array based on the index
 		Vector GetControlActionFromIndex(long index) const;
 	private:
-		float _h;
+		float _h = 0.0;
 
 		Vector _lastControlAction;
 		//Vector _lastState;
 
-		int _stateSpaceDim;
-		int _inputSpaceDim;
+		int _stateSpaceDim = 0;
+		int _inputSpaceDim = 0;
 
 		Quantizer* _stateQuantizer = nullptr;
 		Quantizer* _inputQuantizer = nullptr;
@@ -73,7 +91,7 @@ namespace COSYNNC {
 
 		NeuralNetwork* _neuralNetwork = nullptr;
 
-		Vector* _inputArray = nullptr;
+		Vector* _inputs = nullptr;
 	};
 }
 

@@ -13,6 +13,7 @@
 #include "Procedure.h"
 #include "LinearHybrid.h"
 #include "Unicycle.h"
+#include "Encoder.h"
 
 using namespace std;
 using namespace mxnet;
@@ -53,7 +54,7 @@ void SynthesizeInvarianceControllerDCDC() {
 	cosynnc.Initialize();
 
 	// Load a previously trained network
-	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "FriMar20115005net.m");
+	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "FriMar20115005net");
 
 	// Run the synthesize procedure
 	cosynnc.Synthesize();
@@ -104,7 +105,7 @@ void SynthesizeReachabilityControllerDCDC() {
 	cosynnc.Initialize();
 
 	// Load a previously trained network
-	cosynnc.LoadNeuralNetwork("controllers/timestamps", "WedMay20155901net.m"); 
+	cosynnc.LoadNeuralNetwork("controllers/timestamps", "WedMay20155901net"); 
 
 	// Run the synthesize procedure
 	cosynnc.Synthesize();
@@ -149,7 +150,7 @@ void SynthesizeInvarianceControllerRocket() {
 	// Initialize the synthesize procedure
 	cosynnc.Initialize();
 
-	cosynnc.LoadNeuralNetwork("controllers/timestamps","ThuMay7115702net.m");
+	cosynnc.LoadNeuralNetwork("controllers/timestamps","ThuMay7115702net");
 
 	// Run the synthesize procedure
 	cosynnc.Synthesize();
@@ -207,7 +208,7 @@ void SynthesizeReachabilityControllerRocket() {
 	cosynnc.Initialize();
 
 	// Load a previously trained network
-	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "ThuApr30113252net.m");
+	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "ThuApr30113252net");
 
 	// Run the synthesize procedure
 	cosynnc.Synthesize();
@@ -252,7 +253,7 @@ void SynthesizeReachAndStayControllerRocket() {
 	cosynnc.Initialize();
 
 	// Load a previously trained network
-	cosynnc.LoadNeuralNetwork("controllers/timestamps", "WedMay6104728net.m");
+	cosynnc.LoadNeuralNetwork("controllers/timestamps", "WedMay6104728net");
 
 	// Run the synthesize procedure
 	cosynnc.Synthesize();
@@ -371,7 +372,7 @@ void SynthesizeSS2dReachabilityController() {
 	
 	cosynnc.Initialize();
 
-	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "WedApr29135526net.m");
+	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "WedApr29135526net");
 
 	cosynnc.Synthesize();
 
@@ -433,7 +434,7 @@ void SynthesizeMIMOReachabilityController() {
 
 	cosynnc.Initialize();
 
-	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "MonMay11151654net.m");
+	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "MonMay11151654net");
 
 	cosynnc.Synthesize();
 
@@ -475,7 +476,7 @@ void SynthesizeLHReachabilityController() {
 
 	cosynnc.Initialize();
 
-	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "ThuMay7165527net.m");
+	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "ThuMay7165527net");
 
 	cosynnc.Synthesize();
 
@@ -523,12 +524,22 @@ void SynthesizeUnicycleReachabilityController() {
 
 	cosynnc.Initialize();
 
-	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "TueJun2102314net.m");
+	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "TueJun2102314net");
 
 	cosynnc.Synthesize();
 
 	delete mlp;
 	delete plant;
+}
+
+
+void EncodeWinningSetAsNeuralNetwork() {
+	Encoder encoder("controllers/timestamps", "FriMay15161009scs");
+
+	MultilayerPerceptron* mlp = new MultilayerPerceptron({ 8, 8 }, ActivationActType::kRelu, LossFunctionType::CrossEntropy);
+	mlp->InitializeOptimizer("sgd", 0.0075, 0.0);
+
+	delete mlp;
 }
 
 
@@ -549,6 +560,8 @@ int main() {
 	//SynthesizeLHReachabilityController();
 
 	//SynthesizeUnicycleReachabilityController();
+
+	EncodeWinningSetAsNeuralNetwork();
 
 	system("pause");
 	return 0;

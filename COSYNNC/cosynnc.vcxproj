@@ -137,6 +137,7 @@
     <ClCompile Include="ControlSpecification.cpp" />
     <ClCompile Include="DCDC.cpp" />
     <ClCompile Include="Edge.cpp" />
+    <ClCompile Include="Encoder.cpp" />
     <ClCompile Include="FileManager.cpp" />
     <ClCompile Include="LinearHybrid.cpp" />
     <ClCompile Include="main.cpp" />
@@ -161,6 +162,7 @@
     <ClInclude Include="ControlSpecification.h" />
     <ClInclude Include="DCDC.h" />
     <ClInclude Include="Edge.h" />
+    <ClInclude Include="Encoder.h" />
     <ClInclude Include="FileManager.h" />
     <ClInclude Include="LinearHybrid.h" />
     <ClInclude Include="MultilayerPerceptron.h" />

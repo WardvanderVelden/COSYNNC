@@ -23,7 +23,7 @@ namespace COSYNNC {
 			pos = str.find(denominator);
 		}
 
-		if (str.size() > 1) {
+		if (str.size() >= 1) {
 			vec.push_back(str.substr(0, pos));
 		}
 

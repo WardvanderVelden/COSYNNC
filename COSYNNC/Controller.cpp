@@ -1,12 +1,15 @@
 #include "Controller.h"
 
 namespace COSYNNC {
+	// Initializes the controller
 	Controller::Controller() {
 		_stateSpaceDim = 0;
 		_inputSpaceDim = 0;
 
 	}
 
+
+	// Initializes the controller based on the plant
 	Controller::Controller(Plant* plant) {
 		_stateSpaceDim = plant->GetStateSpaceDimension();
 		_inputSpaceDim = plant->GetInputSpaceDimension();
@@ -14,6 +17,8 @@ namespace COSYNNC {
 		_h = plant->GetStepSize();
 	}
 
+
+	// Initialize the controller based on the plant and both the state and input quantizers
 	Controller::Controller(Plant* plant, Quantizer* stateQuantizer, Quantizer* inputQuantizer) {
 		_stateSpaceDim = plant->GetStateSpaceDimension();
 		_inputSpaceDim = plant->GetInputSpaceDimension();
@@ -23,6 +28,19 @@ namespace COSYNNC {
 
 		_stateQuantizer = stateQuantizer;
 		_inputQuantizer = inputQuantizer;
+	}
+
+
+	// Initialize the controller based on the quantizers to allow for a controller without knowledge of the plant
+	Controller::Controller(Quantizer* stateQuantizer, Quantizer* inputQuantizer) {
+		_stateQuantizer = stateQuantizer;
+		_inputQuantizer = inputQuantizer;
+	}
+
+
+	// Default destructor
+	Controller::~Controller() {
+		delete[] _inputs;
 	}
 
 
@@ -41,6 +59,17 @@ namespace COSYNNC {
 	// Returns a pointer to the neural network
 	NeuralNetwork* Controller::GetNeuralNetwork() const {
 		return _neuralNetwork;
+	}
+
+
+	// Returns a pointer to the state quantizer
+	Quantizer* Controller::GetStateQuantizer() const {
+		return _stateQuantizer;
+	}
+
+	// Returns a pointer to the state quantizer
+	Quantizer* Controller::GetInputQuantizer() const {
+		return _inputQuantizer;
 	}
 
 
@@ -206,23 +235,23 @@ namespace COSYNNC {
 
 
 	// Compile the inputs array that states the input for every index in the state space
-	void Controller::CompileInputArray() {
-		delete[] _inputArray;
+	void Controller::ComputeInputs() {
+		delete[] _inputs;
 
 		// Setup input array
-		const auto _spaceCardinality = _stateQuantizer->GetCardinality();
-		_inputArray = new Vector[_spaceCardinality];
+		const auto spaceCardinality = _stateQuantizer->GetCardinality();
+		_inputs = new Vector[spaceCardinality];
 
 		// Calculate amount of batches required
 		const auto batchSize = GetNeuralNetwork()->GetBatchSize();
-		const long amountOfBatches = ceil(_spaceCardinality / batchSize);
+		const long amountOfBatches = ceil(spaceCardinality / batchSize);
 
 		// Go through all the indices through batches
 		for (unsigned long batch = 0; batch <= amountOfBatches; batch++) {
 			unsigned long indexOffset = batch * batchSize;
 			unsigned int currentBatchSize = batchSize;
 			if (batch == amountOfBatches) {
-				currentBatchSize = _spaceCardinality - indexOffset;
+				currentBatchSize = spaceCardinality - indexOffset;
 
 				if (currentBatchSize == 0) break;
 			}
@@ -243,7 +272,7 @@ namespace COSYNNC {
 			for (unsigned int i = 0; i < currentBatchSize; i++) {
 				long index = indexOffset + i;
 
-				_inputArray[index] = inputs[i];
+				_inputs[index] = inputs[i];
 			}
 
 			delete[] inputs;
@@ -252,8 +281,25 @@ namespace COSYNNC {
 	}
 
 
+	// Initialize the array of precomputed inputs
+	void Controller::InitializeInputs() {
+		delete[] _inputs;
+
+		const auto spaceCardinality = _stateQuantizer->GetCardinality();
+		_inputs = new Vector[spaceCardinality];
+
+		for (unsigned long i = 0; i < spaceCardinality; i++) _inputs[i] = Vector((unsigned int)0);
+	}
+
+
+	// Sets the input for a given state in the state space
+	void Controller::SetInput(unsigned long stateIndex, Vector input) {
+		_inputs[stateIndex] = input;
+	}
+
+
 	// Get input from the input array based on the index
 	Vector Controller::GetControlActionFromIndex(long index) const {
-		return _inputArray[index];
+		return _inputs[index];
 	}
 }

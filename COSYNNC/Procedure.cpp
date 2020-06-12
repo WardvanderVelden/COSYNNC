@@ -401,7 +401,7 @@ namespace COSYNNC {
 
 	// Run the verification phase
 	void Procedure::Verify() {
-		_controller.CompileInputArray();
+		_controller.ComputeInputs();
 
 		Log("Verifier", "Computing relevant transitions");
 		_verifier->ComputeTransitions();

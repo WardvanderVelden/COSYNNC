@@ -22,6 +22,9 @@ namespace COSYNNC {
 		// Loads a neural network
 		void LoadNetworkFromMATLAB(string path, string name);
 
+		// Loads a static controller returning a controller object that contains the deterministic static controllers behaviour
+		Controller LoadStaticController(string path, string name);
+
 		// Save network in its binary form to yield the most compressed representation
 		void SaveNetworkAsRaw(string path, string name);
 
@@ -71,6 +74,9 @@ namespace COSYNNC {
 
 		// Format vector of axis indices into an appropriate string
 		string FormatAxisIndices(vector<unsigned long> axisIndices);
+
+		// Format a vector of parameters into a quantizer for the static controller load function
+		Quantizer* FormatIntoQuantizer(unsigned int dimension, vector<double> parameters);
 
 
 		// Pointers to relevant objects

@@ -15,7 +15,7 @@ namespace COSYNNC {
 
 	// Loads a neural network
 	void FileManager::LoadNetworkFromMATLAB(string path, string name) {
-		ifstream file(path + "/" + name, std::ios_base::in);
+		ifstream file(path + "/" + name + ".m", std::ios_base::in);
 
 		if (file.is_open()) {
 			StringHelper stringHelper;
@@ -31,11 +31,11 @@ namespace COSYNNC {
 				if (line[0] == 'w' || line[0] == 'b') {
 					if (line.find(' ') > 5) continue;
 
-					auto firstSpace = line.find(' ');
-					currentArgument = line.substr(0, firstSpace);
-					line = line.substr(firstSpace + 1, line.size() - firstSpace - 1);
+auto firstSpace = line.find(' ');
+currentArgument = line.substr(0, firstSpace);
+line = line.substr(firstSpace + 1, line.size() - firstSpace - 1);
 
-					readingArgument = true;
+readingArgument = true;
 				}
 
 				if (readingArgument) {
@@ -48,14 +48,14 @@ namespace COSYNNC {
 					stringHelper.ReplaceAll(line, '[');
 					stringHelper.ReplaceAll(line, ']');
 					stringHelper.ReplaceAll(line, ' ');
-					
+
 					auto vec = stringHelper.Split(line, ',');
 
 					if (vec.size() > 0) {
 						for (unsigned int i = 0; i < vec.size(); i++) data.push_back(stof(vec[i]));
 					}
 
-					if(!readingArgument) {
+					if (!readingArgument) {
 						_neuralNetwork->SetArgument(currentArgument, data);
 						data.clear();
 					}
@@ -63,6 +63,92 @@ namespace COSYNNC {
 			}
 		}
 		file.close();
+	}
+
+
+	// Loads a static controller returning a controller object that contains the deterministic static controllers behaviour
+	Controller FileManager::LoadStaticController(string path, string name) {
+		ifstream file(path + "/" + name + ".scs", std::ios_base::in);
+
+		if (file.is_open()) {
+			Controller controller;
+
+			Quantizer* stateQuantizer = nullptr;
+			Quantizer* inputQuantizer = nullptr;
+
+			StringHelper stringHelper;
+			string line;
+
+			// Argument reading variables
+			bool nextLineIsADim = false;
+			bool readingArgument = false;
+			vector<unsigned int> dimensions;
+			vector<double> arguments;
+
+			// Controller reading variables
+			bool readingController = false;
+
+			while (getline(file, line)) {
+				// End processing arguments
+				if (line.find("END") != -1 && !readingController) {
+					readingArgument = false;
+				}
+
+				// Add argument to the vector of arguments
+				if (readingArgument && !readingController) {
+					arguments.push_back(stof(line));
+				}
+
+				// Start processing arguments
+				if (line.find("BEGIN") != -1 && !readingController) {
+					readingArgument = true;
+				}
+
+				// Check if next line is a dimension
+				if (nextLineIsADim) {
+					dimensions.push_back(stoi(line));
+					nextLineIsADim = false;
+				}
+				if (line.find("DIM") != -1 && !readingController) nextLineIsADim = true;
+
+				// Check if we start reading the controller if so process previously attained parameters into appropriate quantizers
+				if (line.find("WINNINGDOMAIN") != -1) {
+					readingController = true;
+
+					vector<double> stateParameters;
+					vector<double> inputParameters;
+
+					for (size_t i = 0; i < dimensions[0] * 3; i++) stateParameters.push_back(arguments[i]);
+					for (size_t i = 0; i < dimensions[1] * 3; i++) inputParameters.push_back(arguments[dimensions[0] * 3 + i]);
+
+					// Instantiate quantizers
+					stateQuantizer = FormatIntoQuantizer(dimensions[0], stateParameters);
+					inputQuantizer = FormatIntoQuantizer(dimensions[1], inputParameters);
+
+					// Initialize controller
+					controller = Controller(stateQuantizer, inputQuantizer);
+					controller.InitializeInputs();
+				}
+
+				if (readingController) {
+					if (line.find("BEGIN") == -1 && line.find(" ") != -1) {
+						auto elements = stringHelper.Split(line, ' ');
+
+						unsigned long stateIndex = stol(elements[0]);
+						unsigned long inputIndex = stol(elements[1]);
+
+						Vector input = inputQuantizer->GetVectorFromIndex(inputIndex);
+						controller.SetInput(stateIndex, input);
+					}
+				}
+			}
+
+			file.close();
+			return controller;
+		}
+		file.close();
+
+
 	}
 
 
@@ -535,5 +621,23 @@ namespace COSYNNC {
 		}
 
 		return formattedString;
+	}
+
+
+	// Format a vector of parameters into a quantizer for the static controller load function
+	Quantizer* FileManager::FormatIntoQuantizer(unsigned int dimension, vector<double> parameters) {
+		Vector eta(dimension);
+		for (size_t i = 0; i < dimension; i++) eta[i] = parameters[i];
+
+		Vector lowerBound(dimension);
+		for (size_t i = 0; i < dimension; i++) lowerBound[i] = parameters[i + dimension];
+
+		Vector upperBound(dimension);
+		for (size_t i = 0; i < dimension; i++) upperBound[i] = parameters[i + 2 * dimension];
+
+		Quantizer* quantizer = new Quantizer();
+		quantizer->SetQuantizeParameters(eta, lowerBound, upperBound);
+
+		return quantizer;
 	}
 }
