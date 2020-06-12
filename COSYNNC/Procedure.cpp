@@ -468,7 +468,7 @@ namespace COSYNNC {
 	// Save the neural network
 	void Procedure::SaveNetwork(string path) {
 		_fileManager.SaveNetworkAsMATLAB(path, "net");
-		_fileManager.SaveVerifiedDomainAsMATLAB(path, "dom");
+		_fileManager.SaveWinningSetAsMATLAB(path, "dom");
 		_fileManager.SaveControllerAsMATLAB(path, "ctl");
 		_fileManager.SaveControllerAsStaticController(path, "scs");
 		_fileManager.SaveTransitions(path, "trs");
@@ -496,7 +496,7 @@ namespace COSYNNC {
 
 		// Save network to a matlab file under the timestamp
 		_fileManager.SaveNetworkAsMATLAB(path, timestampString + "net");
- 		_fileManager.SaveVerifiedDomainAsMATLAB(path, timestampString + "dom");
+ 		_fileManager.SaveWinningSetAsMATLAB(path, timestampString + "dom");
 		_fileManager.SaveControllerAsMATLAB(path, timestampString + "ctl");
 		_fileManager.SaveControllerAsStaticController(path, timestampString + "scs");
 		//_fileManager.SaveAbstractionForSCOTS(path, timestampString + "abss");

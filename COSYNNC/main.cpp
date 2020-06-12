@@ -76,7 +76,7 @@ void SynthesizeReachabilityControllerDCDC() {
 	cosynnc.SpecifyInputQuantizer(Vector((float)1.0), Vector((float)0.0), Vector((float)1.0));
 
 	// Specify the synthesis parameters
-	cosynnc.SpecifySynthesisParameters(1000000, 50, 5000, 50000, 50);
+	cosynnc.SpecifySynthesisParameters(1000000, 50, 5000, 10000, 50);
 
 	// Link a neural network to the procedure
 	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 10, 10 }, ActivationActType::kRelu, OutputType::Labelled);
@@ -176,11 +176,11 @@ void SynthesizeReachabilityControllerRocket() {
 	cosynnc.SpecifySynthesisParameters(1000000, 50, 5000, 50000, 50);
 
 	// Link a neural network to the procedure
-	//MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 6, 6 }, ActivationActType::kRelu, OutputType::Labelled);
-	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 8, 8 }, ActivationActType::kRelu, OutputType::Range);
+	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 6, 6 }, ActivationActType::kRelu, OutputType::Labelled);
+	//MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 8, 8 }, ActivationActType::kRelu, OutputType::Range);
 	//multilayerPerceptron->InitializeOptimizer("sgd", 0.005, 0.001);
-	//multilayerPerceptron->InitializeOptimizer("sgd", 0.0075, 0.0);
-	multilayerPerceptron->InitializeOptimizer("sgd", 0.02, 0.0);
+	multilayerPerceptron->InitializeOptimizer("sgd", 0.0075, 0.0);
+	//multilayerPerceptron->InitializeOptimizer("sgd", 0.02, 0.0);
 	cosynnc.SetNeuralNetwork(multilayerPerceptron);
 
 	// Specify the control specification
@@ -534,7 +534,7 @@ void SynthesizeUnicycleReachabilityController() {
 
 int main() {
 	//SynthesizeInvarianceControllerDCDC();
-	SynthesizeReachabilityControllerDCDC();
+	//SynthesizeReachabilityControllerDCDC();
 	
 	//SynthesizeInvarianceControllerRocket();
 	//SynthesizeReachabilityControllerRocket();
