@@ -14,7 +14,7 @@ namespace COSYNNC {
 	// Split the string into a vector of strings based on a denominator
 	vector<string> StringHelper::Split(string str, char denominator) {
 		vector<string> vec;
-
+		
 		auto pos = str.find(denominator);
 		while (pos != -1) {
 			vec.push_back(str.substr(0, pos));

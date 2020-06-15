@@ -67,11 +67,11 @@ readingArgument = true;
 
 
 	// Loads a static controller returning a controller object that contains the deterministic static controllers behaviour
-	Controller FileManager::LoadStaticController(string path, string name) {
+	Controller* FileManager::LoadStaticController(string path, string name) {
 		ifstream file(path + "/" + name + ".scs", std::ios_base::in);
 
+		Controller* controller = nullptr;
 		if (file.is_open()) {
-			Controller controller;
 
 			Quantizer* stateQuantizer = nullptr;
 			Quantizer* inputQuantizer = nullptr;
@@ -126,29 +126,28 @@ readingArgument = true;
 					inputQuantizer = FormatIntoQuantizer(dimensions[1], inputParameters);
 
 					// Initialize controller
-					controller = Controller(stateQuantizer, inputQuantizer);
-					controller.InitializeInputs();
+					controller = new Controller(stateQuantizer, inputQuantizer);
+					controller->InitializeInputs();
 				}
 
 				if (readingController) {
-					if (line.find("BEGIN") == -1 && line.find(" ") != -1) {
+					if (line.find("#") == -1 && line.find(" ") != -1) {
 						auto elements = stringHelper.Split(line, ' ');
 
-						unsigned long stateIndex = stol(elements[0]);
-						unsigned long inputIndex = stol(elements[1]);
+						if (elements.size() == 2) {
+							unsigned long stateIndex = stol(elements[0]);
+							unsigned long inputIndex = stol(elements[1]);
 
-						Vector input = inputQuantizer->GetVectorFromIndex(inputIndex);
-						controller.SetInput(stateIndex, input);
+							Vector input = inputQuantizer->GetVectorFromIndex(inputIndex);
+							controller->SetInput(stateIndex, input);
+						}
 					}
 				}
 			}
-
-			file.close();
-			return controller;
 		}
 		file.close();
 
-
+		return controller;
 	}
 
 
@@ -625,19 +624,33 @@ readingArgument = true;
 
 
 	// Format a vector of parameters into a quantizer for the static controller load function
-	Quantizer* FileManager::FormatIntoQuantizer(unsigned int dimension, vector<double> parameters) {
+	Quantizer* FileManager::FormatIntoQuantizer(unsigned int dimension, vector<double> parameters, unsigned int significance) {
 		Vector eta(dimension);
-		for (size_t i = 0; i < dimension; i++) eta[i] = parameters[i];
+		for (size_t i = 0; i < dimension; i++) eta[i] = RoundToSignificance(parameters[i], significance);
 
 		Vector lowerBound(dimension);
-		for (size_t i = 0; i < dimension; i++) lowerBound[i] = parameters[i + dimension];
+		for (size_t i = 0; i < dimension; i++) lowerBound[i] = RoundToSignificance(parameters[(size_t)(i + dimension)], significance, true);
 
 		Vector upperBound(dimension);
-		for (size_t i = 0; i < dimension; i++) upperBound[i] = parameters[i + 2 * dimension];
+		for (size_t i = 0; i < dimension; i++) upperBound[i] = RoundToSignificance(parameters[(size_t)(i + 2 * dimension)], significance);
 
 		Quantizer* quantizer = new Quantizer();
 		quantizer->SetQuantizeParameters(eta, lowerBound, upperBound);
 
 		return quantizer;
+	}
+
+
+	// Rounds a value to a double with a given significance
+	double FileManager::RoundToSignificance(double value, int significance, bool down) {
+		const unsigned long significanceFactor = pow(10, significance);
+
+		long temporary = 0;
+		if(down) temporary = (long)(value * significanceFactor);
+		else temporary = (long)(value * significanceFactor + 0.5);
+
+		double newValue = (double)temporary / significanceFactor;
+
+		return newValue;
 	}
 }

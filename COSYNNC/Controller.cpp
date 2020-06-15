@@ -294,7 +294,7 @@ namespace COSYNNC {
 
 	// Sets the input for a given state in the state space
 	void Controller::SetInput(unsigned long stateIndex, Vector input) {
-		_inputs[stateIndex] = input;
+		if(stateIndex >= 0 && stateIndex < _stateQuantizer->GetCardinality()) _inputs[stateIndex] = input;
 	}
 
 

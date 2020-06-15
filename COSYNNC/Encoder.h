@@ -22,9 +22,9 @@ namespace COSYNNC {
 	private:
 		FileManager _fileManager;
 
-		Controller _controller;
+		Controller* _controller = nullptr;
 
-		Quantizer* _stateQuantizer;
-		Quantizer* _inputQuantizer;
+		Quantizer* _stateQuantizer = nullptr;
+		Quantizer* _inputQuantizer = nullptr;
 	};
 }

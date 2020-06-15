@@ -7,8 +7,8 @@ namespace COSYNNC {
 
 		_controller = _fileManager.LoadStaticController(path, name);
 
-		_stateQuantizer = _controller.GetStateQuantizer();
-		_inputQuantizer = _controller.GetInputQuantizer();
+		_stateQuantizer = _controller->GetStateQuantizer();
+		_inputQuantizer = _controller->GetInputQuantizer();
 	}
 
 	// Initializes the encoder based on an abstraction

@@ -23,7 +23,7 @@ namespace COSYNNC {
 		void LoadNetworkFromMATLAB(string path, string name);
 
 		// Loads a static controller returning a controller object that contains the deterministic static controllers behaviour
-		Controller LoadStaticController(string path, string name);
+		Controller* LoadStaticController(string path, string name);
 
 		// Save network in its binary form to yield the most compressed representation
 		void SaveNetworkAsRaw(string path, string name);
@@ -76,7 +76,10 @@ namespace COSYNNC {
 		string FormatAxisIndices(vector<unsigned long> axisIndices);
 
 		// Format a vector of parameters into a quantizer for the static controller load function
-		Quantizer* FormatIntoQuantizer(unsigned int dimension, vector<double> parameters);
+		Quantizer* FormatIntoQuantizer(unsigned int dimension, vector<double> parameters, unsigned int significance = 4);
+
+		// Rounds a value to a double with a given significance
+		double RoundToSignificance(double value, int significance, bool down = false);
 
 
 		// Pointers to relevant objects
