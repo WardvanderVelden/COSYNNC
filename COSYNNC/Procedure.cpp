@@ -177,8 +177,8 @@ namespace COSYNNC {
 	// Set the neural network
 	void Procedure::SetNeuralNetwork(NeuralNetwork* neuralNetwork, size_t batchSize) {
 		_neuralNetwork = neuralNetwork;
-		//_neuralNetwork->ConfigurateInputOutput(_plant, _inputQuantizer, _maxEpisodeHorizonTrainer, 1.0);
-		_neuralNetwork->ConfigurateInputOutput(_plant, _inputQuantizer, batchSize, 1.0);
+		//_neuralNetwork->ConfigureInputOutput(_plant, _inputQuantizer, _maxEpisodeHorizonTrainer, 1.0);
+		_neuralNetwork->ConfigureInputOutput(_plant, _inputQuantizer, batchSize, 1.0);
 
 		_outputType = _neuralNetwork->GetOutputType();
 

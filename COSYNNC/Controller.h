@@ -73,7 +73,7 @@ namespace COSYNNC {
 		// Sets the input for a given state in the state space
 		void SetInput(unsigned long stateIndex, Vector input);
 
-		// Get input from the input array based on the index
+		/// <summary>Gets the control action based on the index from the precompiled inputs array</summary>
 		Vector GetControlActionFromIndex(long index) const;
 	private:
 		float _h = 0.0;
