@@ -28,12 +28,8 @@ namespace COSYNNC {
 		// Save network in its binary form to yield the most compressed representation
 		void SaveNetworkAsRaw(string path, string name);
 
-		/// <summary>Save the structure of a neural network to a MATLAB file</summary>
+		// Save the structure of a neural network to a MATLAB file
 		void SaveNetworkAsMATLAB(string path, string name);
-
-		/// <summary>Save the neural network to a MATLAB file</summary>
-		/// <param name="neuralNetwork">A pointer to the neural network that is to be saved</param>
-		void SaveNetworkAsMATLAB(string path, string name, NeuralNetwork* neuralNetwork, Controller* controller);
 
 		// Save the winning set to a MATLAB file
 		void SaveWinningSetAsMATLAB(string path, string name);
@@ -44,6 +40,12 @@ namespace COSYNNC {
 		// Save the controller as a static controller, just like old versions of SCOTS used to do
 		void SaveControllerAsStaticController(string path, string name);
 
+		// LEGACY: Save the transitions that are currently contained within the abstraction
+		//void SaveAbstraction(string path, string name);
+
+		// LEGACY: Save the transitions used the lower and upper bound so that it can be used in SCOTS
+		//void SaveAbstractionForSCOTS(string path, string name);
+
 		// Saves the transitions of the plant as known to the abstraction
 		void SaveTransitions(string path, string name);
 
@@ -52,9 +54,6 @@ namespace COSYNNC {
 	private:
 		// Writes the quantization parameters for the state and input quantizer to a MATLAB file
 		void WriteQuantizationParametersToMATLABFile(ofstream* file);
-
-		// Writes the quantization parameters for the state and input quantizer to a MATLAB file
-		void WriteQuantizationParametersToMATLABFile(ofstream* file, Controller* controller);
 
 		// Write the quantization parameters for the state and input quantizer to a static controller file
 		void WriteQuantizationParametersToStaticController(ofstream* file);

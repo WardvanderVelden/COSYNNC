@@ -31,11 +31,11 @@ namespace COSYNNC {
 				if (line[0] == 'w' || line[0] == 'b') {
 					if (line.find(' ') > 5) continue;
 
-					auto firstSpace = line.find(' ');
-					currentArgument = line.substr(0, firstSpace);
-					line = line.substr(firstSpace + 1, line.size() - firstSpace - 1);
+auto firstSpace = line.find(' ');
+currentArgument = line.substr(0, firstSpace);
+line = line.substr(firstSpace + 1, line.size() - firstSpace - 1);
 
-					readingArgument = true;
+readingArgument = true;
 				}
 
 				if (readingArgument) {
@@ -254,55 +254,6 @@ namespace COSYNNC {
 	}
 
 
-	// Save the neural network to a MATLAB file
-	void FileManager::SaveNetworkAsMATLAB(string path, string name, NeuralNetwork* neuralNetwork, Controller* controller) {
-		ofstream file(path + "/" + name + ".m", std::ios_base::out);
-
-		// Save activation function
-		file << "activationFunction = 'relu';\n"; // TODO: Make this change based on the activation function
-
-		// Save depth
-		file << "layerDepth = " << neuralNetwork->GetLayerDepth() << ";\n";
-
-		// Save the quantization parameters to the network
-		WriteQuantizationParametersToMATLABFile(&file, controller);
-
-		// Save the arguments of the network
-		file << "\n";
-		auto argumentNames = neuralNetwork->GetArgumentNames();
-		for (unsigned int i = 0; i < argumentNames.size(); i++) {
-			auto argumentName = argumentNames[i];
-			if (argumentName == "input" || argumentName == "label") continue;
-
-			auto argumentShape = neuralNetwork->GetArgumentShape(argumentName);
-
-			file << argumentName << " = [";
-
-			// Vector
-			if (argumentShape.size() == 1) {
-				for (unsigned int i = 0; i < argumentShape[0]; i++) {
-					file << neuralNetwork->GetArgumentValue(argumentName, vector<unsigned int>({ i }));
-					if (i != argumentShape[0] - 1) file << ", ";
-				}
-			}
-			// Matrix
-			else {
-				file << "\n";
-				for (unsigned int i = 0; i < argumentShape[0]; i++) {
-					file << "\t[";
-					for (unsigned int j = 0; j < argumentShape[1]; j++) {
-						file << neuralNetwork->GetArgumentValue(argumentName, vector<unsigned int>({ i, j }));
-						if (j != (argumentShape[1] - 1)) file << ", ";
-					}
-					file << "],\n";
-				}
-			}
-			file << "];\n";
-		}
-		file.close();
-	}
-
-
 	// Save the verified domain to a MATLAB file
 	void FileManager::SaveWinningSetAsMATLAB(string path, string name) {
 		ofstream file(path + "/" + name + ".m", std::ios_base::out);
@@ -382,6 +333,86 @@ namespace COSYNNC {
 
 		file.close();
 	}
+
+
+	// LEGACY: Save the transitions that are currently contained within the abstraction
+	/*void FileManager::SaveAbstraction(string path, string name) {
+		ofstream file(path + "/" + name + ".abs", std::ios_base::out);
+
+		file << "COSYNNC " << _abstraction->GetPlant()->GetName() << " Abstraction\n";
+
+		WriteQuantizationParametersToAbstractionFile(&file);
+
+		// Write all the transitions
+		file << "\n";
+		file << _abstraction->GetAmountOfTransitions() << "\n";
+		for (unsigned long index = 0; index < _abstraction->GetStateQuantizer()->GetCardinality(); index++) {
+			auto formattedIndex = FormatAxisIndices(_abstraction->GetStateQuantizer()->GetAxisIndicesFromIndex(index));
+
+			auto transition = _abstraction->GetTransitionOfIndex(index);
+			auto processedInputs = transition->GetProcessedInputs();
+
+			for (auto input : processedInputs) {
+				auto formattedInput = FormatAxisIndices(_abstraction->GetInputQuantizer()->GetAxisIndicesFromIndex(input));
+
+				auto ends = transition->GetEnds(input);
+
+				// Has non trivial transition
+				if (ends.size() > 0) {
+					for (auto end : ends) {
+						auto formattedEnd = FormatAxisIndices(_abstraction->GetStateQuantizer()->GetAxisIndicesFromIndex(end));
+
+						file << formattedIndex << formattedInput << formattedEnd << "\n";
+					}
+				}
+			}
+		}
+
+		file.close();
+	}*/
+
+
+	// LEGACY: Save the transitions used the lower and upper bound so that it can be used in SCOTS
+	/*void FileManager::SaveAbstractionForSCOTS(string path, string name) {
+		ofstream file(path + "/" + name + ".abss", std::ios_base::out);
+
+		file << "COSYNNC " << _abstraction->GetPlant()->GetName() << " Abstraction\n";
+
+		WriteQuantizationParametersToAbstractionFile(&file);
+
+		// Write all the transitions
+		file << "\n";
+		file << _abstraction->GetAmountOfTransitions() << "\n";
+		for (unsigned long index = 0; index < _abstraction->GetStateQuantizer()->GetCardinality(); index++) {
+			auto formattedIndex = FormatAxisIndices(_abstraction->GetStateQuantizer()->GetAxisIndicesFromIndex(index));
+
+			auto transition = _abstraction->GetTransitionOfIndex(index);
+			auto processedInputs = transition->GetProcessedInputs();
+
+			for (auto input : processedInputs) {
+				auto formattedInput = FormatAxisIndices(_abstraction->GetInputQuantizer()->GetAxisIndicesFromIndex(input));
+
+				auto ends = transition->GetEnds(input);
+
+				// Has non trivial transition
+				if (ends.size() > 0) {
+					auto lowerBoundIndex = _abstraction->GetStateQuantizer()->GetIndexFromVector(transition->GetLowerBound(input));
+					auto upperBoundIndex = _abstraction->GetStateQuantizer()->GetIndexFromVector(transition->GetUpperBound(input));
+
+					auto lowerBoundIndices = _abstraction->GetStateQuantizer()->GetAxisIndicesFromIndex(lowerBoundIndex);
+					auto upperBoundIndices = _abstraction->GetStateQuantizer()->GetAxisIndicesFromIndex(upperBoundIndex);
+
+					file << formattedIndex << formattedInput;
+					for (size_t i = 0; i < _abstraction->GetStateQuantizer()->GetDimension(); i++) {
+						file << to_string(lowerBoundIndices[i]) << " " << to_string(upperBoundIndices[i]) << " ";
+					}
+					file << "\n";
+				}
+			}
+		}
+
+		file.close();
+	}*/
 
 
 	// Saves the transitions of the plant as known to the abstraction
@@ -478,24 +509,6 @@ namespace COSYNNC {
 		WriteVectorToMATLABFile(file, "inputSpaceEta", _abstraction->GetInputQuantizer()->GetEta());
 		WriteVectorToMATLABFile(file, "inputSpaceLowerBound", _abstraction->GetInputQuantizer()->GetLowerBound());
 		WriteVectorToMATLABFile(file, "inputSpaceUpperBound", _abstraction->GetInputQuantizer()->GetUpperBound());
-	}
-
-
-	// Writes the quantization parameters for the state and input quantizer to a MATLAB file
-	void FileManager::WriteQuantizationParametersToMATLABFile(ofstream* file, Controller* controller) {
-		auto stateDimension = controller->GetStateQuantizer()->GetDimension();
-
-		// Save state space quantization parameters
-		*file << "\n";
-		WriteVectorToMATLABFile(file, "stateSpaceEta", controller->GetStateQuantizer()->GetEta());
-		WriteVectorToMATLABFile(file, "stateSpaceLowerBound", controller->GetStateQuantizer()->GetLowerBound());
-		WriteVectorToMATLABFile(file, "stateSpaceUpperBound", controller->GetStateQuantizer()->GetUpperBound());
-
-		// Save input space quantization parameters
-		*file << "\n";
-		WriteVectorToMATLABFile(file, "inputSpaceEta", controller->GetInputQuantizer()->GetEta());
-		WriteVectorToMATLABFile(file, "inputSpaceLowerBound", controller->GetInputQuantizer()->GetLowerBound());
-		WriteVectorToMATLABFile(file, "inputSpaceUpperBound", controller->GetInputQuantizer()->GetUpperBound());
 	}
 
 

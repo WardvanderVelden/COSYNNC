@@ -245,8 +245,6 @@ namespace COSYNNC {
 			std::cout << "\tFitness: " << fitness << "\tFalse positives: " << falsePositives << "\tBest: " << _bestFitness << " - " << _bestFitnessFalsePositives << std::endl;
 		} while (fitness < passingFitness);
 
-		_fileManager.SaveNetworkAsMATLAB("controllers/winningsets", "winningset", _neuralNetwork, _controller);
-
 		std::cout << std::endl << "COSYNNC:\tWinning set encoded into neural network!" << std::endl;
 	}
 
