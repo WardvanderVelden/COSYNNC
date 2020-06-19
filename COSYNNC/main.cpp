@@ -534,9 +534,10 @@ void SynthesizeUnicycleReachabilityController() {
 
 
 void EncodeWinningSetAsNeuralNetwork() {
-	Encoder encoder("controllers/timestamps", "FriMay15161009scs"); // Rocket
-	//Encoder encoder("controllers/timestamps", "TueMay19153948scs"); // DCDC
+	//Encoder encoder("controllers/timestamps", "FriMay15161009scs"); // Rocket
+	Encoder encoder("controllers/timestamps", "TueMay19153948scs"); // DCDC
 	//Encoder encoder("controllers/timestamps", "WedMay20102331scs"); // MIMO
+	//Encoder encoder("controllers/timestamps", "TueJun2110014scs"); // Unicycle
 
 	MultilayerPerceptron* mlp = new MultilayerPerceptron({ 8, 8 }, ActivationActType::kRelu, LossFunctionType::CrossEntropy);
 	mlp->InitializeOptimizer("sgd", 0.0075, 0.0);
@@ -545,7 +546,7 @@ void EncodeWinningSetAsNeuralNetwork() {
 	encoder.SetBatchSize(10);
 	encoder.SetNeuralNetwork(mlp);
 	
-	encoder.Encode(25, 99.95, 0.0);
+	encoder.Encode(10, 2, 97.9, 0.00499999);
 
 	delete mlp;
 }

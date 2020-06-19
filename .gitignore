@@ -345,3 +345,4 @@ healthchecksdb
 # Timestamp folder
 controllers/timestamps/
 /COSYNNC/controllers/timestamps
+/COSYNNC/controllers/winningsets

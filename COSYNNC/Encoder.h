@@ -1,6 +1,7 @@
 #pragma once
 #include "FileManager.h"
 #include "Quantizer.h"
+#include "StringHelper.h"
 
 namespace COSYNNC {
 	class Encoder {
@@ -38,10 +39,11 @@ namespace COSYNNC {
 		void DetrainFalsePositives(unsigned int epochs = 10);
 
 		/// <summary>Encodes the winning set of the loaded static controller into the neural network</summary>
-		/// <param name="epochsPerTrainingSession">Amount of epochs of data that the neural network trains on before checking the fitness</param>
+		/// <param name="trainingEpochs">Amount of epochs of data that the neural network trains on before checking the fitness</param>
+		/// <param name="falsePositiveDetrainingEpochs">Amount of epochs of data that the neural network detrains the false positives before checking the fitness</param>
 		/// <param name="passingFitness">The level of fitness that the assigned neural network should attain before the procedure. The value is a percentage e.g. 95.</param>
 		/// <param name="passingFalsePositives">The level of false positives that is acceptable for termination of the encoder</param>
-		void Encode(unsigned int epochsPerTrainingSession = 10, float passingFitness = 95.0, float passingFalsePositives = 0.0);
+		void Encode(unsigned int trainingEpochs = 10, unsigned int falsePositiveDetrainingEpochs = 5, float passingFitness = 95.0, float passingFalsePositives = 0.0);
 	private:
 		/// <summary>Train the neural network based on the neural network inputs and assigned labels</summary>
 		/// <param name="inputs">A vector of COSYNNC Vectors that represent the inputs to the neural network</param>

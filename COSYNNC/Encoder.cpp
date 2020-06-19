@@ -224,28 +224,35 @@ namespace COSYNNC {
 
 
 	// Encodes the loaded static controller into the neural network assigned to the encoder
-	void Encoder::Encode(unsigned int epochsPerTrainingSession, float passingFitness, float passingFalsePositives) {
+	void Encoder::Encode(unsigned int trainingEpochs, unsigned int falsePositiveDetrainingEpochs, float passingFitness, float passingFalsePositives) {
 		std::cout << std::endl;
+
+		StringHelper stringHelper;
 
 		float fitness = 0.0;
 		float falsePositives = 0.0;
 		do {
 			std::cout << "Training: ";
-			Train(epochsPerTrainingSession);
-			DetrainFalsePositives(10);
+			Train(trainingEpochs);
+			DetrainFalsePositives(falsePositiveDetrainingEpochs);
 
 			fitness = ComputeFitness();
 			falsePositives = ComputeFalsePositives();
 
-			if (fitness > _bestFitness) {
+			if (fitness > _bestFitness && falsePositives <= passingFalsePositives) {
 				_bestFitness = fitness;
 				_bestFitnessFalsePositives = falsePositives;
+
+				string fitnessString = to_string(_bestFitness);
+				stringHelper.ReplaceAll(fitnessString, '.','-');
+
+				_fileManager.SaveNetworkAsMATLAB("controllers/winningsets", "winningset" + fitnessString, _neuralNetwork, _controller);
 			}
 
 			std::cout << "\tFitness: " << fitness << "\tFalse positives: " << falsePositives << "\tBest: " << _bestFitness << " - " << _bestFitnessFalsePositives << std::endl;
-		} while (fitness < passingFitness);
+		} while (fitness < passingFitness || falsePositives > passingFalsePositives);
 
-		_fileManager.SaveNetworkAsMATLAB("controllers/winningsets", "winningset", _neuralNetwork, _controller);
+		//_fileManager.SaveNetworkAsMATLAB("controllers/winningsets", "winningset", _neuralNetwork, _controller);
 
 		std::cout << std::endl << "COSYNNC:\tWinning set encoded into neural network!" << std::endl;
 	}

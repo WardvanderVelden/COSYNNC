@@ -5,7 +5,7 @@ namespace COSYNNC {
 	void StringHelper::ReplaceAll(string& str, char denominator, char replacement) {
 		auto pos = str.find(denominator);
 		while (pos != -1) {
-			if (replacement == NULL) str.erase(pos, 1);
+			if (replacement == 0x00) str.erase(pos, 1);
 			else str[pos] = replacement;
 			pos = str.find(denominator);
 		}
