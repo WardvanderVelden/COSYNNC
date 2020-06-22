@@ -1,5 +1,5 @@
 #pragma once
-#include "Vector.h";
+#include "Vector.h"
 #include "Plant.h"
 #include "Quantizer.h"
 #include "ControlSpecification.h"

@@ -46,15 +46,6 @@ namespace COSYNNC {
 
 		//threadGroup[1].join();
 
-		/*for (unsigned long index = 0; index < spaceCardinality; index++) {
-			// Print status to monitor progression
-			if (index % ((long)floor(spaceCardinality / 20)) == 0) std::cout << (float)((float)index / (float)spaceCardinality * 100.0) << "% . ";
-		
-			auto input = _abstraction->GetController()->GetControlActionFromIndex(index);
-			if (_abstraction->ComputeTransitionFunctionForIndex(index, input)) {
-				_transitionsInAbstraction++;
-			}
-		}*/
 		std::cout << std::endl;
 	}
 
@@ -65,8 +56,7 @@ namespace COSYNNC {
 
 		for (unsigned long index = start; index < end; index++) {
 			if (index % ((long)floor(spaceCardinality / 100)) == 0) {
-				std::cout << "."; // Print dot monitor progress
-				//std::cout << index << std::endl;
+				std::cout << "." << std::flush;
 			}
 
 			auto input = _abstraction->GetController()->GetControlActionFromIndex(index);

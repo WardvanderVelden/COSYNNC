@@ -89,7 +89,7 @@ namespace COSYNNC {
 				}*/
 				TrainQueue(states, labels);
 			}
-			std::cout << ".";
+			std::cout << "." << std::flush;
 		}
 	}
 
@@ -224,7 +224,7 @@ namespace COSYNNC {
 					inWinningSet.clear();
 				}
 			}
-			std::cout << "+";
+			std::cout << "+" << std::flush;
 		}
 	}
 

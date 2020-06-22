@@ -2,7 +2,7 @@
 #include <vector>
 #include <map>
 #include <iostream>
-#include "mxnet-cpp/MxNetCpp.h";
+#include "mxnet-cpp/MxNetCpp.h"
 #include "NeuralNetwork.h"
 #include "Plant.h"
 #include "Controller.h"
