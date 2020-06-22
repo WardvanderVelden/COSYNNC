@@ -53,6 +53,12 @@ namespace COSYNNC {
 	}
 
 
+	// Set the saving path
+	void Encoder::SetSavingPath(string path) {
+		_savingPath = path;
+	}
+
+
 	// Train the linked neural network to encode the winning set
 	void Encoder::Train(unsigned int epochs) {
 		const unsigned long stateSpaceCardinality = _stateQuantizer->GetCardinality();
@@ -246,13 +252,11 @@ namespace COSYNNC {
 				string fitnessString = to_string(_bestFitness);
 				stringHelper.ReplaceAll(fitnessString, '.','-');
 
-				_fileManager.SaveNetworkAsMATLAB("controllers/winningsets", "winningset" + fitnessString, _neuralNetwork, _controller);
+				_fileManager.SaveNetworkAsMATLAB(_savingPath + "/winningsets", "winningset" + fitnessString, _neuralNetwork, _controller);
 			}
 
 			std::cout << "\tFitness: " << fitness << "\tFalse positives: " << falsePositives << "\tBest: " << _bestFitness << " - " << _bestFitnessFalsePositives << std::endl;
 		} while (fitness < passingFitness || falsePositives > passingFalsePositives);
-
-		//_fileManager.SaveNetworkAsMATLAB("controllers/winningsets", "winningset", _neuralNetwork, _controller);
 
 		std::cout << std::endl << "COSYNNC:\tWinning set encoded into neural network!" << std::endl;
 	}

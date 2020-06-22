@@ -194,9 +194,10 @@ namespace COSYNNC {
 	}
 
 
-	// Save the structure of a neural network to a MATLAB file 	// TODO: Adapt this depending on which type of neural network is currently being trained
+	// Save the structure of a neural network to a MATLAB file
 	void FileManager::SaveNetworkAsMATLAB(string path, string name) {
 		ofstream file(path + "/" + name + ".m", std::ios_base::out);
+		file.precision(9);
 
 		// Save the winning domain percentage
 		file << "winningDomainPercentage = " << _verifier->GetWinningSetPercentage() << ";\n\n";
@@ -257,6 +258,7 @@ namespace COSYNNC {
 	// Save the neural network to a MATLAB file
 	void FileManager::SaveNetworkAsMATLAB(string path, string name, NeuralNetwork* neuralNetwork, Controller* controller) {
 		ofstream file(path + "/" + name + ".m", std::ios_base::out);
+		file.precision(9);
 
 		// Save activation function
 		file << "activationFunction = 'relu';\n"; // TODO: Make this change based on the activation function
@@ -387,6 +389,7 @@ namespace COSYNNC {
 	// Saves the transitions of the plant as known to the abstraction
 	void FileManager::SaveTransitions(string path, string name) {
 		ofstream file(path + "/" + name + ".trs", std::ios_base::out);
+		file.precision(9);
 
 		file << "COSYNNC " << _abstraction->GetPlant()->GetName() << " Abstraction\n";
 

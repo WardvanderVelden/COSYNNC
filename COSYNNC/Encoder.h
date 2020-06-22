@@ -24,6 +24,9 @@ namespace COSYNNC {
 		/// <summary>Set the threshold that determines the significance with which the neural network needs to output a value for it to be taken as the truth</summary>
 		void SetThreshold(float threshold = 0.95);
 
+		/// <summary>Set the saving path</summary>
+		void SetSavingPath(string path);
+
 		/// <summary>Train the linked neural network to encode the winning set</summary>
 		/// <param name="epochs">Amount of data epochs that the neural network is trained before termination</param>
 		void Train(unsigned int epochs = 10);
@@ -64,6 +67,8 @@ namespace COSYNNC {
 		float _threshold = 0.95; // The significance with which the neural network has to output a statement for it to be taken as the truth
 
 		// Logging variables
+		string _savingPath = "controllers";
+
 		float _bestFitness = 0.0;
 		float _bestFitnessFalsePositives = 0.0;
 	};
