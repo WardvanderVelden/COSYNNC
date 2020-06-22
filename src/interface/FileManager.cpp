@@ -15,7 +15,7 @@ namespace COSYNNC {
 
 	// Loads a neural network
 	void FileManager::LoadNetworkFromMATLAB(string path, string name) {
-		ifstream file(path + "/" + name, std::ios_base::in);
+		ifstream file(path + "/" + name + ".m", std::ios_base::in);
 
 		if (file.is_open()) {
 			StringHelper stringHelper;
@@ -48,14 +48,14 @@ namespace COSYNNC {
 					stringHelper.ReplaceAll(line, '[');
 					stringHelper.ReplaceAll(line, ']');
 					stringHelper.ReplaceAll(line, ' ');
-					
+
 					auto vec = stringHelper.Split(line, ',');
 
 					if (vec.size() > 0) {
 						for (unsigned int i = 0; i < vec.size(); i++) data.push_back(stof(vec[i]));
 					}
 
-					if(!readingArgument) {
+					if (!readingArgument) {
 						_neuralNetwork->SetArgument(currentArgument, data);
 						data.clear();
 					}
@@ -63,6 +63,91 @@ namespace COSYNNC {
 			}
 		}
 		file.close();
+	}
+
+
+	// Loads a static controller returning a controller object that contains the deterministic static controllers behaviour
+	Controller* FileManager::LoadStaticController(string path, string name) {
+		ifstream file(path + "/" + name + ".scs", std::ios_base::in);
+
+		Controller* controller = nullptr;
+		if (file.is_open()) {
+
+			Quantizer* stateQuantizer = nullptr;
+			Quantizer* inputQuantizer = nullptr;
+
+			StringHelper stringHelper;
+			string line;
+
+			// Argument reading variables
+			bool nextLineIsADim = false;
+			bool readingArgument = false;
+			vector<unsigned int> dimensions;
+			vector<double> arguments;
+
+			// Controller reading variables
+			bool readingController = false;
+
+			while (getline(file, line)) {
+				// End processing arguments
+				if (line.find("END") != -1 && !readingController) {
+					readingArgument = false;
+				}
+
+				// Add argument to the vector of arguments
+				if (readingArgument && !readingController) {
+					arguments.push_back(stof(line));
+				}
+
+				// Start processing arguments
+				if (line.find("BEGIN") != -1 && !readingController) {
+					readingArgument = true;
+				}
+
+				// Check if next line is a dimension
+				if (nextLineIsADim) {
+					dimensions.push_back(stoi(line));
+					nextLineIsADim = false;
+				}
+				if (line.find("DIM") != -1 && !readingController) nextLineIsADim = true;
+
+				// Check if we start reading the controller if so process previously attained parameters into appropriate quantizers
+				if (line.find("WINNINGDOMAIN") != -1) {
+					readingController = true;
+
+					vector<double> stateParameters;
+					vector<double> inputParameters;
+
+					for (size_t i = 0; i < dimensions[0] * 3; i++) stateParameters.push_back(arguments[i]);
+					for (size_t i = 0; i < dimensions[1] * 3; i++) inputParameters.push_back(arguments[dimensions[0] * 3 + i]);
+
+					// Instantiate quantizers
+					stateQuantizer = FormatIntoQuantizer(dimensions[0], stateParameters);
+					inputQuantizer = FormatIntoQuantizer(dimensions[1], inputParameters);
+
+					// Initialize controller
+					controller = new Controller(stateQuantizer, inputQuantizer);
+					controller->InitializeInputs();
+				}
+
+				if (readingController) {
+					if (line.find("#") == -1 && line.find(" ") != -1) {
+						auto elements = stringHelper.Split(line, ' ');
+
+						if (elements.size() == 2) {
+							unsigned long stateIndex = stol(elements[0]);
+							unsigned long inputIndex = stol(elements[1]);
+
+							Vector input = inputQuantizer->GetVectorFromIndex(inputIndex);
+							controller->SetInput(stateIndex, input);
+						}
+					}
+				}
+			}
+		}
+		file.close();
+
+		return controller;
 	}
 
 
@@ -109,9 +194,10 @@ namespace COSYNNC {
 	}
 
 
-	// Save the structure of a neural network to a MATLAB file 	// TODO: Adapt this depending on which type of neural network is currently being trained
+	// Save the structure of a neural network to a MATLAB file
 	void FileManager::SaveNetworkAsMATLAB(string path, string name) {
 		ofstream file(path + "/" + name + ".m", std::ios_base::out);
+		file.precision(9);
 
 		// Save the winning domain percentage
 		file << "winningDomainPercentage = " << _verifier->GetWinningSetPercentage() << ";\n\n";
@@ -169,11 +255,61 @@ namespace COSYNNC {
 	}
 
 
+	// Save the neural network to a MATLAB file
+	void FileManager::SaveNetworkAsMATLAB(string path, string name, NeuralNetwork* neuralNetwork, Controller* controller) {
+		ofstream file(path + "/" + name + ".m", std::ios_base::out);
+		file.precision(9);
+
+		// Save activation function
+		file << "activationFunction = 'relu';\n"; // TODO: Make this change based on the activation function
+
+		// Save depth
+		file << "layerDepth = " << neuralNetwork->GetLayerDepth() << ";\n";
+
+		// Save the quantization parameters to the network
+		WriteQuantizationParametersToMATLABFile(&file, controller);
+
+		// Save the arguments of the network
+		file << "\n";
+		auto argumentNames = neuralNetwork->GetArgumentNames();
+		for (unsigned int i = 0; i < argumentNames.size(); i++) {
+			auto argumentName = argumentNames[i];
+			if (argumentName == "input" || argumentName == "label") continue;
+
+			auto argumentShape = neuralNetwork->GetArgumentShape(argumentName);
+
+			file << argumentName << " = [";
+
+			// Vector
+			if (argumentShape.size() == 1) {
+				for (unsigned int i = 0; i < argumentShape[0]; i++) {
+					file << neuralNetwork->GetArgumentValue(argumentName, vector<unsigned int>({ i }));
+					if (i != argumentShape[0] - 1) file << ", ";
+				}
+			}
+			// Matrix
+			else {
+				file << "\n";
+				for (unsigned int i = 0; i < argumentShape[0]; i++) {
+					file << "\t[";
+					for (unsigned int j = 0; j < argumentShape[1]; j++) {
+						file << neuralNetwork->GetArgumentValue(argumentName, vector<unsigned int>({ i, j }));
+						if (j != (argumentShape[1] - 1)) file << ", ";
+					}
+					file << "],\n";
+				}
+			}
+			file << "];\n";
+		}
+		file.close();
+	}
+
+
 	// Save the verified domain to a MATLAB file
-	void FileManager::SaveVerifiedDomainAsMATLAB(string path, string name) {
+	void FileManager::SaveWinningSetAsMATLAB(string path, string name) {
 		ofstream file(path + "/" + name + ".m", std::ios_base::out);
 
-		// Save the winning domain to the domain file
+		// Save the winning set percentage to the set file
 		file << "winningDomainPercentage = " << _verifier->GetWinningSetPercentage() << ";\n";
 		file << "networkDataSize = " << _neuralNetwork->GetDataSize() << ";\n";
 
@@ -187,7 +323,7 @@ namespace COSYNNC {
 			WriteVectorToMATLABFile(&file, "goalUpperVertex", _abstraction->GetControlSpecification()->GetUpperHyperIntervalVertex());
 		}
 
-		// Save the winning domain
+		// Save the winning set
 		unsigned long stateCardinality = _abstraction->GetStateQuantizer()->GetCardinality();
 
 		file << "\nwinningDomain = zeros(" << stateCardinality << ", 1);\n\n";
@@ -250,89 +386,10 @@ namespace COSYNNC {
 	}
 
 
-	// LEGACY: Save the transitions that are currently contained within the abstraction
-	/*void FileManager::SaveAbstraction(string path, string name) {
-		ofstream file(path + "/" + name + ".abs", std::ios_base::out);
-
-		file << "COSYNNC " << _abstraction->GetPlant()->GetName() << " Abstraction\n";
-
-		WriteQuantizationParametersToAbstractionFile(&file);
-
-		// Write all the transitions
-		file << "\n";
-		file << _abstraction->GetAmountOfTransitions() << "\n";
-		for (unsigned long index = 0; index < _abstraction->GetStateQuantizer()->GetCardinality(); index++) {
-			auto formattedIndex = FormatAxisIndices(_abstraction->GetStateQuantizer()->GetAxisIndicesFromIndex(index));
-
-			auto transition = _abstraction->GetTransitionOfIndex(index);
-			auto processedInputs = transition->GetProcessedInputs();
-
-			for (auto input : processedInputs) {
-				auto formattedInput = FormatAxisIndices(_abstraction->GetInputQuantizer()->GetAxisIndicesFromIndex(input));
-
-				auto ends = transition->GetEnds(input);
-
-				// Has non trivial transition
-				if (ends.size() > 0) {
-					for (auto end : ends) {
-						auto formattedEnd = FormatAxisIndices(_abstraction->GetStateQuantizer()->GetAxisIndicesFromIndex(end));
-
-						file << formattedIndex << formattedInput << formattedEnd << "\n";
-					}
-				}
-			}
-		}
-
-		file.close();
-	}*/
-
-
-	// LEGACY: Save the transitions used the lower and upper bound so that it can be used in SCOTS
-	/*void FileManager::SaveAbstractionForSCOTS(string path, string name) {
-		ofstream file(path + "/" + name + ".abss", std::ios_base::out);
-
-		file << "COSYNNC " << _abstraction->GetPlant()->GetName() << " Abstraction\n";
-
-		WriteQuantizationParametersToAbstractionFile(&file);
-
-		// Write all the transitions
-		file << "\n";
-		file << _abstraction->GetAmountOfTransitions() << "\n";
-		for (unsigned long index = 0; index < _abstraction->GetStateQuantizer()->GetCardinality(); index++) {
-			auto formattedIndex = FormatAxisIndices(_abstraction->GetStateQuantizer()->GetAxisIndicesFromIndex(index));
-
-			auto transition = _abstraction->GetTransitionOfIndex(index);
-			auto processedInputs = transition->GetProcessedInputs();
-
-			for (auto input : processedInputs) {
-				auto formattedInput = FormatAxisIndices(_abstraction->GetInputQuantizer()->GetAxisIndicesFromIndex(input));
-
-				auto ends = transition->GetEnds(input);
-
-				// Has non trivial transition
-				if (ends.size() > 0) {
-					auto lowerBoundIndex = _abstraction->GetStateQuantizer()->GetIndexFromVector(transition->GetLowerBound(input));
-					auto upperBoundIndex = _abstraction->GetStateQuantizer()->GetIndexFromVector(transition->GetUpperBound(input));
-
-					auto lowerBoundIndices = _abstraction->GetStateQuantizer()->GetAxisIndicesFromIndex(lowerBoundIndex);
-					auto upperBoundIndices = _abstraction->GetStateQuantizer()->GetAxisIndicesFromIndex(upperBoundIndex);
-
-					file << formattedIndex << formattedInput;
-					for (size_t i = 0; i < _abstraction->GetStateQuantizer()->GetDimension(); i++) {
-						file << to_string(lowerBoundIndices[i]) << " " << to_string(upperBoundIndices[i]) << " ";
-					}
-					file << "\n";
-				}
-			}
-		}
-
-		file.close();
-	}*/
-
-
 	// Saves the transitions of the plant as known to the abstraction
 	void FileManager::SaveTransitions(string path, string name) {
 		ofstream file(path + "/" + name + ".trs", std::ios_base::out);
+		file.precision(9);
 
 		file << "COSYNNC " << _abstraction->GetPlant()->GetName() << " Abstraction\n";
 
@@ -424,6 +481,24 @@ namespace COSYNNC {
 		WriteVectorToMATLABFile(file, "inputSpaceEta", _abstraction->GetInputQuantizer()->GetEta());
 		WriteVectorToMATLABFile(file, "inputSpaceLowerBound", _abstraction->GetInputQuantizer()->GetLowerBound());
 		WriteVectorToMATLABFile(file, "inputSpaceUpperBound", _abstraction->GetInputQuantizer()->GetUpperBound());
+	}
+
+
+	// Writes the quantization parameters for the state and input quantizer to a MATLAB file
+	void FileManager::WriteQuantizationParametersToMATLABFile(ofstream* file, Controller* controller) {
+		auto stateDimension = controller->GetStateQuantizer()->GetDimension();
+
+		// Save state space quantization parameters
+		*file << "\n";
+		WriteVectorToMATLABFile(file, "stateSpaceEta", controller->GetStateQuantizer()->GetEta());
+		WriteVectorToMATLABFile(file, "stateSpaceLowerBound", controller->GetStateQuantizer()->GetLowerBound());
+		WriteVectorToMATLABFile(file, "stateSpaceUpperBound", controller->GetStateQuantizer()->GetUpperBound());
+
+		// Save input space quantization parameters
+		*file << "\n";
+		WriteVectorToMATLABFile(file, "inputSpaceEta", controller->GetInputQuantizer()->GetEta());
+		WriteVectorToMATLABFile(file, "inputSpaceLowerBound", controller->GetInputQuantizer()->GetLowerBound());
+		WriteVectorToMATLABFile(file, "inputSpaceUpperBound", controller->GetInputQuantizer()->GetUpperBound());
 	}
 
 
@@ -535,5 +610,37 @@ namespace COSYNNC {
 		}
 
 		return formattedString;
+	}
+
+
+	// Format a vector of parameters into a quantizer for the static controller load function
+	Quantizer* FileManager::FormatIntoQuantizer(unsigned int dimension, vector<double> parameters, unsigned int significance) {
+		Vector eta(dimension);
+		for (size_t i = 0; i < dimension; i++) eta[i] = RoundToSignificance(parameters[i], significance);
+
+		Vector lowerBound(dimension);
+		for (size_t i = 0; i < dimension; i++) lowerBound[i] = RoundToSignificance(parameters[(size_t)(i + dimension)], significance, true);
+
+		Vector upperBound(dimension);
+		for (size_t i = 0; i < dimension; i++) upperBound[i] = RoundToSignificance(parameters[(size_t)(i + 2 * dimension)], significance);
+
+		Quantizer* quantizer = new Quantizer();
+		quantizer->SetQuantizeParameters(eta, lowerBound, upperBound);
+
+		return quantizer;
+	}
+
+
+	// Rounds a value to a double with a given significance
+	double FileManager::RoundToSignificance(double value, int significance, bool down) {
+		const unsigned long significanceFactor = pow(10, significance);
+
+		long temporary = 0;
+		if(down) temporary = (long)(value * significanceFactor);
+		else temporary = (long)(value * significanceFactor + 0.5);
+
+		double newValue = (double)temporary / significanceFactor;
+
+		return newValue;
 	}
 }

@@ -2,6 +2,15 @@
 
 namespace COSYNNC {
 	// Initializes a neural network of the multilayer perceptron topology
+	MultilayerPerceptron::MultilayerPerceptron(vector<int> hiddenLayers, ActivationActType activationFunction, LossFunctionType lossFunction) {
+		_activationFunction = activationFunction;
+		_lossFunction = lossFunction;
+
+		SetHiddenLayers(hiddenLayers);
+	}
+
+
+	// Initializes a neural network of the multilayer perceptron topology
 	MultilayerPerceptron::MultilayerPerceptron(vector<int> hiddenLayers, ActivationActType activationFunction, OutputType outputType) {
 		_activationFunction = activationFunction;
 		_outputType = outputType;

@@ -166,6 +166,12 @@ namespace COSYNNC {
 	}
 
 
+	// Specify the saving path
+	void Procedure::SpecifySavingPath(string path) {
+		_savingPath = path;
+	}
+
+
 	// Set the plant
 	void Procedure::SetPlant(Plant* plant) {
 		_plant = plant;
@@ -177,8 +183,8 @@ namespace COSYNNC {
 	// Set the neural network
 	void Procedure::SetNeuralNetwork(NeuralNetwork* neuralNetwork, size_t batchSize) {
 		_neuralNetwork = neuralNetwork;
-		//_neuralNetwork->ConfigurateInputOutput(_plant, _inputQuantizer, _maxEpisodeHorizonTrainer, 1.0);
-		_neuralNetwork->ConfigurateInputOutput(_plant, _inputQuantizer, batchSize, 1.0);
+		//_neuralNetwork->ConfigureInputOutput(_plant, _inputQuantizer, _maxEpisodeHorizonTrainer, 1.0);
+		_neuralNetwork->ConfigureInputOutput(_plant, _inputQuantizer, batchSize, 1.0);
 
 		_outputType = _neuralNetwork->GetOutputType();
 
@@ -401,7 +407,7 @@ namespace COSYNNC {
 
 	// Run the verification phase
 	void Procedure::Verify() {
-		_controller.CompileInputArray();
+		_controller.ComputeInputs();
 
 		Log("Verifier", "Computing relevant transitions");
 		_verifier->ComputeTransitions();
@@ -468,7 +474,7 @@ namespace COSYNNC {
 	// Save the neural network
 	void Procedure::SaveNetwork(string path) {
 		_fileManager.SaveNetworkAsMATLAB(path, "net");
-		_fileManager.SaveVerifiedDomainAsMATLAB(path, "dom");
+		_fileManager.SaveWinningSetAsMATLAB(path, "dom");
 		_fileManager.SaveControllerAsMATLAB(path, "ctl");
 		_fileManager.SaveControllerAsStaticController(path, "scs");
 		_fileManager.SaveTransitions(path, "trs");
@@ -482,8 +488,6 @@ namespace COSYNNC {
 		char timestamp[26];
 		time_t t = time(0);
         strftime(timestamp, sizeof(timestamp), "%a %b %d %H %M %S", localtime(&t));
-		//ctime_s(timestamp, sizeof(timestamp), &t);
-
 
 		string timestampString;
 		for (unsigned int i = 0; i < sizeof(timestamp) - 1; i++) {
@@ -492,17 +496,17 @@ namespace COSYNNC {
 		timestampString = timestampString.substr(0, 14);
 
 		// Concatenate string and chars to form path
-		string path = "../controllers/timestamps";
+		string path = _savingPath + "/timestamps";
 
 		Log("File Manager", "Saving to path: '" + path + "/" + timestampString + "'");
 
 		// Save network to a matlab file under the timestamp
-		_fileManager.SaveNetworkAsMATLAB(path, (timestampString + "net"));
- 		_fileManager.SaveVerifiedDomainAsMATLAB(path, (timestampString + "dom"));
-		_fileManager.SaveControllerAsMATLAB(path, (timestampString + "ctl"));
-		_fileManager.SaveControllerAsStaticController(path, (timestampString + "scs"));
-		//_fileManager.SaveAbstractionForSCOTS(path, (timestampString + "abss"));
-		_fileManager.SaveTransitions(path, (timestampString + "trs"));
+		_fileManager.SaveNetworkAsMATLAB(path, timestampString + "net");
+ 		_fileManager.SaveWinningSetAsMATLAB(path, timestampString + "dom");
+		_fileManager.SaveControllerAsMATLAB(path, timestampString + "ctl");
+		_fileManager.SaveControllerAsStaticController(path, timestampString + "scs");
+		//_fileManager.SaveAbstractionForSCOTS(path, timestampString + "abss");
+		_fileManager.SaveTransitions(path, timestampString + "trs");
 		if(_saveRawNeuralNetwork) _fileManager.SaveNetworkAsRaw(path, timestampString + "raw");
 
 		// Log best network
@@ -512,7 +516,7 @@ namespace COSYNNC {
 			_bestControllerWinningDomainPercentage = currentWinningDomainPercentage;
 		}
 
-		_fileManager.WriteSynthesisStatusToLog("../controllers", "log", _plant->GetName(), timestampString);
+		_fileManager.WriteSynthesisStatusToLog(_savingPath, "log", _plant->GetName(), timestampString);
 	}
 
 

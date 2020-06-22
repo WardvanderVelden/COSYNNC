@@ -73,6 +73,8 @@ add_executable(COSYNNC
         src/utilities/Vector.h
         src/Procedure.cpp
         src/Procedure.h
+        src/Encoder.cpp
+        src/Encoder.h
         src/main.cpp)
 
 # Link the required libraries

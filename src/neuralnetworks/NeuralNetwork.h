@@ -38,16 +38,35 @@ namespace COSYNNC {
 		// Initializes the optimizer for training
 		virtual void InitializeOptimizer(string optimizer = "sgd", float learningRate = 0.1, float weightDecayRate = 0.1);
 
-		// Configures the neural network to receive input and output data compatible with the state and input dimensions and batch size
-		virtual void ConfigurateInputOutput(Plant* plant, Quantizer* inputQuantizer, int batchSize = 1, float initialDistribution = 0.1);
+		/// <summary>Configures the neural network to receive input and output data compatible with the state and input dimensions and batch size</summary>
+		/// <param name="plant">A pointer to the plant</param>
+		/// <param name="inputQuantizer">A pointer to the input quantizer</param>
+		/// <param name="batchSize">The size of the batch that will be utilized during training</param>
+		/// <param name="initialDistribution">The initial distribution of the weights and the biases in the neural network</param>
+		virtual void ConfigureInputOutput(Plant* plant, Quantizer* inputQuantizer, int batchSize = 1, float initialDistribution = 0.1);
+
+		/// <summary>Configure the inputs and outputs of the neural network for a given batch size and initial distribution</summary>
+		/// <param name="inputNeurons">The amount of input neurons to the neural network</param>
+		/// <param name="outputNeurons">The amount of output neurons to the neural network</param>
+		/// <param name="batchSize">The size of the batch that will be utilized during training</param>
+		/// <param name="initialDistribution">The initial distribution of the weights and the biases in the neural network</param>
+		virtual void ConfigureInputOutput(unsigned int inputNeurons, unsigned int outputNeurons, unsigned int batchSize = 1, float initialDistribution = 0.1);
 
 		// Evaluates the neural network
 		virtual Vector EvaluateNetwork(Vector input);
 
-		// Evaluates the neural network in batch
+		/// <summary>Evaluates the neural network in a batch to increase the speed</summary>
+		/// <param name="inputs">A pointer array for the inputs to evaluate the network</param>
+		/// <param name="batchSize">The size of the pointer</param>
 		virtual Vector* EvaluateNetworkInBatch(Vector* inputs, unsigned int batchSize);
 
-		// Train the network based on inputs and labels
+		/// <summary>Evaluates the neural network in a batch to increase the speed</summary>
+		/// <param name="inputs">A vector of COSYNNC Vectors which form the input for evaluation</param>
+		virtual Vector* EvaluateNetworkInBatch(vector<Vector> inputs);
+
+		/// <summary>Train the network based on an array inputs and an array labels</summary>
+		/// <param name="states">A vector of COSYNNC vectors that represent the states fed to the neural network for training. The vectors need to be of the same dimension as the state space dimension.</param>
+		/// <param name="labels">A vector of COSYNNC vectors that represents the labels fed to the neural network for training.</param>
 		virtual void Train(vector<Vector> states, vector<Vector> labels);
 		
 		// Print network weights
@@ -95,6 +114,9 @@ namespace COSYNNC {
 		// Returns a value in the argument
 		mx_float GetArgumentValue(string name, vector<unsigned int> index);
 	protected:
+		// Initializes the neural network based on the hidden layers and input and label dimension
+		virtual void Initialize(unsigned int batchSize, float initialDistribution);
+
 		vector<int> _layers;
 		vector<int> _hiddenLayers;
 
