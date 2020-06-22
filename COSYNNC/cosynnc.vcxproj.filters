@@ -111,6 +111,9 @@
     <ClCompile Include="Unicycle.cpp">
       <Filter>Source Files\Plants</Filter>
     </ClCompile>
+    <ClCompile Include="Encoder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="NeuralNetwork.h">
@@ -175,6 +178,9 @@
     </ClInclude>
     <ClInclude Include="Unicycle.h">
       <Filter>Header Files\Plants</Filter>
+    </ClInclude>
+    <ClInclude Include="Encoder.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

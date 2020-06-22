@@ -29,7 +29,7 @@ namespace COSYNNC {
 	
 
 	// Configures the neural network to receive input and output data compatible with the state and input dimensions and batch size
-	void NeuralNetwork::ConfigurateInputOutput(Plant* plant, Quantizer* inputQuantizer, int batchSize, float initialDistribution) {
+	void NeuralNetwork::ConfigureInputOutput(Plant* plant, Quantizer* inputQuantizer, int batchSize, float initialDistribution) {
 		_inputDimension = plant->GetStateSpaceDimension();
 
 		// Define label dimension based on output type
@@ -43,33 +43,6 @@ namespace COSYNNC {
 		}
 
 		Initialize(batchSize, initialDistribution);
-
-		/*// Define layers based on label dimension
-		auto layers = vector<int>(_hiddenLayers);
-		layers.push_back(_labelDimension);
-		SetLayers(layers);
-
-		// Defines the dimensions of the input and output of the neural network based on the plant and the batch size
-		_batchSize = batchSize;
-
-		_arguments["input"] = NDArray(Shape(batchSize, _inputDimension), _context);
-		_arguments["label"] = NDArray(Shape(batchSize, _labelDimension), _context);
-
-		// Initialize the neural network graph
-		InitializeGraph();
-
-		// Infers the size of the other matrices and vectors based on the input and output and amount of neurons per layer
-		_network.InferArgsMap(_context, &_arguments, _arguments);
-
-		// Initialize all parameters with a uniform distribution
-		auto initializer = Uniform(initialDistribution);
-		for (auto& argument : _arguments) {
-			initializer(argument.first, &argument.second);
-		}
-
-		// Bind parameters to the neural network model through an executor
-		_executor = _network.SimpleBind(_context, _arguments);
-		_argumentNames = _network.ListArguments();*/
 	}
 
 
@@ -169,6 +142,44 @@ namespace COSYNNC {
 			for (unsigned int j = 0; j < outputDimension; j++) {
 				//outputs[i][j] = _executor->outputs[0].At(i, j);
 				outputs[i][j] = min(max(_executor->outputs[0].At(i, j), (mx_float)0.0), (mx_float)1.0);
+			}
+		}
+
+		return outputs;
+	}
+
+
+	// Evaluates the neural network in batch
+	Vector* NeuralNetwork::EvaluateNetworkInBatch(vector<Vector> inputs) {
+		const unsigned int batchSize = inputs.size();
+
+		vector<mx_float> data;
+
+		for (unsigned int i = 0; i < _batchSize; i++) {
+			auto input = inputs[i % batchSize];
+			for (unsigned int j = 0; j < _inputDimension; j++)
+				data.push_back(input[j]);
+		}
+
+		NDArray networkInput(data, Shape(_batchSize, _inputDimension), _context);
+		networkInput.WaitToRead();
+
+		networkInput.CopyTo(&_arguments["input"]);
+		networkInput.WaitToWrite();
+
+		MXNDArrayWaitAll();
+
+		// Execute network operations
+		_executor->Forward(false);
+
+		// Get data
+		Vector* outputs = new Vector[batchSize];
+		auto outputDimension = _layers.back();
+		for (unsigned int i = 0; i < batchSize; i++) {
+			outputs[i] = Vector(outputDimension);
+			for (unsigned int j = 0; j < outputDimension; j++) {
+				outputs[i][j] = _executor->outputs[0].At(i, j);
+				//outputs[i][j] = min(max(_executor->outputs[0].At(i, j), (mx_float)0.0), (mx_float)1.0);
 			}
 		}
 

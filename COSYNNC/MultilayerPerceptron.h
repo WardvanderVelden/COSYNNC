@@ -14,6 +14,9 @@ namespace COSYNNC {
 	{
 	public:
 		// Initializes a neural network of the multilayer perceptron topology
+		MultilayerPerceptron(vector<int> hiddenLayers, ActivationActType activationFunction, LossFunctionType lossFunction);
+
+		// Initializes a neural network of the multilayer perceptron topology for a specific output type
 		MultilayerPerceptron(vector<int> hiddenLayers, ActivationActType activationFunction, OutputType outputType);
 
 		// Initializes a neural network of the multilayer perceptron topology, the layers exclude the input and the output (infered from the plant)

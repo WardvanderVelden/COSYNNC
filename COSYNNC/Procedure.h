@@ -64,6 +64,9 @@ namespace COSYNNC {
 		// Specify whether or not to save the transitions
 		void SpecifySaveAbstractionTransitions(bool saveTransitions = true);
 
+		// Specify the saving path
+		void SpecifySavingPath(string path);
+
 		// Set the plant
 		void SetPlant(Plant* plant);
 
@@ -160,9 +163,11 @@ namespace COSYNNC {
 
 		bool _saveTransitions = true;
 
-		// Controller log
+		// Saving parameters
 		float _bestControllerWinningDomainPercentage = 0.0;
 		string _bestControllerTimestamp = "";
+
+		string _savingPath = "controllers";
 
 		// Debug and logging parameters
 		bool _verboseTrainer = true;
