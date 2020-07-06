@@ -8,18 +8,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # Allow for multithreading
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 
-# Set the paths to where MXNET and CUDD are located
-#set(CUDD_PATH /usr/local)
-set(MXNET_PATH /home/ward/Thesis/third/mxnet)
+# Set the path to where MXNET is located
+set(MXNET_PATH /mxnet/path)
+
 
 # Add MXNet include folders
 include_directories(${MXNET_PATH}/cpp-package/include)
 include_directories(${MXNET_PATH}/include)
 include_directories(${MXNET_PATH}/3rdparty/dmlc-core/include)
 include_directories(${MXNET_PATH}/3rdparty/tvm/nnvm/include)
-
-# Add CUDD include folders
-#include_directories(${CUDD_PATH}/include)
 
 # Add COSYNNC include folders
 include_directories(src)
@@ -79,4 +76,3 @@ add_executable(COSYNNC
 
 # Link the required libraries
 target_link_libraries(COSYNNC ${MXNET_PATH}/build/libmxnet.so)
-#target_link_libraries(COSYNNC ${CUDD_PATH}/lib/libcudd.so)

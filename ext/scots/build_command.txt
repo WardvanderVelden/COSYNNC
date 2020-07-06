@@ -1,0 +1,1 @@
+g++ -Wall -Wextra -std=c++11 -O3 -DNDEBUG -D_GLIBCXX_USE_CXX11_ABI=0 -IC:\msys64\usr\local\include -I../../../bdd -I../../../utils -LC:\msys64\mingw64\lib -llibcudd dcdc.cc

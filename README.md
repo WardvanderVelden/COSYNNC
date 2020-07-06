@@ -8,6 +8,7 @@ COSYNNC relies on the open and rich neural network library called MXNet. In orde
 In order to build MXNet, the dependencies upon which MXNet relies need to be configured. MXNet is a vast library and has a lot of customizable options for different configurations (CPU or GPU based etc...). For COSYNNC, the simplest form of MXNet is used which is CPU based MXNet. The build instructions for both Ubuntu and Windows will now be provided.
 
 <h3>Ubuntu</h3>
+
 * Install GCC
 
 * Install CMake 3.13 or higher. This can be done by downloading the latest version of [CMake](https://cmake.org) and extracting the files. After that, open a terminal and navigate to where the files where extracted. Then run:
