@@ -79,14 +79,6 @@ namespace COSYNNC {
 				if (input.GetLength() > 0) labels.push_back(Vector({ 0.0, 1.0 }));
 				else labels.push_back(Vector({ 1.0, 0.0 }));
 
-				// Check if the queue is full, if so push to the neural network for training
-				/*if (states.size() >= _batchSize) {
-					_neuralNetwork->Train(states, labels);
-
-					// Clear the queue
-					states.clear();
-					labels.clear();
-				}*/
 				TrainQueue(states, labels);
 			}
 			std::cout << "." << std::flush;

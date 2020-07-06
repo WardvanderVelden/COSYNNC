@@ -67,9 +67,6 @@ namespace COSYNNC {
 		// Determines the losing set and the set of losing cells which are next to the winning domain
 		void DetermineLosingSet();
 
-		// TEMPORARY: Validation method in order to verify and bugfix the behaviour of the verifier, returns true when the domain is indeed valid
-		bool ValidateDomain();
-
 		// Initializes the winning set for verification
 		void InitializeWinningSet();
 

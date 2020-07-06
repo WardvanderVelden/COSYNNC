@@ -320,51 +320,6 @@ namespace COSYNNC {
 	}
 
 
-	// TEMPORARY: Validation method in order to verify and bugfix the behaviour of the verifier
-	bool Verifier::ValidateDomain() {
-		bool hasDiscrepancy = false;
-
-		auto spaceEta = _abstraction->GetStateQuantizer()->GetEta();
-		auto specificationType = _abstraction->GetControlSpecification()->GetSpecificationType();
-		
-		for (long index = 0; index < _abstraction->GetStateQuantizer()->GetCardinality(); index++) {
-			bool isLosingHole = true; // This will remain true if there is a losing state surrounded by winning states
-			bool isWinningIsland = true; // This will remain true if the is a winning state surrounded by losing states
-
-			for (unsigned int dim = 0; dim < _abstraction->GetStateQuantizer()->GetDimension(); dim++) {
-				auto cell = _abstraction->GetStateQuantizer()->GetVectorFromIndex(index);
-
-				for (int i = -1; i <= 1; i++) {
-					if (i == 0) continue;
-
-					Vector neighbor = cell;
-					neighbor[dim] = cell[dim] + (spaceEta[dim] * i);
-
-					auto neighborIndex = _abstraction->GetStateQuantizer()->GetIndexFromVector(neighbor);
-					auto neighborWinning = IsIndexInWinningSet(neighborIndex);
-
-					if (!neighborWinning) isLosingHole = false;
-					if (neighborWinning) isWinningIsland = false;
-				}
-			}
-
-			// Handle winning islands and losing holes
-			if (isLosingHole && specificationType == ControlSpecificationType::Reachability) {
-				if (_abstraction->GetPlant()->IsLinear()) _winningSet[index] = true;
-				hasDiscrepancy = true;
-			}
-
-			if (isWinningIsland && specificationType == ControlSpecificationType::Invariance) {
-				if (_abstraction->GetPlant()->IsLinear()) _winningSet[index] = false;
-				hasDiscrepancy = true;
-			}
-		}
-
-		if (hasDiscrepancy) return false;
-		return true;
-	}
-
-
 	#pragma region Getters and Setters
 
 	// Sets a part of the winning domain, returns whether or not that element has changed

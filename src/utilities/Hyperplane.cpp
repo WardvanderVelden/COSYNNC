@@ -53,7 +53,6 @@ namespace COSYNNC {
 
 			// Evaluate dot product of the projection onto the normal
 			auto dotProduct = _normal.Dot(diff);
-			//if (!_internalSignPositive) dotProduct *= -1;
 
 			if (dotProduct > 0.0) return true;
 		}
