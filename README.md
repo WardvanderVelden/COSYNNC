@@ -83,5 +83,5 @@ In order to build COSYNNC, the MXNet library needs to be build first as specifie
 	./COSYNNC
 	```
 
-<h1> Configurating the framework for synthesis </h1>
-To configure the framework for synthesis...
+<h1> Using COSYNNC </h1>
+For using COSYNNC as a correct-by-design neural network synthesis framework, we refer to the manual that is located in the doc folder.
