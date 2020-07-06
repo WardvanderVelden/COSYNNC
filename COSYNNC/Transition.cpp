@@ -26,7 +26,6 @@ namespace COSYNNC {
 
 	// Adds an end without checking whether or not the end is already in the transition function
 	void Transition::AddEnd(long endIndex, unsigned long inputIndex) {
-		// TODO: Checking if it is contained already is relatively expensive and can probably be done in a more efficient manner
 		if (!Contains(endIndex, inputIndex)) { 
 			_ends[inputIndex].push_back(endIndex);
 		}

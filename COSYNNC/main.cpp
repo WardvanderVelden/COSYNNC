@@ -7,11 +7,7 @@
 #include "StateSpaceRepresentation.h"
 #include "Unicycle.h"
 
-#include "Quantizer.h"
-#include "Controller.h"
-#include "ControlSpecification.h"
 #include "MultilayerPerceptron.h"
-#include "Verifier.h"
 #include "Procedure.h"
 #include "Encoder.h"
 
@@ -82,15 +78,16 @@ void SynthesizeReachabilityControllerRocket() {
 	cosynnc.SpecifyInputQuantizer(Vector((float)1000.0), Vector((float)0.0), Vector((float)5000.0));
 
 	// Specify the synthesis parameters
-	cosynnc.SpecifySynthesisParameters(1000000, 50, 5000, 50000, 50);
+	cosynnc.SpecifySynthesisParameters(5000000, 50, 5000, 50000, 50);
 
 	// Link a neural network to the procedure
 	MultilayerPerceptron* multilayerPerceptron = new MultilayerPerceptron({ 8, 8 }, ActivationActType::kRelu, OutputType::Labelled);
 	multilayerPerceptron->InitializeOptimizer("sgd", 0.0075, 0.0);
-	cosynnc.SetNeuralNetwork(multilayerPerceptron);
+	cosynnc.SetNeuralNetwork(multilayerPerceptron, 7);
 
 	// Specify the control specification
-	cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ -1.0, -1.0 }), Vector({ 1.0, 1.0 }));
+	//cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ -1.0, -1.0 }), Vector({ 1.0, 1.0 }));
+	cosynnc.SpecifyControlSpecification(ControlSpecificationType::ReachAndStay, Vector({ -1.0, -1.0 }), Vector({ 1.0, 1.0 }));
 
 	cosynnc.SpecifyRadialInitialState(0.15, 0.85);
 	cosynnc.SpecifyTrainingFocus(TrainingFocus::RadialOutwards);
@@ -100,7 +97,7 @@ void SynthesizeReachabilityControllerRocket() {
 	cosynnc.SpecifyTrainingFocus(TrainingFocus::AllStates);
 
 	//cosynnc.SpecifyNorm({ 1.0, 1.0 });
-	cosynnc.SpecifyWinningSetReinforcement(true);
+	//cosynnc.SpecifyWinningSetReinforcement(true);
 
 	cosynnc.SpecifyUseRefinedTransitions(true);
 
@@ -286,20 +283,17 @@ void SynthesizeUnicycleReachabilityController() {
 
 
 void EncodeWinningSetAsNeuralNetwork() {
-	//Encoder encoder("controllers/timestamps", "FriMay15161009scs"); // Rocket
-	Encoder encoder("controllers/timestamps", "TueMay19153948scs"); // DCDC
-	//Encoder encoder("controllers/timestamps", "WedMay20102331scs"); // MIMO
-	//Encoder encoder("controllers/timestamps", "TueJun2110014scs"); // Unicycle
+	Encoder encoder("controllers/timestamps", "scs"); // MIMO
 
 	MultilayerPerceptron* mlp = new MultilayerPerceptron({ 8, 8 }, ActivationActType::kRelu, LossFunctionType::CrossEntropy);
-	mlp->InitializeOptimizer("sgd", 0.0075, 0.0);
+	mlp->InitializeOptimizer("sgd", 0.01, 0.0);
 
 	encoder.SetBatchSize(10);
 	encoder.SetNeuralNetwork(mlp);
 
 	encoder.SetSavingPath("controllers");
 	
-	encoder.Encode(10, 2, 97.9, 0.00499999);
+	encoder.Encode(10, 2, 99, 0.00499999);
 
 	delete mlp;
 }

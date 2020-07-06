@@ -1,5 +1,5 @@
 #include "Unicycle.h"
-#include "Quantizer.h"
+//#include "Quantizer.h"
 
 namespace COSYNNC {
 	Vector Unicycle::EvaluateDynamics(Vector input) {

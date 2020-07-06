@@ -1,6 +1,8 @@
 #pragma once
 #include "Plant.h"
 
+#define PI 3.14159265
+
 namespace COSYNNC {
 	class Unicycle : public Plant {
 	public:

@@ -211,7 +211,7 @@ namespace COSYNNC {
 		file << "';\n";
 
 		// Save activation function
-		file << "activationFunction = 'relu';\n"; // TODO: Make this change based on the activation function
+		file << "activationFunction = 'relu';\n";
 
 		// Save depth
 		file << "layerDepth = " << _neuralNetwork->GetLayerDepth() << ";\n";
@@ -261,7 +261,7 @@ namespace COSYNNC {
 		file.precision(9);
 
 		// Save activation function
-		file << "activationFunction = 'relu';\n"; // TODO: Make this change based on the activation function
+		file << "activationFunction = 'relu';\n";
 
 		// Save depth
 		file << "layerDepth = " << neuralNetwork->GetLayerDepth() << ";\n";

@@ -63,8 +63,6 @@ namespace COSYNNC {
 			if (_abstraction->ComputeTransitionFunctionForIndex(index, input)) {
 				_transitionsInAbstraction++;
 			}
-
-			//std::cout << index << std::endl;
 		}
 	}
 
@@ -82,19 +80,6 @@ namespace COSYNNC {
 			auto state = _abstraction->GetStateQuantizer()->GetVectorFromIndex(index);
 
 			_winningSet[index] = controlSpecification->IsInSpecificationSet(state);
-
-			/*switch (_abstraction->GetControlSpecification()->GetSpecificationType()) {
-			case ControlSpecificationType::Invariance:
-				_winningSet[index] = controlSpecification->IsInSpecificationSet(state);
-
-				break;
-
-			case ControlSpecificationType::Reachability:
-				if (controlSpecification->IsInSpecificationSet(state)) _winningSet[index] = true;
-				else _winningSet[index] = false;
-
-				break;
-			}*/
 		}
 	}
 
@@ -103,19 +88,6 @@ namespace COSYNNC {
 	void Verifier::ComputeWinningSet() {
 		// Initialize the winning set such that only the target set is in the winning set
 		InitializeWinningSet();
-
-		// DEBUG: Print a map of the set to depict its evolution
-		/*const int indexDivider = round((_abstraction->GetStateQuantizer()->GetUpperBound()[0] - _abstraction->GetStateQuantizer()->GetLowerBound()[0]) / _abstraction->GetStateQuantizer()->GetEta()[0]); // Temporary divider for 2D systems
-		if (indexDivider > 250) _verboseMode = false;
-
-		if (_verboseMode) {
-			for (long index = 0; index < _abstraction->GetStateQuantizer()->GetCardinality(); index++) {
-				if (index % indexDivider == 0) std::cout << std::endl << "\t";
-				if (_winningSet[index]) std::cout << "X";
-				else std::cout << ".";
-			}
-			std::cout << std::endl;
-		}*/
 		
 		// Perform fixed algorithm operator on winning set to determine the winning set
 		size_t iterations = 0;
@@ -243,17 +215,6 @@ namespace COSYNNC {
 			std::cout << "\t\ti: " << iterations;
 
 			auto hasSetChanged = PerformSingleFixedPointOperation(type);
-
-			// DEBUG: Print a map of the set to depict its evolution
-			/*if (_verboseMode) {
-				for (long index = 0; index < _abstraction->GetStateQuantizer()->GetCardinality(); index++) {
-					if (index % indexDivider == 0) std::cout << std::endl << "\t";
-					if (_winningSet[index]) std::cout << "X";
-					else std::cout << ".";
-				}
-				std::cout << std::endl;
-			}*/
-
 			if (!hasSetChanged) hasIterationConverged = true;
 
 			std::cout << std::endl;
@@ -307,51 +268,6 @@ namespace COSYNNC {
 		if (index < 0 || index > _abstraction->GetStateQuantizer()->GetCardinality()) return false;
 	
 		return _winningSet[index];
-	}
-
-
-	// TEMPORARY: Validation method in order to verify and bugfix the behaviour of the verifier
-	bool Verifier::ValidateDomain() {
-		bool hasDiscrepancy = false;
-
-		auto spaceEta = _abstraction->GetStateQuantizer()->GetEta();
-		auto specificationType = _abstraction->GetControlSpecification()->GetSpecificationType();
-		
-		for (long index = 0; index < _abstraction->GetStateQuantizer()->GetCardinality(); index++) {
-			bool isLosingHole = true; // This will remain true if there is a losing state surrounded by winning states
-			bool isWinningIsland = true; // This will remain true if the is a winning state surrounded by losing states
-
-			for (unsigned int dim = 0; dim < _abstraction->GetStateQuantizer()->GetDimension(); dim++) {
-				auto cell = _abstraction->GetStateQuantizer()->GetVectorFromIndex(index);
-
-				for (int i = -1; i <= 1; i++) {
-					if (i == 0) continue;
-
-					Vector neighbor = cell;
-					neighbor[dim] = cell[dim] + (spaceEta[dim] * i);
-
-					auto neighborIndex = _abstraction->GetStateQuantizer()->GetIndexFromVector(neighbor);
-					auto neighborWinning = IsIndexInWinningSet(neighborIndex);
-
-					if (!neighborWinning) isLosingHole = false;
-					if (neighborWinning) isWinningIsland = false;
-				}
-			}
-
-			// Handle winning islands and losing holes
-			if (isLosingHole && specificationType == ControlSpecificationType::Reachability) {
-				if (_abstraction->GetPlant()->IsLinear()) _winningSet[index] = true;
-				hasDiscrepancy = true;
-			}
-
-			if (isWinningIsland && specificationType == ControlSpecificationType::Invariance) {
-				if (_abstraction->GetPlant()->IsLinear()) _winningSet[index] = false;
-				hasDiscrepancy = true;
-			}
-		}
-
-		if (hasDiscrepancy) return false;
-		return true;
 	}
 
 

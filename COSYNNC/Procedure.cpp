@@ -194,6 +194,7 @@ namespace COSYNNC {
 		Log("COSYNNC", "Neural network has data size: " + std::to_string(dataSize) + " bytes");
 	}
 
+
 	#pragma endregion Procedure Specifiers	
 
 
