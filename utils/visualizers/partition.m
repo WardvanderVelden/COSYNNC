@@ -1,3 +1,5 @@
+% A MATLAB visualizer to visualize the partitions as created by the controller
+
 clc;
 close all;
 clear all;

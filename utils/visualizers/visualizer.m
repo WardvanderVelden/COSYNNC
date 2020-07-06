@@ -1,3 +1,5 @@
+% A MATLAB visualizer to visualize the winning set and behaviour of the neural network controller
+
 clc;
 close all;
 clear all;

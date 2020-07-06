@@ -1,3 +1,5 @@
+% A MATLAB visualizer to visualize neural network encoded winning sets
+
 % Clear all data and add function path
 clear all;
 close all;
