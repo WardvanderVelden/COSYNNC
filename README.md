@@ -57,8 +57,6 @@ In order to build MXNet, the dependencies upon which MXNet relies need to be con
 
 	This procedure should result in a shared library in the build folder and the required headers in the cpp-package/include folder.
 
-<h3>Windows</h3>
-
 <h2> Building COSYNNC </h2>
 In order to build COSYNNC, the MXNet library needs to be build first as specified above. Once that has been completed follow the following instructions:
 
