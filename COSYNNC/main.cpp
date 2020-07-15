@@ -54,9 +54,6 @@ void SynthesizeReachabilityControllerDCDC() {
 	// Initialize the synthesize procedure
 	cosynnc.Initialize();
 
-	// Load a previously trained network
-	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "WedMay20155901net"); 
-
 	// Run the synthesize procedure
 	cosynnc.Synthesize();
 	
@@ -86,8 +83,7 @@ void SynthesizeReachabilityControllerRocket() {
 	cosynnc.SetNeuralNetwork(multilayerPerceptron, 7);
 
 	// Specify the control specification
-	//cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ -1.0, -1.0 }), Vector({ 1.0, 1.0 }));
-	cosynnc.SpecifyControlSpecification(ControlSpecificationType::ReachAndStay, Vector({ -1.0, -1.0 }), Vector({ 1.0, 1.0 }));
+	cosynnc.SpecifyControlSpecification(ControlSpecificationType::Reachability, Vector({ -1.0, -1.0 }), Vector({ 1.0, 1.0 }));
 
 	cosynnc.SpecifyRadialInitialState(0.15, 0.85);
 	cosynnc.SpecifyTrainingFocus(TrainingFocus::RadialOutwards);
@@ -105,9 +101,6 @@ void SynthesizeReachabilityControllerRocket() {
 
 	// Initialize the synthesize procedure
 	cosynnc.Initialize();
-
-	// Load a previously trained network
-	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "ThuApr30113252net");
 
 	// Run the synthesize procedure
 	cosynnc.Synthesize();
@@ -164,7 +157,7 @@ void SynthesizeSS3dReachabilityController() {
 
 	cosynnc.SpecifyVerbosity(true, false);
 
-	cosynnc.SpecifyUseRefinedTransitions(false);
+	cosynnc.SpecifyUseRefinedTransitions(true);
 
 	cosynnc.SpecifySavingPath("controllers");
 
@@ -227,8 +220,6 @@ void SynthesizeMIMOReachabilityController() {
 
 	cosynnc.Initialize();
 
-	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "MonMay11151654net");
-
 	cosynnc.Synthesize();
 
 	delete mlp;
@@ -273,8 +264,6 @@ void SynthesizeUnicycleReachabilityController() {
 
 	cosynnc.Initialize();
 
-	//cosynnc.LoadNeuralNetwork("controllers/timestamps", "TueJun2102314net");
-
 	cosynnc.Synthesize();
 
 	delete mlp;
@@ -300,7 +289,7 @@ void EncodeWinningSetAsNeuralNetwork() {
 
 
 int main() {
-	//SynthesizeReachabilityControllerDCDC();
+	SynthesizeReachabilityControllerDCDC();
 	
 	//SynthesizeReachabilityControllerRocket();
 
@@ -310,7 +299,7 @@ int main() {
 
 	//SynthesizeUnicycleReachabilityController();
 
-	EncodeWinningSetAsNeuralNetwork();
+	//EncodeWinningSetAsNeuralNetwork();
 
 	system("pause");
 	return 0;

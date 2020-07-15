@@ -19,8 +19,11 @@ namespace COSYNNC {
 		// Sets the normal and hence defines the normal points of the hyperplane
 		void SetNormal(Vector normal, Vector cellCenter);
 
-		// Over approximates the normal of the hyperplane 
+		// LEGACY: Over approximates the normal of the hyperplane 
 		void OverApproximateNormal(Plant* plant, Vector input);
+
+		// Computes the normal based on the hyperplane
+		void ComputeNormal(Vector center);
 
 		// Tests if a point in space is on the internal side of the hyperplane
 		bool IsPointOnInternalSide(Vector point);
