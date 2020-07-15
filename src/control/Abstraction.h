@@ -60,7 +60,7 @@ namespace COSYNNC {
 		#pragma region Transition Function
 
 		// Over-approximates the vertices of the original cell and returns the hyperplanes that result from the over-approximation
-		Vector* OverApproximateEvolution(Vector state, Vector input, vector<Hyperplane>& hyperplanes);
+		Vector* OverApproximateEvolution(Vector state, Vector newState, Vector input, vector<Hyperplane>& hyperplanes);
 
 		// Returns the hyperplanes that naturally arise between the vertices
 		vector<Hyperplane> GetHyperplanesBetweenVertices(Vector* vertices, Vector cellCenter);

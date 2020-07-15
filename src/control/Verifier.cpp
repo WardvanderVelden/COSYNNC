@@ -46,15 +46,6 @@ namespace COSYNNC {
 
 		//threadGroup[1].join();
 
-		/*for (unsigned long index = 0; index < spaceCardinality; index++) {
-			// Print status to monitor progression
-			if (index % ((long)floor(spaceCardinality / 20)) == 0) std::cout << (float)((float)index / (float)spaceCardinality * 100.0) << "% . ";
-		
-			auto input = _abstraction->GetController()->GetControlActionFromIndex(index);
-			if (_abstraction->ComputeTransitionFunctionForIndex(index, input)) {
-				_transitionsInAbstraction++;
-			}
-		}*/
 		std::cout << std::endl;
 	}
 
@@ -66,15 +57,12 @@ namespace COSYNNC {
 		for (unsigned long index = start; index < end; index++) {
 			if (index % ((long)floor(spaceCardinality / 100)) == 0) {
 				std::cout << "." << std::flush; // Print dot monitor progress
-				//std::cout << index << std::endl;
 			}
 
 			auto input = _abstraction->GetController()->GetControlActionFromIndex(index);
 			if (_abstraction->ComputeTransitionFunctionForIndex(index, input)) {
 				_transitionsInAbstraction++;
 			}
-
-			//std::cout << index << std::endl;
 		}
 	}
 
@@ -92,19 +80,6 @@ namespace COSYNNC {
 			auto state = _abstraction->GetStateQuantizer()->GetVectorFromIndex(index);
 
 			_winningSet[index] = controlSpecification->IsInSpecificationSet(state);
-
-			/*switch (_abstraction->GetControlSpecification()->GetSpecificationType()) {
-			case ControlSpecificationType::Invariance:
-				_winningSet[index] = controlSpecification->IsInSpecificationSet(state);
-
-				break;
-
-			case ControlSpecificationType::Reachability:
-				if (controlSpecification->IsInSpecificationSet(state)) _winningSet[index] = true;
-				else _winningSet[index] = false;
-
-				break;
-			}*/
 		}
 	}
 
@@ -113,19 +88,6 @@ namespace COSYNNC {
 	void Verifier::ComputeWinningSet() {
 		// Initialize the winning set such that only the target set is in the winning set
 		InitializeWinningSet();
-
-		// DEBUG: Print a map of the set to depict its evolution
-		/*const int indexDivider = round((_abstraction->GetStateQuantizer()->GetUpperBound()[0] - _abstraction->GetStateQuantizer()->GetLowerBound()[0]) / _abstraction->GetStateQuantizer()->GetEta()[0]); // Temporary divider for 2D systems
-		if (indexDivider > 250) _verboseMode = false;
-
-		if (_verboseMode) {
-			for (long index = 0; index < _abstraction->GetStateQuantizer()->GetCardinality(); index++) {
-				if (index % indexDivider == 0) std::cout << std::endl << "\t";
-				if (_winningSet[index]) std::cout << "X";
-				else std::cout << ".";
-			}
-			std::cout << std::endl;
-		}*/
 		
 		// Perform fixed algorithm operator on winning set to determine the winning set
 		size_t iterations = 0;
@@ -253,16 +215,6 @@ namespace COSYNNC {
 			std::cout << "\t\ti: " << iterations;
 
 			auto hasSetChanged = PerformSingleFixedPointOperation(type);
-
-			// DEBUG: Print a map of the set to depict its evolution
-			/*if (_verboseMode) {
-				for (long index = 0; index < _abstraction->GetStateQuantizer()->GetCardinality(); index++) {
-					if (index % indexDivider == 0) std::cout << std::endl << "\t";
-					if (_winningSet[index]) std::cout << "X";
-					else std::cout << ".";
-				}
-				std::cout << std::endl;
-			}*/
 
 			if (!hasSetChanged) hasIterationConverged = true;
 

@@ -31,17 +31,34 @@ namespace COSYNNC {
 	}
 
 
-	// Over approximates the normal of the hyperplane 
-	void Hyperplane::OverApproximateNormal(Plant* plant, Vector input) {
-		// Over approximate the normal points
-		for (unsigned int i = 0; i < 2; i++) {
-			plant->SetState(_normalPoints[i]);
-			_normalPoints[i] = plant->EvaluateDynamics(input);
+	// Computes the normal based on the hyperplane
+	void Hyperplane::ComputeNormal(Vector center) {
+		if (_dimension == 2) {
+			Vector dir = *_points[1] - *_points[0];
+
+			_normal[0] = dir[1];
+			_normal[1] = -dir[0];
+		} 
+		else if (_dimension == 3) {
+			Vector one = *_points[1] - *_points[0];
+			Vector two = *_points[2] - *_points[0];
+
+			one.Normalize();
+			two.Normalize();
+
+			_normal[0] = one[1] * two[2] - two[1] * one[2];
+			_normal[1] = one[0] * two[2] - two[0] * one[2];
+			_normal[2] = one[0] * two[1] - two[0] * one[1];
+		}
+		else {
+			// TODO: Add higher dimensions
 		}
 
-		// Set and normalize the over approximated normal of the plane
-		_normal = (_normalPoints[1] - _normalPoints[0]);
+		// Normalize
 		_normal.Normalize();
+
+		// Make sure the normal is directed at the center
+		if (!IsPointOnInternalSide(center)) _normal = _normal * -1;
 	}
 
 

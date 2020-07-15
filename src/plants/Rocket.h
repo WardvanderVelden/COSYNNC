@@ -6,7 +6,6 @@ namespace COSYNNC {
 	public:
 		Rocket() : Plant(2, 1, 0.1, "Rocket", true) { }
 
-		// Simple second order rocket dynamics in one axis
 		Vector DynamicsODE(Vector x, float t) override;
 	private:
 		const float _mass = 267; // kg

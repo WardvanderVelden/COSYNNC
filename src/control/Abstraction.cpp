@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Abstraction.h"
 
 using namespace std;
@@ -31,8 +33,6 @@ namespace COSYNNC {
 
 	// Destructor
 	Abstraction::~Abstraction() {
-		//delete[] _transitions;
-
 		for (unsigned int i = 0; i < _partitions; i++) delete[] _transitionPartitions[i];
 		delete[] _transitionPartitions;
 	}
@@ -105,7 +105,7 @@ namespace COSYNNC {
 
 			// Evolve the vertices of the cell and find the resulting hyperplanes
 			vector<Hyperplane> hyperplanes;
-			auto vertices = OverApproximateEvolution(state, input, hyperplanes);
+			auto vertices = OverApproximateEvolution(state, newState, input, hyperplanes);
 
 			// Check if any of the vertices is out of bounds, in that case the transition is invalid
 			for (unsigned int i = 0; i < _amountOfVerticesPerCell; i++) {
@@ -138,7 +138,7 @@ namespace COSYNNC {
 
 
 	// Over approximates all the vertices and returns an array of the new vertices
-	Vector* Abstraction::OverApproximateEvolution(Vector state, Vector input, vector<Hyperplane>& hyperplanes) {
+	Vector* Abstraction::OverApproximateEvolution(Vector state, Vector newState, Vector input, vector<Hyperplane>& hyperplanes) {
 		// Get the vertices that make up the hypercell
 		auto vertices = _stateQuantizer->GetCellVertices(state);
 
@@ -154,9 +154,9 @@ namespace COSYNNC {
 				vertices[i] = _plant->EvaluateDynamics(input);
 			}
 
-			// Over approximate the dynamics of the plant to update the normal vectors
+			// Update the normal vectors
 			for (unsigned int i = 0; i < hyperplanes.size(); i++) {
-				hyperplanes[i].OverApproximateNormal(_plant, input);
+				hyperplanes[i].ComputeNormal(newState);
 			}
 		}
 		else if (!_useRefinedTransitions && _plant->IsLinear()) {
@@ -182,18 +182,6 @@ namespace COSYNNC {
 					else vertices[i][dim] = newState[dim] - radialGrowthBound[dim];
 				}
 			}
-			/*for (char i = 0; i < _amountOfVerticesPerCell; i++) {
-				for (size_t dim = 0; dim < _stateQuantizer->GetDimension(); dim++) {
-					auto test = (i >> dim);
-
-					if ((i >> dim) & 0) {
-						vertices[i] = newState[i] - radialGrowthBound[i];
-					}
-					if ((i >> dim) & 1) {
-						vertices[i] = newState[i] + radialGrowthBound[i];
-					}
-				}
-			}*/
 		}
 
 		return vertices;
