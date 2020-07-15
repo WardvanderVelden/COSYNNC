@@ -1,5 +1,3 @@
-#pragma once
-
 #include "Abstraction.h"
 
 using namespace std;
